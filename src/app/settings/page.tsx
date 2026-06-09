@@ -23,7 +23,7 @@ export default function SettingsPage() {
     <div className="space-y-6">
       <h1 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">Settings</h1>
 
-      <div className="bg-white dark:bg-zinc-900 rounded-lg border border-zinc-200 dark:border-zinc-800 p-5 space-y-6">
+      <div className="bg-white/70 dark:bg-zinc-900/50 backdrop-blur-sm rounded-lg border border-zinc-200/60 dark:border-zinc-800/60 p-5 space-y-6">
         <SettingSection title="Appearance" description="Choose your preferred color scheme">
           <ThemeToggle />
         </SettingSection>
