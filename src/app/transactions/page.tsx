@@ -1,0 +1,65 @@
+"use client"
+
+import { useState } from "react"
+import { useTransactions } from "@/hooks/useTransactions"
+import { useCategories } from "@/hooks/useCategories"
+import { filterTransactions, getSortedTransactions } from "@/lib/analytics"
+import { TransactionFilters } from "@/types"
+import { Button } from "@/components/ui/button"
+import { Plus } from "lucide-react"
+import { TransactionDialog } from "@/components/transactions/TransactionDialog"
+import { TransactionFiltersBar } from "@/components/transactions/TransactionFilters"
+import { TransactionList } from "@/components/transactions/TransactionList"
+import { ExportButton } from "@/components/transactions/ExportButton"
+
+export default function TransactionsPage() {
+  const { transactions, addTransaction, updateTransaction, deleteTransaction } = useTransactions()
+  const { categories } = useCategories()
+  const [addOpen, setAddOpen] = useState(false)
+  const [filters, setFilters] = useState<TransactionFilters>({})
+
+  const sorted = getSortedTransactions(transactions)
+  const filtered = filterTransactions(sorted, filters)
+
+  return (
+    <div className="space-y-5">
+      <div className="flex items-center justify-between">
+        <h1 className="text-xl font-semibold text-zinc-900">Transactions</h1>
+        <Button size="sm" className="gap-1.5" onClick={() => setAddOpen(true)}>
+          <Plus className="w-4 h-4" />
+          Add Transaction
+        </Button>
+      </div>
+
+      <div className="bg-white rounded-lg border border-zinc-200 p-4 space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <TransactionFiltersBar
+            filters={filters}
+            categories={categories}
+            onChange={setFilters}
+          />
+          <ExportButton transactions={filtered} categories={categories} />
+        </div>
+
+        <div className="text-xs text-zinc-400">
+          {filtered.length} transaction{filtered.length !== 1 ? "s" : ""}
+          {filtered.length !== transactions.length && ` (filtered from ${transactions.length})`}
+        </div>
+
+        <TransactionList
+          transactions={filtered}
+          categories={categories}
+          onUpdate={updateTransaction}
+          onDelete={deleteTransaction}
+        />
+      </div>
+
+      <TransactionDialog
+        open={addOpen}
+        onOpenChange={setAddOpen}
+        categories={categories}
+        onSubmit={addTransaction}
+      />
+    </div>
+  )
+}
