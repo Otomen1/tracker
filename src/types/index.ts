@@ -7,6 +7,11 @@ export interface Transaction {
   categoryId: string
   description: string
   date: string // "YYYY-MM-DD"
+  notes?: string
+  tags?: string[]
+  isRecurring?: boolean
+  recurringDay?: number // 1–31
+  recurringId?: string  // id of the template transaction this was auto-generated from
   createdAt: string
   updatedAt: string
 }
@@ -17,9 +22,16 @@ export interface Category {
   id: string
   name: string
   type: CategoryType
-  color: string // hex color
+  color: string
   isDefault: boolean
+  budget?: number // monthly budget limit
   createdAt: string
+}
+
+export interface Settings {
+  currency: string
+  theme: "light" | "dark" | "system"
+  monthlySavingsGoal: number
 }
 
 export interface MonthlySummary {
@@ -39,6 +51,16 @@ export interface CategoryBreakdown {
   count: number
 }
 
+export interface BudgetStatus {
+  categoryId: string
+  categoryName: string
+  color: string
+  budget: number
+  spent: number
+  percentage: number
+  isOverBudget: boolean
+}
+
 export interface DashboardStats {
   currentMonthIncome: number
   currentMonthExpenses: number
@@ -49,18 +71,32 @@ export interface DashboardStats {
   transactionCountThisMonth: number
 }
 
+export interface AnnualSummary {
+  year: number
+  totalIncome: number
+  totalExpenses: number
+  netBalance: number
+  monthlyBreakdown: MonthlySummary[]
+  topExpenseCategories: CategoryBreakdown[]
+}
+
 export interface TransactionFormData {
   type: TransactionType
   amount: string
   categoryId: string
   description: string
   date: string
+  notes?: string
+  tags?: string[]
+  isRecurring?: boolean
+  recurringDay?: number
 }
 
 export interface CategoryFormData {
   name: string
   type: "income" | "expense"
   color: string
+  budget?: number
 }
 
 export interface TransactionFilters {
@@ -69,4 +105,5 @@ export interface TransactionFilters {
   dateFrom?: string
   dateTo?: string
   search?: string
+  tag?: string
 }

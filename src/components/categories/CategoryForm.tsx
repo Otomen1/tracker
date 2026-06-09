@@ -14,7 +14,15 @@ const schema = z.object({
   name: z.string().min(1, "Name is required").max(30),
   type: z.enum(["income", "expense"]),
   color: z.string().min(4, "Color is required"),
+  budget: z.string().optional(),
 })
+
+interface FormFields {
+  name: string
+  type: "income" | "expense"
+  color: string
+  budget?: string
+}
 
 interface Props {
   category?: Category
@@ -24,54 +32,42 @@ interface Props {
   onCancel: () => void
 }
 
-export function CategoryForm({
-  category,
-  defaultType = "expense",
-  existingNames = [],
-  onSubmit,
-  onCancel,
-}: Props) {
+export function CategoryForm({ category, defaultType = "expense", existingNames = [], onSubmit, onCancel }: Props) {
   const {
-    register,
-    handleSubmit,
-    watch,
-    setValue,
+    register, handleSubmit, watch, setValue,
     formState: { errors },
-  } = useForm<CategoryFormData>({
+  } = useForm<FormFields>({
     resolver: zodResolver(schema),
     defaultValues: {
       name: category?.name ?? "",
       type: (category?.type as "income" | "expense") ?? defaultType,
       color: category?.color ?? COLOR_PRESETS[0],
+      budget: category?.budget?.toString() ?? "",
     },
   })
 
   const selectedColor = watch("color")
   const selectedType = watch("type")
 
-  const handleFormSubmit = (data: CategoryFormData) => {
-    if (
-      existingNames
-        .filter((n) => n.toLowerCase() !== category?.name.toLowerCase())
-        .some((n) => n.toLowerCase() === data.name.toLowerCase())
-    ) {
-      return
-    }
-    onSubmit(data)
+  const handleFormSubmit = (data: FormFields) => {
+    const duplicate = existingNames
+      .filter((n) => n.toLowerCase() !== category?.name?.toLowerCase())
+      .some((n) => n.toLowerCase() === data.name.toLowerCase())
+    if (duplicate) return
+    onSubmit({
+      name: data.name,
+      type: data.type,
+      color: data.color,
+      budget: data.budget ? parseFloat(data.budget) : undefined,
+    })
   }
 
   return (
     <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4">
       <div className="space-y-1.5">
         <Label htmlFor="name">Name</Label>
-        <Input
-          id="name"
-          placeholder="Category name"
-          {...register("name")}
-        />
-        {errors.name && (
-          <p className="text-xs text-destructive">{errors.name.message}</p>
-        )}
+        <Input id="name" placeholder="Category name" {...register("name")} />
+        {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
       </div>
 
       {!category && (
@@ -94,6 +90,23 @@ export function CategoryForm({
               </button>
             ))}
           </div>
+        </div>
+      )}
+
+      {(category?.type === "expense" || (!category && selectedType === "expense")) && (
+        <div className="space-y-1.5">
+          <Label htmlFor="budget">
+            Monthly Budget <span className="text-muted-foreground font-normal">(optional)</span>
+          </Label>
+          <Input
+            id="budget"
+            type="number"
+            step="0.01"
+            min="0"
+            placeholder="0.00"
+            {...register("budget")}
+          />
+          <p className="text-xs text-muted-foreground">Leave empty for no budget limit</p>
         </div>
       )}
 
@@ -123,12 +136,8 @@ export function CategoryForm({
       </div>
 
       <div className="flex gap-2 pt-2">
-        <Button type="button" variant="outline" className="flex-1" onClick={onCancel}>
-          Cancel
-        </Button>
-        <Button type="submit" className="flex-1">
-          {category ? "Save Changes" : "Add Category"}
-        </Button>
+        <Button type="button" variant="outline" className="flex-1" onClick={onCancel}>Cancel</Button>
+        <Button type="submit" className="flex-1">{category ? "Save Changes" : "Add Category"}</Button>
       </div>
     </form>
   )
