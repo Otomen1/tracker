@@ -24,14 +24,14 @@ export default function TransactionsPage() {
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-zinc-900">Transactions</h1>
+        <h1 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">Transactions</h1>
         <Button size="sm" className="gap-1.5" onClick={() => setAddOpen(true)}>
           <Plus className="w-4 h-4" />
           Add Transaction
         </Button>
       </div>
 
-      <div className="bg-white rounded-lg border border-zinc-200 p-4 space-y-4">
+      <div className="bg-white/70 dark:bg-zinc-900/50 backdrop-blur-sm rounded-lg border border-zinc-200/60 dark:border-zinc-800/60 p-4 space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <TransactionFiltersBar
             filters={filters}

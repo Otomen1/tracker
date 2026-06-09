@@ -18,9 +18,9 @@ export default function CategoriesPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-xl font-semibold text-zinc-900">Categories</h1>
+      <h1 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">Categories</h1>
 
-      <div className="bg-white rounded-lg border border-zinc-200 p-5 space-y-6">
+      <div className="bg-white/70 dark:bg-zinc-900/50 backdrop-blur-sm rounded-lg border border-zinc-200/60 dark:border-zinc-800/60 p-5 space-y-6">
         <CategoryList
           title="Income"
           type="income"
