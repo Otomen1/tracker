@@ -1,4 +1,4 @@
-import { Category } from "@/types"
+import { Category, Settings } from "@/types"
 
 export const DEFAULT_CATEGORIES: Category[] = [
   { id: "cat_salary", name: "Salary", type: "income", color: "#22c55e", isDefault: true, createdAt: new Date().toISOString() },
@@ -18,6 +18,7 @@ export const STORAGE_KEYS = {
   TRANSACTIONS: "tracker_transactions",
   CATEGORIES: "tracker_categories",
   SCHEMA_VERSION: "tracker_schema_version",
+  SETTINGS: "tracker_settings",
 } as const
 
 export const SCHEMA_VERSION = "1"
@@ -27,3 +28,24 @@ export const COLOR_PRESETS = [
   "#3b82f6", "#8b5cf6", "#ec4899", "#f43f5e", "#64748b",
   "#6b7280", "#0ea5e9",
 ]
+
+export const CURRENCIES = [
+  { code: "USD", name: "US Dollar", symbol: "$" },
+  { code: "MYR", name: "Malaysian Ringgit", symbol: "RM" },
+  { code: "EUR", name: "Euro", symbol: "€" },
+  { code: "GBP", name: "British Pound", symbol: "£" },
+  { code: "SGD", name: "Singapore Dollar", symbol: "S$" },
+  { code: "AUD", name: "Australian Dollar", symbol: "A$" },
+  { code: "CAD", name: "Canadian Dollar", symbol: "C$" },
+  { code: "JPY", name: "Japanese Yen", symbol: "¥" },
+  { code: "INR", name: "Indian Rupee", symbol: "₹" },
+  { code: "IDR", name: "Indonesian Rupiah", symbol: "Rp" },
+  { code: "THB", name: "Thai Baht", symbol: "฿" },
+  { code: "CNY", name: "Chinese Yuan", symbol: "¥" },
+]
+
+export const DEFAULT_SETTINGS: Settings = {
+  currency: "USD",
+  theme: "system",
+  monthlySavingsGoal: 0,
+}

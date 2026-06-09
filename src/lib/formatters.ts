@@ -1,11 +1,19 @@
 import { format, parseISO } from "date-fns"
 
-export function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: 2,
-  }).format(amount)
+export function formatCurrency(amount: number, currency = "USD"): string {
+  try {
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency,
+      minimumFractionDigits: 2,
+    }).format(amount)
+  } catch {
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
+      minimumFractionDigits: 2,
+    }).format(amount)
+  }
 }
 
 export function formatDate(isoDate: string): string {
@@ -35,6 +43,10 @@ export function formatShortMonth(monthKey: string): string {
 export function getMonthKey(date?: Date): string {
   const d = date ?? new Date()
   return format(d, "yyyy-MM")
+}
+
+export function getYearKey(date?: Date): number {
+  return (date ?? new Date()).getFullYear()
 }
 
 export function addMonths(monthKey: string, delta: number): string {
