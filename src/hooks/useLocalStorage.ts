@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { useState, useCallback, useEffect } from "react"
 
 export function useLocalStorage<T>(key: string, initialValue: T) {
   const [storedValue, setStoredValue] = useState<T>(() => {
@@ -31,6 +31,20 @@ export function useLocalStorage<T>(key: string, initialValue: T) {
     },
     [key]
   )
+
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key !== key) return
+      try {
+        setStoredValue(e.newValue !== null ? (JSON.parse(e.newValue) as T) : initialValue)
+      } catch {
+        // ignore parse errors
+      }
+    }
+    window.addEventListener("storage", handleStorage)
+    return () => window.removeEventListener("storage", handleStorage)
+  }, [key]) // eslint-disable-line react-hooks/exhaustive-deps
 
   return [storedValue, setValue] as const
 }

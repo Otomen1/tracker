@@ -13,6 +13,22 @@ interface Props {
   onChange: (filters: TransactionFilters) => void
 }
 
+function FilterChip({ label, onRemove }: { label: string; onRemove: () => void }) {
+  return (
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 rounded-full text-xs">
+      {label}
+      <button
+        type="button"
+        onClick={onRemove}
+        aria-label={`Remove ${label} filter`}
+        className="hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
+      >
+        <X className="w-3 h-3" />
+      </button>
+    </span>
+  )
+}
+
 export function TransactionFiltersBar({ filters, categories, onChange }: Props) {
   const [search, setSearch] = useState(filters.search ?? "")
 
@@ -40,81 +56,123 @@ export function TransactionFiltersBar({ filters, categories, onChange }: Props) 
     onChange({})
   }
 
+  const activeCategory = filters.categoryId
+    ? categories.find((c) => c.id === filters.categoryId)
+    : undefined
+
   return (
-    <div className="flex flex-wrap gap-2 items-center">
-      <Select
-        value={filters.type ?? "all"}
-        onValueChange={(v) =>
-          onChange({ ...filters, type: v === "all" ? "" : (v as TransactionType), categoryId: "" })
-        }
-      >
-        <SelectTrigger className="w-32 h-9 text-sm">
-          <SelectValue placeholder="All types" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">All types</SelectItem>
-          <SelectItem value="income">Income</SelectItem>
-          <SelectItem value="expense">Expense</SelectItem>
-        </SelectContent>
-      </Select>
+    <div className="space-y-2">
+      <div className="flex flex-wrap gap-2 items-center">
+        <Select
+          value={filters.type ?? "all"}
+          onValueChange={(v) =>
+            onChange({ ...filters, type: v === "all" ? "" : (v as TransactionType), categoryId: "" })
+          }
+        >
+          <SelectTrigger className="w-32 h-9 text-sm">
+            <SelectValue placeholder="All types" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All types</SelectItem>
+            <SelectItem value="income">Income</SelectItem>
+            <SelectItem value="expense">Expense</SelectItem>
+          </SelectContent>
+        </Select>
 
-      <Select
-        value={filters.categoryId ?? "all"}
-        onValueChange={(v) =>
-          onChange({ ...filters, categoryId: v === "all" ? "" : v })
-        }
-      >
-        <SelectTrigger className="w-36 h-9 text-sm">
-          <SelectValue placeholder="All categories" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">All categories</SelectItem>
-          {filteredCategories.map((c) => (
-            <SelectItem key={c.id} value={c.id}>
-              <span className="flex items-center gap-2">
-                <span
-                  className="inline-block w-2 h-2 rounded-full"
-                  style={{ backgroundColor: c.color }}
-                />
-                {c.name}
-              </span>
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+        <Select
+          value={filters.categoryId ?? "all"}
+          onValueChange={(v) =>
+            onChange({ ...filters, categoryId: v === "all" ? "" : v })
+          }
+        >
+          <SelectTrigger className="w-36 h-9 text-sm">
+            <SelectValue placeholder="All categories" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All categories</SelectItem>
+            {filteredCategories.map((c) => (
+              <SelectItem key={c.id} value={c.id}>
+                <span className="flex items-center gap-2">
+                  <span
+                    className="inline-block w-2 h-2 rounded-full"
+                    style={{ backgroundColor: c.color }}
+                  />
+                  {c.name}
+                </span>
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
 
-      <Input
-        type="date"
-        className="w-36 h-9 text-sm"
-        value={filters.dateFrom ?? ""}
-        onChange={(e) => onChange({ ...filters, dateFrom: e.target.value })}
-        placeholder="From"
-      />
-      <Input
-        type="date"
-        className="w-36 h-9 text-sm"
-        value={filters.dateTo ?? ""}
-        onChange={(e) => onChange({ ...filters, dateTo: e.target.value })}
-        placeholder="To"
-      />
+        <Input
+          type="date"
+          className="w-36 h-9 text-sm"
+          aria-label="From date"
+          value={filters.dateFrom ?? ""}
+          onChange={(e) => onChange({ ...filters, dateFrom: e.target.value })}
+        />
+        <Input
+          type="date"
+          className="w-36 h-9 text-sm"
+          aria-label="To date"
+          value={filters.dateTo ?? ""}
+          onChange={(e) => onChange({ ...filters, dateTo: e.target.value })}
+        />
 
-      <Input
-        className="w-44 h-9 text-sm"
-        placeholder="Search..."
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-      />
+        <Input
+          className="w-44 h-9 text-sm"
+          placeholder="Search..."
+          aria-label="Search transactions"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+
+        {hasFilters && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-9 text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100"
+            onClick={clearFilters}
+          >
+            <X className="w-3.5 h-3.5 mr-1" />
+            Clear all
+          </Button>
+        )}
+      </div>
 
       {hasFilters && (
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-9 text-zinc-500 hover:text-zinc-900"
-          onClick={clearFilters}
-        >
-          <X className="w-3.5 h-3.5 mr-1" />
-          Clear
-        </Button>
+        <div className="flex flex-wrap gap-1.5">
+          {filters.type && (
+            <FilterChip
+              label={filters.type === "income" ? "Income" : "Expense"}
+              onRemove={() => onChange({ ...filters, type: "" as TransactionType, categoryId: "" })}
+            />
+          )}
+          {filters.categoryId && activeCategory && (
+            <FilterChip
+              label={activeCategory.name}
+              onRemove={() => onChange({ ...filters, categoryId: "" })}
+            />
+          )}
+          {filters.dateFrom && (
+            <FilterChip
+              label={`From: ${filters.dateFrom}`}
+              onRemove={() => onChange({ ...filters, dateFrom: "" })}
+            />
+          )}
+          {filters.dateTo && (
+            <FilterChip
+              label={`To: ${filters.dateTo}`}
+              onRemove={() => onChange({ ...filters, dateTo: "" })}
+            />
+          )}
+          {filters.search && (
+            <FilterChip
+              label={`"${filters.search}"`}
+              onRemove={() => { setSearch(""); onChange({ ...filters, search: "" }) }}
+            />
+          )}
+        </div>
       )}
     </div>
   )

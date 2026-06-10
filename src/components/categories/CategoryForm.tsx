@@ -34,7 +34,7 @@ interface Props {
 
 export function CategoryForm({ category, defaultType = "expense", existingNames = [], onSubmit, onCancel }: Props) {
   const {
-    register, handleSubmit, watch, setValue,
+    register, handleSubmit, watch, setValue, setError,
     formState: { errors },
   } = useForm<FormFields>({
     resolver: zodResolver(schema),
@@ -53,7 +53,10 @@ export function CategoryForm({ category, defaultType = "expense", existingNames 
     const duplicate = existingNames
       .filter((n) => n.toLowerCase() !== category?.name?.toLowerCase())
       .some((n) => n.toLowerCase() === data.name.toLowerCase())
-    if (duplicate) return
+    if (duplicate) {
+      setError("name", { type: "manual", message: "A category with this name already exists" })
+      return
+    }
     onSubmit({
       name: data.name,
       type: data.type,
