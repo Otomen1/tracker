@@ -1,5 +1,6 @@
 "use client"
 
+import Link from "next/link"
 import { BudgetStatus } from "@/types"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { useSettingsContext } from "@/context/SettingsContext"
@@ -13,7 +14,21 @@ interface Props {
 export function BudgetProgressCard({ budgets }: Props) {
   const { fmt } = useSettingsContext()
 
-  if (budgets.length === 0) return null
+  if (budgets.length === 0) {
+    return (
+      <Card className="border-zinc-200 dark:border-zinc-800">
+        <CardContent className="py-4 flex items-center justify-between">
+          <span className="text-sm text-zinc-500 dark:text-zinc-400">No budget limits set</span>
+          <Link
+            href="/settings"
+            className="text-xs text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 underline underline-offset-2 transition-colors"
+          >
+            Set limits in Settings →
+          </Link>
+        </CardContent>
+      </Card>
+    )
+  }
 
   const overBudgetCount = budgets.filter((b) => b.isOverBudget).length
 
