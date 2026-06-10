@@ -6,20 +6,19 @@ import { useSettingsContext } from "@/context/SettingsContext"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 
-function CategoryBudgetRow({ id, name, color, budget }: {
-  id: string
+function CategoryBudgetRow({ name, color, budget, onSave }: {
   name: string
   color: string
   budget?: number
+  onSave: (budget: number | undefined) => void
 }) {
-  const { updateCategory } = useCategories()
   const { fmt } = useSettingsContext()
   const [value, setValue] = useState(budget?.toString() ?? "")
   const [saved, setSaved] = useState(false)
 
   const handleSave = () => {
     const parsed = parseFloat(value)
-    updateCategory(id, { budget: !isNaN(parsed) && parsed > 0 ? parsed : undefined })
+    onSave(!isNaN(parsed) && parsed > 0 ? parsed : undefined)
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)
   }
@@ -50,7 +49,7 @@ function CategoryBudgetRow({ id, name, color, budget }: {
 }
 
 export function BudgetLimitsForm() {
-  const { categories } = useCategories()
+  const { categories, updateCategory } = useCategories()
   const expenseCategories = categories.filter((c) => c.type === "expense" || c.type === "both")
 
   if (expenseCategories.length === 0) {
@@ -62,10 +61,10 @@ export function BudgetLimitsForm() {
       {expenseCategories.map((c) => (
         <CategoryBudgetRow
           key={c.id}
-          id={c.id}
           name={c.name}
           color={c.color}
           budget={c.budget}
+          onSave={(budget) => updateCategory(c.id, { budget })}
         />
       ))}
     </div>
