@@ -1,4 +1,5 @@
 import withPWA from "@ducanh2912/next-pwa";
+import withBundleAnalyzer from "@next/bundle-analyzer";
 
 const securityHeaders = [
   { key: "X-Content-Type-Options", value: "nosniff" },
@@ -30,4 +31,4 @@ const nextConfig = withPWA({
   },
 });
 
-export default nextConfig;
+export default withBundleAnalyzer({ enabled: process.env.ANALYZE === "true" })(nextConfig);

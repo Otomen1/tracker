@@ -1,17 +1,27 @@
 "use client"
 
 import { useState } from "react"
+import dynamic from "next/dynamic"
 import { useTransactions } from "@/hooks/useTransactions"
 import { useCategories } from "@/hooks/useCategories"
 import { getDashboardStats, getExpenseBreakdown, getMonthlyTrend, getRecentTransactions, getBudgetStatus } from "@/lib/analytics"
 import { getMonthKey } from "@/lib/formatters"
 import { MonthSelector } from "@/components/dashboard/MonthSelector"
 import { StatsCards } from "@/components/dashboard/StatsCards"
-import { ExpensePieChart } from "@/components/dashboard/ExpensePieChart"
-import { MonthlyBarChart } from "@/components/dashboard/MonthlyBarChart"
 import { RecentTransactions } from "@/components/dashboard/RecentTransactions"
 import { SavingsGoalCard } from "@/components/dashboard/SavingsGoalCard"
 import { BudgetProgressCard } from "@/components/dashboard/BudgetProgressCard"
+import { ChartSkeleton } from "@/components/ui/skeleton"
+
+const ExpensePieChart = dynamic(
+  () => import("@/components/dashboard/ExpensePieChart").then((m) => ({ default: m.ExpensePieChart })),
+  { loading: () => <ChartSkeleton height={220} />, ssr: false }
+)
+
+const MonthlyBarChart = dynamic(
+  () => import("@/components/dashboard/MonthlyBarChart").then((m) => ({ default: m.MonthlyBarChart })),
+  { loading: () => <ChartSkeleton height={260} />, ssr: false }
+)
 
 export default function DashboardPage() {
   const [selectedMonth, setSelectedMonth] = useState(getMonthKey())
