@@ -3,8 +3,11 @@
 import { useState } from "react"
 import { useTransactions } from "@/hooks/useTransactions"
 import { useCategories } from "@/hooks/useCategories"
-import { filterTransactions, getSortedTransactions } from "@/lib/analytics"
-import { TransactionFilters } from "@/types"
+import { filterTransactions, getSortedTransactions, getBudgetStatus } from "@/lib/analytics"
+import { Transaction, TransactionFilters, TransactionFormData } from "@/types"
+import { getMonthKey } from "@/lib/formatters"
+import { useSettingsContext } from "@/context/SettingsContext"
+import { useToast } from "@/context/ToastContext"
 import { Button } from "@/components/ui/button"
 import { Plus } from "lucide-react"
 import { TransactionDialog } from "@/components/transactions/TransactionDialog"
@@ -15,11 +18,58 @@ import { ExportButton } from "@/components/transactions/ExportButton"
 export default function TransactionsPage() {
   const { transactions, addTransaction, updateTransaction, deleteTransaction, deleteWithCascade } = useTransactions()
   const { categories } = useCategories()
+  const { fmt } = useSettingsContext()
+  const { showToast } = useToast()
   const [addOpen, setAddOpen] = useState(false)
   const [filters, setFilters] = useState<TransactionFilters>({})
 
   const sorted = getSortedTransactions(transactions)
   const filtered = filterTransactions(sorted, filters)
+
+  const checkBudget = (data: TransactionFormData, baseTransactions: Transaction[]) => {
+    const currentMonth = getMonthKey()
+    if (data.type !== "expense" || !data.date.startsWith(currentMonth)) return
+
+    const hypothetical: Transaction[] = [
+      ...baseTransactions,
+      {
+        id: "_budget_check",
+        type: data.type,
+        amount: parseFloat(data.amount),
+        categoryId: data.categoryId,
+        description: data.description,
+        date: data.date,
+        createdAt: "",
+        updatedAt: "",
+      },
+    ]
+
+    const budgets = getBudgetStatus(hypothetical, currentMonth, categories)
+    const b = budgets.find((b) => b.categoryId === data.categoryId)
+    if (!b) return
+
+    if (b.isOverBudget) {
+      showToast(
+        `${b.categoryName} is over budget — ${fmt(b.spent)} of ${fmt(b.budget)} spent`,
+        "error"
+      )
+    } else if (b.percentage >= 80) {
+      showToast(
+        `${b.categoryName} is at ${Math.round(b.percentage)}% of budget`,
+        "warning"
+      )
+    }
+  }
+
+  const handleAdd = (data: TransactionFormData) => {
+    addTransaction(data)
+    checkBudget(data, transactions)
+  }
+
+  const handleUpdate = (id: string, data: TransactionFormData) => {
+    updateTransaction(id, data)
+    checkBudget(data, transactions.filter((t) => t.id !== id))
+  }
 
   const handleDelete = (id: string, cascade: boolean) => {
     if (cascade) deleteWithCascade(id)
@@ -54,7 +104,7 @@ export default function TransactionsPage() {
         <TransactionList
           transactions={filtered}
           categories={categories}
-          onUpdate={updateTransaction}
+          onUpdate={handleUpdate}
           onDelete={handleDelete}
         />
       </div>
@@ -63,7 +113,7 @@ export default function TransactionsPage() {
         open={addOpen}
         onOpenChange={setAddOpen}
         categories={categories}
-        onSubmit={addTransaction}
+        onSubmit={handleAdd}
       />
     </div>
   )
