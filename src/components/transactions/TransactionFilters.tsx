@@ -5,7 +5,7 @@ import { TransactionFilters, Category, TransactionType } from "@/types"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
-import { X } from "lucide-react"
+import { X, RefreshCw } from "lucide-react"
 
 interface Props {
   filters: TransactionFilters
@@ -44,7 +44,8 @@ export function TransactionFiltersBar({ filters, categories, onChange }: Props) 
     filters.categoryId ||
     filters.dateFrom ||
     filters.dateTo ||
-    filters.search
+    filters.search ||
+    filters.recurring
 
   const filteredCategories =
     filters.type
@@ -55,6 +56,9 @@ export function TransactionFiltersBar({ filters, categories, onChange }: Props) 
     setSearch("")
     onChange({})
   }
+
+  const toggleRecurring = () =>
+    onChange({ ...filters, recurring: filters.recurring ? undefined : true })
 
   const activeCategory = filters.categoryId
     ? categories.find((c) => c.id === filters.categoryId)
@@ -127,6 +131,17 @@ export function TransactionFiltersBar({ filters, categories, onChange }: Props) 
           onChange={(e) => setSearch(e.target.value)}
         />
 
+        <Button
+          variant={filters.recurring ? "default" : "outline"}
+          size="sm"
+          className="h-9 gap-1.5"
+          onClick={toggleRecurring}
+          aria-pressed={!!filters.recurring}
+        >
+          <RefreshCw className="w-3.5 h-3.5" />
+          Recurring
+        </Button>
+
         {hasFilters && (
           <Button
             variant="ghost"
@@ -170,6 +185,12 @@ export function TransactionFiltersBar({ filters, categories, onChange }: Props) 
             <FilterChip
               label={`"${filters.search}"`}
               onRemove={() => { setSearch(""); onChange({ ...filters, search: "" }) }}
+            />
+          )}
+          {filters.recurring && (
+            <FilterChip
+              label="Recurring"
+              onRemove={() => onChange({ ...filters, recurring: undefined })}
             />
           )}
         </div>

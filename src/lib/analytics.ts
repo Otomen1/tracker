@@ -173,6 +173,7 @@ export function filterTransactions(
     if (filters.dateFrom && t.date < filters.dateFrom) return false
     if (filters.dateTo && t.date > filters.dateTo) return false
     if (filters.tag && !(t.tags ?? []).includes(filters.tag)) return false
+    if (filters.recurring && !t.isRecurring) return false
     if (filters.search) {
       const q = filters.search.toLowerCase()
       const matchDesc = t.description.toLowerCase().includes(q)

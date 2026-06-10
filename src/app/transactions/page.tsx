@@ -13,13 +13,18 @@ import { TransactionList } from "@/components/transactions/TransactionList"
 import { ExportButton } from "@/components/transactions/ExportButton"
 
 export default function TransactionsPage() {
-  const { transactions, addTransaction, updateTransaction, deleteTransaction } = useTransactions()
+  const { transactions, addTransaction, updateTransaction, deleteTransaction, deleteWithCascade } = useTransactions()
   const { categories } = useCategories()
   const [addOpen, setAddOpen] = useState(false)
   const [filters, setFilters] = useState<TransactionFilters>({})
 
   const sorted = getSortedTransactions(transactions)
   const filtered = filterTransactions(sorted, filters)
+
+  const handleDelete = (id: string, cascade: boolean) => {
+    if (cascade) deleteWithCascade(id)
+    else deleteTransaction(id)
+  }
 
   return (
     <div className="space-y-5">
@@ -50,7 +55,7 @@ export default function TransactionsPage() {
           transactions={filtered}
           categories={categories}
           onUpdate={updateTransaction}
-          onDelete={deleteTransaction}
+          onDelete={handleDelete}
         />
       </div>
 

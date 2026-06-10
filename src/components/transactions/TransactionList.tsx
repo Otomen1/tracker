@@ -8,7 +8,7 @@ interface Props {
   transactions: Transaction[]
   categories: Category[]
   onUpdate: (id: string, data: TransactionFormData) => void
-  onDelete: (id: string) => void
+  onDelete: (id: string, cascade: boolean) => void
 }
 
 export function TransactionList({ transactions, categories, onUpdate, onDelete }: Props) {
@@ -21,6 +21,13 @@ export function TransactionList({ transactions, categories, onUpdate, onDelete }
       </div>
     )
   }
+
+  const instanceCountMap = new Map<string, number>()
+  transactions.forEach((t) => {
+    if (t.recurringId) {
+      instanceCountMap.set(t.recurringId, (instanceCountMap.get(t.recurringId) ?? 0) + 1)
+    }
+  })
 
   return (
     <div className="overflow-x-auto">
@@ -43,6 +50,7 @@ export function TransactionList({ transactions, categories, onUpdate, onDelete }
               categories={categories}
               onUpdate={onUpdate}
               onDelete={onDelete}
+              recurringInstanceCount={instanceCountMap.get(t.id) ?? 0}
             />
           ))}
         </tbody>

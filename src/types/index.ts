@@ -106,4 +106,5 @@ export interface TransactionFilters {
   dateTo?: string
   search?: string
   tag?: string
+  recurring?: boolean
 }

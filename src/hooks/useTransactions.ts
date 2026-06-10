@@ -90,5 +90,9 @@ export function useTransactions() {
     setTransactions((prev) => prev.filter((t) => t.id !== id))
   }
 
-  return { transactions, addTransaction, updateTransaction, deleteTransaction }
+  const deleteWithCascade = (id: string): void => {
+    setTransactions((prev) => prev.filter((t) => t.id !== id && t.recurringId !== id))
+  }
+
+  return { transactions, addTransaction, updateTransaction, deleteTransaction, deleteWithCascade }
 }

@@ -14,10 +14,11 @@ interface Props {
   transaction: Transaction
   categories: Category[]
   onUpdate: (id: string, data: TransactionFormData) => void
-  onDelete: (id: string) => void
+  onDelete: (id: string, cascade: boolean) => void
+  recurringInstanceCount?: number
 }
 
-export function TransactionRow({ transaction, categories, onUpdate, onDelete }: Props) {
+export function TransactionRow({ transaction, categories, onUpdate, onDelete, recurringInstanceCount = 0 }: Props) {
   const [editOpen, setEditOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
   const { fmt } = useSettingsContext()
@@ -106,7 +107,8 @@ export function TransactionRow({ transaction, categories, onUpdate, onDelete }: 
         open={deleteOpen}
         onOpenChange={setDeleteOpen}
         description="Are you sure you want to delete this transaction? This cannot be undone."
-        onConfirm={() => onDelete(transaction.id)}
+        cascadeCount={transaction.isRecurring ? recurringInstanceCount : undefined}
+        onConfirm={(cascade) => onDelete(transaction.id, cascade)}
       />
     </>
   )
