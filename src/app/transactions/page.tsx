@@ -18,7 +18,7 @@ import { ExportButton } from "@/components/transactions/ExportButton"
 export default function TransactionsPage() {
   const { transactions, addTransaction, updateTransaction, deleteTransaction, deleteWithCascade } = useTransactions()
   const { categories } = useCategories()
-  const { fmt } = useSettingsContext()
+  const { fmt, settings } = useSettingsContext()
   const { showToast } = useToast()
   const [addOpen, setAddOpen] = useState(false)
   const [filters, setFilters] = useState<TransactionFilters>({})
@@ -93,7 +93,12 @@ export default function TransactionsPage() {
             categories={categories}
             onChange={setFilters}
           />
-          <ExportButton transactions={filtered} categories={categories} />
+          <ExportButton
+                allTransactions={transactions}
+                transactions={filtered}
+                categories={categories}
+                currency={settings.currency}
+              />
         </div>
 
         <div className="text-xs text-zinc-400">
