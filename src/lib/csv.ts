@@ -1,6 +1,10 @@
 import { Transaction, Category } from "@/types"
 import { formatDate } from "./formatters"
 
+// Prevent CSV formula injection (Excel/Sheets execute cells starting with these chars)
+const sanitizeCsvField = (v: string) =>
+  /^[=+\-@\t\r]/.test(v) ? `\t${v}` : v
+
 export function transactionsToCSV(
   transactions: Transaction[],
   categories: Category[]
@@ -14,8 +18,8 @@ export function transactionsToCSV(
     .map((t) => [
       formatDate(t.date),
       t.type === "income" ? "Income" : "Expense",
-      getCategoryName(t.categoryId),
-      `"${t.description.replace(/"/g, '""')}"`,
+      sanitizeCsvField(getCategoryName(t.categoryId)),
+      `"${sanitizeCsvField(t.description).replace(/"/g, '""')}"`,
       t.type === "income"
         ? t.amount.toFixed(2)
         : `-${t.amount.toFixed(2)}`,

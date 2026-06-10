@@ -139,7 +139,7 @@ export function TransactionForm({ transaction, categories, onSubmit, onCancel }:
 
       <div className="space-y-1.5">
         <Label htmlFor="description">Description</Label>
-        <Input id="description" placeholder="What was this for?" {...register("description")} />
+        <Input id="description" placeholder="What was this for?" maxLength={200} {...register("description")} />
         {errors.description && <p className="text-xs text-destructive">{errors.description.message}</p>}
       </div>
 
@@ -154,6 +154,7 @@ export function TransactionForm({ transaction, categories, onSubmit, onCancel }:
           id="notes"
           className="flex min-h-[60px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none"
           placeholder="Additional details..."
+          maxLength={500}
           {...register("notes")}
         />
       </div>

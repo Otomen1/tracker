@@ -44,6 +44,11 @@ export function BudgetProgressCard({ budgets }: Props) {
             </div>
             <div className="w-full bg-zinc-100 dark:bg-zinc-800 rounded-full h-1.5">
               <div
+                role="progressbar"
+                aria-valuenow={Math.min(b.percentage, 100)}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-label={`${b.categoryName} budget progress`}
                 className={cn("h-1.5 rounded-full transition-all", b.isOverBudget ? "bg-rose-500" : b.percentage > 80 ? "bg-amber-400" : "bg-emerald-500")}
                 style={{ width: `${Math.min(b.percentage, 100)}%` }}
               />

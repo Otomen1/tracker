@@ -36,6 +36,11 @@ export function SavingsGoalCard({ currentNet }: Props) {
         </div>
         <div className="w-full bg-zinc-100 dark:bg-zinc-800 rounded-full h-2">
           <div
+            role="progressbar"
+            aria-valuenow={Math.max(percentage, 0)}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-label="Savings goal progress"
             className={cn("h-2 rounded-full transition-all", isAchieved ? "bg-emerald-500" : isBehind ? "bg-rose-400" : "bg-zinc-900 dark:bg-zinc-100")}
             style={{ width: `${Math.max(percentage, 0)}%` }}
           />

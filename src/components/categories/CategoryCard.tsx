@@ -49,19 +49,20 @@ export function CategoryCard({ category, existingNames, hasTransactions, onUpdat
           </div>
         </div>
 
-        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity">
           {category.isDefault ? (
             <div className="w-7 h-7 flex items-center justify-center">
               <Lock className="w-3.5 h-3.5 text-zinc-300" />
             </div>
           ) : (
             <>
-              <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => { setDeleteError(""); setEditOpen(true) }}>
+              <Button size="icon" variant="ghost" className="h-7 w-7" aria-label="Edit category" onClick={() => { setDeleteError(""); setEditOpen(true) }}>
                 <Pencil className="w-3.5 h-3.5" />
               </Button>
               <Button
                 size="icon" variant="ghost"
                 className="h-7 w-7 text-rose-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950"
+                aria-label="Delete category"
                 onClick={() => { setDeleteError(""); setDeleteOpen(true) }}
               >
                 <Trash2 className="w-3.5 h-3.5" />

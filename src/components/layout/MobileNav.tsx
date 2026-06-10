@@ -25,6 +25,7 @@ export function MobileNav() {
             <Link
               key={href}
               href={href}
+              {...(isActive ? { "aria-current": "page" as const } : {})}
               className={cn(
                 "flex-1 flex flex-col items-center gap-1 py-2.5 text-xs transition-colors min-h-[56px] justify-center",
                 isActive

@@ -79,13 +79,14 @@ export function TransactionRow({ transaction, categories, onUpdate, onDelete }: 
           {transaction.type === "income" ? "+" : "-"}{fmt(transaction.amount)}
         </td>
         <td className="py-3 px-4 text-right">
-          <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setEditOpen(true)}>
+          <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity">
+            <Button size="icon" variant="ghost" className="h-8 w-8" aria-label="Edit transaction" onClick={() => setEditOpen(true)}>
               <Pencil className="w-3.5 h-3.5" />
             </Button>
             <Button
               size="icon" variant="ghost"
               className="h-8 w-8 text-rose-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950"
+              aria-label="Delete transaction"
               onClick={() => setDeleteOpen(true)}
             >
               <Trash2 className="w-3.5 h-3.5" />

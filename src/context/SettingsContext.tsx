@@ -1,6 +1,6 @@
 "use client"
 
-import { createContext, useContext } from "react"
+import { createContext, useCallback, useContext } from "react"
 import { Settings } from "@/types"
 import { useSettings } from "@/hooks/useSettings"
 import { DEFAULT_SETTINGS } from "@/lib/constants"
@@ -20,7 +20,10 @@ const SettingsContext = createContext<SettingsContextValue>({
 
 export function SettingsProvider({ children }: { children: React.ReactNode }) {
   const { settings, updateSettings } = useSettings()
-  const fmt = (amount: number) => _formatCurrency(amount, settings.currency)
+  const fmt = useCallback(
+    (amount: number) => _formatCurrency(amount, settings.currency),
+    [settings.currency]
+  )
 
   return (
     <SettingsContext.Provider value={{ settings, updateSettings, fmt }}>

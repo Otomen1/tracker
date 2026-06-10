@@ -27,12 +27,12 @@ export function TransactionList({ transactions, categories, onUpdate, onDelete }
       <table className="w-full">
         <thead>
           <tr className="border-b border-zinc-200">
-            <th className="py-3 px-4 text-xs font-medium text-zinc-500 text-left">Date</th>
-            <th className="py-3 px-4 text-xs font-medium text-zinc-500 text-left">Description</th>
-            <th className="py-3 px-4 text-xs font-medium text-zinc-500 text-left">Category</th>
-            <th className="py-3 px-4 text-xs font-medium text-zinc-500 text-left hidden sm:table-cell">Type</th>
-            <th className="py-3 px-4 text-xs font-medium text-zinc-500 text-right">Amount</th>
-            <th className="py-3 px-4 w-20" />
+            <th scope="col" className="py-3 px-4 text-xs font-medium text-zinc-500 text-left">Date</th>
+            <th scope="col" className="py-3 px-4 text-xs font-medium text-zinc-500 text-left">Description</th>
+            <th scope="col" className="py-3 px-4 text-xs font-medium text-zinc-500 text-left">Category</th>
+            <th scope="col" className="py-3 px-4 text-xs font-medium text-zinc-500 text-left hidden sm:table-cell">Type</th>
+            <th scope="col" className="py-3 px-4 text-xs font-medium text-zinc-500 text-right">Amount</th>
+            <th scope="col" className="py-3 px-4 w-20" />
           </tr>
         </thead>
         <tbody>

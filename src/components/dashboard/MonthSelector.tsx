@@ -18,17 +18,19 @@ export function MonthSelector({ month, onChange }: Props) {
         variant="ghost"
         size="icon"
         className="h-8 w-8"
+        aria-label="Previous month"
         onClick={() => onChange(addMonths(month, -1))}
       >
         <ChevronLeft className="w-4 h-4" />
       </Button>
-      <span className="text-sm font-medium w-32 text-center">
+      <span aria-live="polite" aria-atomic="true" className="text-sm font-medium w-32 text-center">
         {formatMonth(month)}
       </span>
       <Button
         variant="ghost"
         size="icon"
         className="h-8 w-8"
+        aria-label="Next month"
         onClick={() => onChange(addMonths(month, 1))}
         disabled={isCurrentMonth}
       >
