@@ -144,7 +144,7 @@ export function ExportButton({ allTransactions, transactions, categories, curren
       </Button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-1 z-20 w-72 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 shadow-lg overflow-hidden">
+        <div className="absolute left-0 sm:left-auto sm:right-0 top-full mt-1 z-20 w-72 max-w-[calc(100vw-1rem)] rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 shadow-lg overflow-hidden">
           {/* Column headers */}
           <div className="flex items-center px-3 py-2 border-b border-zinc-100 dark:border-zinc-800">
             <span className="flex-1 text-xs font-medium text-zinc-400 uppercase tracking-wide">Date range</span>
