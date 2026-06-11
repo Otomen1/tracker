@@ -1,6 +1,6 @@
 import {
   Transaction, Category, DashboardStats, CategoryBreakdown,
-  MonthlySummary, TransactionFilters, BudgetStatus, AnnualSummary
+  MonthlySummary, TransactionFilters, BudgetStatus, AnnualSummary, Insight
 } from "@/types"
 import { getMonthKey, addMonths } from "./formatters"
 
@@ -194,4 +194,99 @@ export function getSortedTransactions(transactions: Transaction[]): Transaction[
     const d = b.date.localeCompare(a.date)
     return d !== 0 ? d : b.createdAt.localeCompare(a.createdAt)
   })
+}
+
+export function getSpendingInsights(
+  transactions: Transaction[],
+  monthKey: string,
+  categories: Category[],
+  fmt: (n: number) => string
+): Insight[] {
+  const prevMonthKey = addMonths(monthKey, -1)
+  const curTxns = transactions.filter((t) => t.date.startsWith(monthKey))
+  const prevTxns = transactions.filter((t) => t.date.startsWith(prevMonthKey))
+
+  if (curTxns.length < 2) return []
+
+  let curIncome = 0, curExpenses = 0
+  for (const t of curTxns) {
+    if (t.type === "income") curIncome += t.amount
+    else curExpenses += t.amount
+  }
+  let prevExpenses = 0, prevIncome = 0
+  for (const t of prevTxns) {
+    if (t.type === "expense") prevExpenses += t.amount
+    else prevIncome += t.amount
+  }
+
+  const curBreakdown = getExpenseBreakdown(transactions, monthKey, categories)
+  const prevBreakdown = getExpenseBreakdown(transactions, prevMonthKey, categories)
+
+  const insights: Insight[] = []
+
+  // 1. Month-over-month total expenses
+  if (prevExpenses > 0 && curExpenses > 0) {
+    const pct = ((curExpenses - prevExpenses) / prevExpenses) * 100
+    if (Math.abs(pct) >= 5) {
+      insights.push({
+        id: "expense-mom",
+        type: pct < 0 ? "positive" : "warning",
+        title: pct < 0
+          ? `Expenses down ${Math.abs(pct).toFixed(0)}% vs last month`
+          : `Expenses up ${pct.toFixed(0)}% vs last month`,
+        detail: `${fmt(curExpenses)} this month vs ${fmt(prevExpenses)} last month`,
+      })
+    }
+  }
+
+  // 2. Biggest category spike (≥ 30% AND ≥ $10 more)
+  for (const cur of curBreakdown) {
+    const prev = prevBreakdown.find((p) => p.categoryId === cur.categoryId)
+    if (!prev || prev.total === 0) continue
+    const pct = ((cur.total - prev.total) / prev.total) * 100
+    if (pct >= 30 && cur.total - prev.total >= 10) {
+      insights.push({
+        id: `spike-${cur.categoryId}`,
+        type: "warning",
+        title: `${cur.categoryName} up ${pct.toFixed(0)}% vs last month`,
+        detail: `${fmt(cur.total)} this month vs ${fmt(prev.total)} last month`,
+      })
+      break // only the biggest spike
+    }
+  }
+
+  // 3. Top expense category
+  if (curBreakdown.length > 0) {
+    const top = curBreakdown[0]
+    insights.push({
+      id: "top-category",
+      type: "neutral",
+      title: `${top.categoryName} is your top expense`,
+      detail: `${fmt(top.total)} — ${top.percentage.toFixed(0)}% of spending`,
+    })
+  }
+
+  // 4. Savings rate or overspending
+  if (curIncome > 0) {
+    const curNet = curIncome - curExpenses
+    const rate = (curNet / curIncome) * 100
+    if (curNet < 0) {
+      insights.push({
+        id: "overspending",
+        type: "negative",
+        title: "Spending exceeds income this month",
+        detail: `${fmt(Math.abs(curNet))} over income`,
+      })
+    } else if (rate >= 10) {
+      insights.push({
+        id: "savings-rate",
+        type: "positive",
+        title: `Saving ${rate.toFixed(0)}% of income this month`,
+        detail: `${fmt(curNet)} saved so far`,
+      })
+    }
+  }
+
+  const order: Record<Insight["type"], number> = { negative: 0, warning: 1, positive: 2, neutral: 3 }
+  return insights.sort((a, b) => order[a.type] - order[b.type]).slice(0, 4)
 }

@@ -4,13 +4,15 @@ import { useState } from "react"
 import dynamic from "next/dynamic"
 import { useTransactions } from "@/hooks/useTransactions"
 import { useCategories } from "@/hooks/useCategories"
-import { getDashboardStats, getExpenseBreakdown, getMonthlyTrend, getRecentTransactions, getBudgetStatus } from "@/lib/analytics"
+import { getDashboardStats, getExpenseBreakdown, getMonthlyTrend, getRecentTransactions, getBudgetStatus, getSpendingInsights } from "@/lib/analytics"
 import { getMonthKey } from "@/lib/formatters"
+import { useSettingsContext } from "@/context/SettingsContext"
 import { MonthSelector } from "@/components/dashboard/MonthSelector"
 import { StatsCards } from "@/components/dashboard/StatsCards"
 import { RecentTransactions } from "@/components/dashboard/RecentTransactions"
 import { SavingsGoalCard } from "@/components/dashboard/SavingsGoalCard"
 import { BudgetProgressCard } from "@/components/dashboard/BudgetProgressCard"
+import { SpendingInsightsCard } from "@/components/dashboard/SpendingInsightsCard"
 import { ChartSkeleton } from "@/components/ui/skeleton"
 
 const ExpensePieChart = dynamic(
@@ -27,12 +29,14 @@ export default function DashboardPage() {
   const [selectedMonth, setSelectedMonth] = useState(getMonthKey())
   const { transactions } = useTransactions()
   const { categories } = useCategories()
+  const { fmt } = useSettingsContext()
 
   const stats = getDashboardStats(transactions, selectedMonth)
   const expenseBreakdown = getExpenseBreakdown(transactions, selectedMonth, categories)
   const monthlyTrend = getMonthlyTrend(transactions, 6)
   const recentTransactions = getRecentTransactions(transactions, 5)
   const budgetStatus = getBudgetStatus(transactions, selectedMonth, categories)
+  const insights = getSpendingInsights(transactions, selectedMonth, categories, fmt)
 
   return (
     <div className="space-y-5">
@@ -42,6 +46,8 @@ export default function DashboardPage() {
       </div>
 
       <StatsCards stats={stats} />
+
+      <SpendingInsightsCard insights={insights} selectedMonth={selectedMonth} />
 
       <SavingsGoalCard currentNet={stats.currentMonthNet} />
 

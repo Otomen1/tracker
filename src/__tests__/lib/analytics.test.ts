@@ -9,6 +9,7 @@ import {
   filterTransactions,
   getSortedTransactions,
   getRecentTransactions,
+  getSpendingInsights,
 } from "@/lib/analytics"
 
 const makeTransaction = (overrides: Partial<Transaction> = {}): Transaction => ({
@@ -393,5 +394,120 @@ describe("getRecentTransactions", () => {
       makeTransaction({ id: "new", date: "2024-12-01", createdAt: "2024-12-01T00:00:00Z" }),
     ]
     expect(getRecentTransactions(txns, 1)[0].id).toBe("new")
+  })
+})
+
+// ─── getSpendingInsights ──────────────────────────────────────────────────────
+
+const fmt = (n: number) => `$${n.toFixed(2)}`
+
+describe("getSpendingInsights", () => {
+  it("returns empty array when fewer than 2 transactions in the month", () => {
+    const txns = [makeTransaction({ id: "t1", date: "2024-06-01" })]
+    expect(getSpendingInsights(txns, "2024-06", [makeCategory()], fmt)).toEqual([])
+  })
+
+  it("returns empty array for no transactions", () => {
+    expect(getSpendingInsights([], "2024-06", [makeCategory()], fmt)).toEqual([])
+  })
+
+  it("generates a warning when expenses increased ≥ 5% vs last month", () => {
+    const txns = [
+      makeTransaction({ id: "t1", date: "2024-06-01", amount: 110 }),
+      makeTransaction({ id: "t2", date: "2024-06-10", amount: 110 }),
+      makeTransaction({ id: "t3", date: "2024-05-01", amount: 100 }),
+      makeTransaction({ id: "t4", date: "2024-05-10", amount: 100 }),
+    ]
+    const insights = getSpendingInsights(txns, "2024-06", [makeCategory()], fmt)
+    const momInsight = insights.find((i) => i.id === "expense-mom")
+    expect(momInsight).toBeDefined()
+    expect(momInsight?.type).toBe("warning")
+    expect(momInsight?.title).toMatch(/up 10%/)
+  })
+
+  it("generates a positive insight when expenses decreased ≥ 5% vs last month", () => {
+    const txns = [
+      makeTransaction({ id: "t1", date: "2024-06-01", amount: 90 }),
+      makeTransaction({ id: "t2", date: "2024-06-10", amount: 90 }),
+      makeTransaction({ id: "t3", date: "2024-05-01", amount: 100 }),
+      makeTransaction({ id: "t4", date: "2024-05-10", amount: 100 }),
+    ]
+    const insights = getSpendingInsights(txns, "2024-06", [makeCategory()], fmt)
+    const momInsight = insights.find((i) => i.id === "expense-mom")
+    expect(momInsight?.type).toBe("positive")
+    expect(momInsight?.title).toMatch(/down 10%/)
+  })
+
+  it("generates a savings-rate insight when saving ≥ 10% of income", () => {
+    const txns = [
+      makeTransaction({ id: "t1", type: "income", amount: 1000, date: "2024-06-01", categoryId: "cat_food" }),
+      makeTransaction({ id: "t2", type: "expense", amount: 600, date: "2024-06-10", categoryId: "cat_food" }),
+      makeTransaction({ id: "t3", type: "expense", amount: 100, date: "2024-06-15", categoryId: "cat_food" }),
+    ]
+    const insights = getSpendingInsights(txns, "2024-06", [makeCategory()], fmt)
+    const savingsInsight = insights.find((i) => i.id === "savings-rate")
+    expect(savingsInsight).toBeDefined()
+    expect(savingsInsight?.type).toBe("positive")
+    expect(savingsInsight?.title).toContain("30%")
+  })
+
+  it("generates a negative insight when spending exceeds income", () => {
+    const txns = [
+      makeTransaction({ id: "t1", type: "income", amount: 500, date: "2024-06-01", categoryId: "cat_food" }),
+      makeTransaction({ id: "t2", type: "expense", amount: 400, date: "2024-06-10", categoryId: "cat_food" }),
+      makeTransaction({ id: "t3", type: "expense", amount: 300, date: "2024-06-15", categoryId: "cat_food" }),
+    ]
+    const insights = getSpendingInsights(txns, "2024-06", [makeCategory()], fmt)
+    const overspendInsight = insights.find((i) => i.id === "overspending")
+    expect(overspendInsight).toBeDefined()
+    expect(overspendInsight?.type).toBe("negative")
+  })
+
+  it("generates a top-category insight when expenses exist", () => {
+    const txns = [
+      makeTransaction({ id: "t1", date: "2024-06-01", amount: 200 }),
+      makeTransaction({ id: "t2", date: "2024-06-10", amount: 100 }),
+    ]
+    const insights = getSpendingInsights(txns, "2024-06", [makeCategory()], fmt)
+    const topInsight = insights.find((i) => i.id === "top-category")
+    expect(topInsight).toBeDefined()
+    expect(topInsight?.title).toContain("Food")
+  })
+
+  it("generates a category spike warning when a category grows ≥ 30% and ≥ $10", () => {
+    const txns = [
+      makeTransaction({ id: "t1", date: "2024-06-01", amount: 130 }),
+      makeTransaction({ id: "t2", date: "2024-06-10", amount: 130 }),
+      makeTransaction({ id: "t3", date: "2024-05-01", amount: 100 }),
+      makeTransaction({ id: "t4", date: "2024-05-10", amount: 100 }),
+    ]
+    const insights = getSpendingInsights(txns, "2024-06", [makeCategory()], fmt)
+    const spikeInsight = insights.find((i) => i.id.startsWith("spike-"))
+    expect(spikeInsight).toBeDefined()
+    expect(spikeInsight?.type).toBe("warning")
+  })
+
+  it("sorts insights: negative before warning before positive before neutral", () => {
+    const txns = [
+      makeTransaction({ id: "t1", type: "income", amount: 500, date: "2024-06-01", categoryId: "cat_food" }),
+      makeTransaction({ id: "t2", type: "expense", amount: 700, date: "2024-06-10", categoryId: "cat_food" }),
+      makeTransaction({ id: "t3", type: "expense", amount: 200, date: "2024-06-15", categoryId: "cat_food" }),
+    ]
+    const insights = getSpendingInsights(txns, "2024-06", [makeCategory()], fmt)
+    const types = insights.map((i) => i.type)
+    const negIdx = types.indexOf("negative")
+    const warIdx = types.indexOf("warning")
+    if (negIdx !== -1 && warIdx !== -1) expect(negIdx).toBeLessThan(warIdx)
+  })
+
+  it("returns at most 4 insights", () => {
+    const txns = [
+      makeTransaction({ id: "t1", type: "income", amount: 500, date: "2024-06-01", categoryId: "cat_food" }),
+      makeTransaction({ id: "t2", type: "expense", amount: 700, date: "2024-06-10", categoryId: "cat_food" }),
+      makeTransaction({ id: "t3", date: "2024-05-01", amount: 100 }),
+      makeTransaction({ id: "t4", date: "2024-05-10", amount: 100 }),
+    ]
+    const insights = getSpendingInsights(txns, "2024-06", [makeCategory()], fmt)
+    expect(insights.length).toBeLessThanOrEqual(4)
   })
 })
