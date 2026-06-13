@@ -1,5 +1,8 @@
+"use client"
+
 import { Sidebar } from "./Sidebar"
 import { MobileNav } from "./MobileNav"
+import { QuickAddFAB } from "./QuickAddFAB"
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   return (
@@ -11,6 +14,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       </main>
       <MobileNav />
+      <QuickAddFAB />
     </div>
   )
 }
