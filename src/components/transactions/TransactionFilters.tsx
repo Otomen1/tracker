@@ -10,10 +10,11 @@ import { X } from "lucide-react"
 interface Props {
   filters: TransactionFilters
   categories: Category[]
+  tags: string[]
   onChange: (filters: TransactionFilters) => void
 }
 
-export function TransactionFiltersBar({ filters, categories, onChange }: Props) {
+export function TransactionFiltersBar({ filters, categories, tags, onChange }: Props) {
   const [search, setSearch] = useState(filters.search ?? "")
 
   useEffect(() => {
@@ -28,7 +29,8 @@ export function TransactionFiltersBar({ filters, categories, onChange }: Props) 
     filters.categoryId ||
     filters.dateFrom ||
     filters.dateTo ||
-    filters.search
+    filters.search ||
+    filters.tag
 
   const filteredCategories =
     filters.type
@@ -82,6 +84,23 @@ export function TransactionFiltersBar({ filters, categories, onChange }: Props) 
           ))}
         </SelectContent>
       </Select>
+
+      {tags.length > 0 && (
+        <Select
+          value={filters.tag ?? "all"}
+          onValueChange={(v) => onChange({ ...filters, tag: v === "all" ? "" : v })}
+        >
+          <SelectTrigger className="w-32 h-9 text-sm">
+            <SelectValue placeholder="All tags" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All tags</SelectItem>
+            {tags.map((tag) => (
+              <SelectItem key={tag} value={tag}>#{tag}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      )}
 
       <Input
         type="date"

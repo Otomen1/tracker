@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { useTransactions } from "@/hooks/useTransactions"
 import { useCategories } from "@/hooks/useCategories"
 import { filterTransactions, getSortedTransactions } from "@/lib/analytics"
@@ -21,6 +21,12 @@ export default function TransactionsPage() {
   const sorted = getSortedTransactions(transactions)
   const filtered = filterTransactions(sorted, filters)
 
+  const allTags = useMemo(() => {
+    const set = new Set<string>()
+    sorted.forEach((t) => t.tags?.forEach((tag) => set.add(tag)))
+    return Array.from(set).sort()
+  }, [sorted])
+
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">
@@ -36,9 +42,13 @@ export default function TransactionsPage() {
           <TransactionFiltersBar
             filters={filters}
             categories={categories}
+            tags={allTags}
             onChange={setFilters}
           />
-          <ExportButton transactions={filtered} categories={categories} />
+          <ExportButton
+            transactions={filtered}
+            categories={categories}
+          />
         </div>
 
         <div className="text-xs text-zinc-400">
