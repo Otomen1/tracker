@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { LayoutDashboard, ArrowLeftRight, Tag, Wallet, CalendarDays, Settings } from "lucide-react"
+import { LayoutDashboard, ArrowLeftRight, Tag, Wallet, CalendarDays, CalendarRange, Settings } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 const navItems = [
@@ -10,6 +10,7 @@ const navItems = [
   { href: "/transactions", label: "Transactions", icon: ArrowLeftRight },
   { href: "/categories", label: "Categories", icon: Tag },
   { href: "/annual", label: "Annual", icon: CalendarDays },
+  { href: "/monthly", label: "Monthly", icon: CalendarRange },
   { href: "/settings", label: "Settings", icon: Settings },
 ]
 

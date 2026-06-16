@@ -179,6 +179,13 @@ export function getRecentTransactions(transactions: Transaction[], count = 5): T
   return getSortedTransactions(transactions).slice(0, count)
 }
 
+export function getTopTransactions(transactions: Transaction[], monthKey: string, count = 5): Transaction[] {
+  return transactions
+    .filter((t) => t.date.startsWith(monthKey))
+    .sort((a, b) => b.amount - a.amount)
+    .slice(0, count)
+}
+
 export function getSortedTransactions(transactions: Transaction[]): Transaction[] {
   return [...transactions].sort((a, b) => {
     const d = b.date.localeCompare(a.date)

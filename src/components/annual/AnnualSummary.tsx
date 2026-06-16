@@ -3,6 +3,7 @@
 import { AnnualSummary as AnnualSummaryType } from "@/types"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { useSettingsContext } from "@/context/SettingsContext"
+import { useRouter } from "next/navigation"
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts"
 import { formatShortMonth } from "@/lib/formatters"
 import { cn } from "@/lib/utils"
@@ -13,6 +14,7 @@ interface Props { summary: AnnualSummaryType }
 
 export function AnnualSummaryView({ summary }: Props) {
   const { fmt } = useSettingsContext()
+  const router = useRouter()
 
   const chartData = summary.monthlyBreakdown.map((m) => ({
     month: MONTH_NAMES[parseInt(m.month.slice(5)) - 1],
@@ -95,7 +97,11 @@ export function AnnualSummaryView({ summary }: Props) {
               </thead>
               <tbody>
                 {summary.monthlyBreakdown.map((m, i) => (
-                  <tr key={m.month} className="border-b border-zinc-100 dark:border-zinc-800 last:border-0 hover:bg-zinc-50 dark:hover:bg-zinc-800/50">
+                  <tr
+                    key={m.month}
+                    onClick={() => router.push(`/monthly?month=${m.month}`)}
+                    className="border-b border-zinc-100 dark:border-zinc-800 last:border-0 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 cursor-pointer"
+                  >
                     <td className="py-3 px-4 text-sm text-zinc-900 dark:text-zinc-100 font-medium">{MONTH_NAMES[i]}</td>
                     <td className="py-3 px-4 text-sm text-emerald-600 text-right">{m.totalIncome > 0 ? fmt(m.totalIncome) : "—"}</td>
                     <td className="py-3 px-4 text-sm text-rose-500 text-right">{m.totalExpenses > 0 ? fmt(m.totalExpenses) : "—"}</td>
