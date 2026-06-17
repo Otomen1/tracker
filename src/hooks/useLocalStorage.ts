@@ -1,8 +1,10 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { useState, useCallback, useEffect, useRef } from "react"
 
 export function useLocalStorage<T>(key: string, initialValue: T) {
+  const initialValueRef = useRef(initialValue)
+
   const [storedValue, setStoredValue] = useState<T>(() => {
     if (typeof window === "undefined") return initialValue
     try {
@@ -13,6 +15,19 @@ export function useLocalStorage<T>(key: string, initialValue: T) {
     }
   })
 
+  useEffect(() => {
+    const handler = (e: StorageEvent) => {
+      if (e.key !== key || e.storageArea !== localStorage) return
+      try {
+        setStoredValue(e.newValue ? (JSON.parse(e.newValue) as T) : initialValueRef.current)
+      } catch {
+        // ignore malformed JSON from other tabs
+      }
+    }
+    window.addEventListener("storage", handler)
+    return () => window.removeEventListener("storage", handler)
+  }, [key])
+
   const setValue = useCallback(
     (value: T | ((val: T) => T)) => {
       setStoredValue((prev) => {
@@ -21,7 +36,7 @@ export function useLocalStorage<T>(key: string, initialValue: T) {
           try {
             window.localStorage.setItem(key, JSON.stringify(valueToStore))
           } catch {
-            // ignore quota errors
+            window.dispatchEvent(new CustomEvent("storageQuotaExceeded"))
           }
         }
         return valueToStore

@@ -65,7 +65,7 @@ export function TransactionForm({ transaction, categories, onSubmit, onCancel }:
     const current = watch("categoryId")
     const stillValid = filteredCategories.some((c) => c.id === current)
     if (!stillValid) setValue("categoryId", "")
-  }, [selectedType]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [filteredCategories, watch, setValue])
 
   const addTag = () => {
     const trimmed = tagInput.trim().toLowerCase().replace(/\s+/g, "-")
@@ -95,6 +95,7 @@ export function TransactionForm({ transaction, categories, onSubmit, onCancel }:
             <button
               key={t}
               type="button"
+              aria-pressed={selectedType === t}
               onClick={() => setValue("type", t)}
               className={cn(
                 "flex-1 py-2 text-sm font-medium capitalize transition-colors",
@@ -113,14 +114,27 @@ export function TransactionForm({ transaction, categories, onSubmit, onCancel }:
 
       <div className="space-y-1.5">
         <Label htmlFor="amount">Amount</Label>
-        <Input id="amount" type="number" step="0.01" min="0.01" placeholder="0.00" {...register("amount")} />
-        {errors.amount && <p className="text-xs text-destructive">{errors.amount.message}</p>}
+        <Input
+          id="amount"
+          type="number"
+          step="0.01"
+          min="0.01"
+          placeholder="0.00"
+          aria-invalid={!!errors.amount}
+          aria-describedby={errors.amount ? "amount-error" : undefined}
+          {...register("amount")}
+        />
+        {errors.amount && <p id="amount-error" className="text-xs text-destructive">{errors.amount.message}</p>}
       </div>
 
       <div className="space-y-1.5">
-        <Label>Category</Label>
+        <Label htmlFor="category-trigger">Category</Label>
         <Select value={watch("categoryId")} onValueChange={(v) => setValue("categoryId", v)}>
-          <SelectTrigger>
+          <SelectTrigger
+            id="category-trigger"
+            aria-invalid={!!errors.categoryId}
+            aria-describedby={errors.categoryId ? "category-error" : undefined}
+          >
             <SelectValue placeholder="Select a category" />
           </SelectTrigger>
           <SelectContent>
@@ -134,13 +148,19 @@ export function TransactionForm({ transaction, categories, onSubmit, onCancel }:
             ))}
           </SelectContent>
         </Select>
-        {errors.categoryId && <p className="text-xs text-destructive">{errors.categoryId.message}</p>}
+        {errors.categoryId && <p id="category-error" className="text-xs text-destructive">{errors.categoryId.message}</p>}
       </div>
 
       <div className="space-y-1.5">
         <Label htmlFor="description">Description</Label>
-        <Input id="description" placeholder="What was this for?" {...register("description")} />
-        {errors.description && <p className="text-xs text-destructive">{errors.description.message}</p>}
+        <Input
+          id="description"
+          placeholder="What was this for?"
+          aria-invalid={!!errors.description}
+          aria-describedby={errors.description ? "description-error" : undefined}
+          {...register("description")}
+        />
+        {errors.description && <p id="description-error" className="text-xs text-destructive">{errors.description.message}</p>}
       </div>
 
       <div className="space-y-1.5">
@@ -164,7 +184,12 @@ export function TransactionForm({ transaction, categories, onSubmit, onCancel }:
           {tags.map((tag) => (
             <span key={tag} className="inline-flex items-center gap-1 px-2 py-0.5 bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 rounded-full text-xs">
               #{tag}
-              <button type="button" onClick={() => setTags((p) => p.filter((t) => t !== tag))}>
+              <button
+                type="button"
+                aria-label={`Remove tag ${tag}`}
+                className="p-1 -m-1"
+                onClick={() => setTags((p) => p.filter((t) => t !== tag))}
+              >
                 <X className="w-2.5 h-2.5" />
               </button>
             </span>

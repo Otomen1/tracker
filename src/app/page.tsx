@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { useTransactions } from "@/hooks/useTransactions"
 import { useCategories } from "@/hooks/useCategories"
 import { getDashboardStats, getExpenseBreakdown, getMonthlyTrend, getRecentTransactions, getBudgetStatus } from "@/lib/analytics"
@@ -18,11 +18,11 @@ export default function DashboardPage() {
   const { transactions } = useTransactions()
   const { categories } = useCategories()
 
-  const stats = getDashboardStats(transactions, selectedMonth)
-  const expenseBreakdown = getExpenseBreakdown(transactions, selectedMonth, categories)
-  const monthlyTrend = getMonthlyTrend(transactions, 6)
-  const recentTransactions = getRecentTransactions(transactions, 5)
-  const budgetStatus = getBudgetStatus(transactions, selectedMonth, categories)
+  const stats = useMemo(() => getDashboardStats(transactions, selectedMonth), [transactions, selectedMonth])
+  const expenseBreakdown = useMemo(() => getExpenseBreakdown(transactions, selectedMonth, categories), [transactions, selectedMonth, categories])
+  const monthlyTrend = useMemo(() => getMonthlyTrend(transactions, 6), [transactions])
+  const recentTransactions = useMemo(() => getRecentTransactions(transactions, 5), [transactions])
+  const budgetStatus = useMemo(() => getBudgetStatus(transactions, selectedMonth, categories), [transactions, selectedMonth, categories])
 
   return (
     <div className="space-y-5">

@@ -6,6 +6,9 @@ const nextConfig = withPWA({
   aggressiveFrontEndNavCaching: true,
   reloadOnOnline: true,
   disable: process.env.NODE_ENV === "development",
+  fallbacks: {
+    document: "/offline.html",
+  },
 })({});
 
 export default nextConfig;

@@ -4,6 +4,7 @@ import { ThemeToggle } from "@/components/settings/ThemeToggle"
 import { CurrencySelector } from "@/components/settings/CurrencySelector"
 import { SavingsGoalForm } from "@/components/settings/SavingsGoalForm"
 import { BackupRestore } from "@/components/settings/BackupRestore"
+import { InstallPrompt } from "@/components/settings/InstallPrompt"
 import { Separator } from "@/components/ui/separator"
 
 function SettingSection({ title, description, children }: { title: string; description?: string; children: React.ReactNode }) {
@@ -44,6 +45,12 @@ export default function SettingsPage() {
 
         <SettingSection title="Data Backup" description="Export or restore your data">
           <BackupRestore />
+        </SettingSection>
+
+        <Separator />
+
+        <SettingSection title="Install App" description="Add to your home screen for a native-like experience">
+          <InstallPrompt />
         </SettingSection>
       </div>
     </div>

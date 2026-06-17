@@ -1,6 +1,12 @@
 import { Transaction, Category } from "@/types"
 import { formatDate } from "./formatters"
 
+function escapeCsvCell(value: string): string {
+  // Prefix formula-injection characters so spreadsheets don't execute them
+  const safe = /^[=+\-@\t\r]/.test(value) ? `'${value}` : value
+  return `"${safe.replace(/"/g, '""')}"`
+}
+
 export function transactionsToCSV(
   transactions: Transaction[],
   categories: Category[]
@@ -12,13 +18,11 @@ export function transactionsToCSV(
   const rows = [...transactions]
     .sort((a, b) => b.date.localeCompare(a.date))
     .map((t) => [
-      formatDate(t.date),
-      t.type === "income" ? "Income" : "Expense",
-      getCategoryName(t.categoryId),
-      `"${t.description.replace(/"/g, '""')}"`,
-      t.type === "income"
-        ? t.amount.toFixed(2)
-        : `-${t.amount.toFixed(2)}`,
+      escapeCsvCell(formatDate(t.date)),
+      escapeCsvCell(t.type === "income" ? "Income" : "Expense"),
+      escapeCsvCell(getCategoryName(t.categoryId)),
+      escapeCsvCell(t.description),
+      t.type === "income" ? t.amount.toFixed(2) : `-${t.amount.toFixed(2)}`,
     ])
 
   return [headers.join(","), ...rows.map((r) => r.join(","))].join("\n")

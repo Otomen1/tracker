@@ -1,5 +1,6 @@
 "use client"
 
+import { memo } from "react"
 import { BudgetStatus } from "@/types"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { useSettingsContext } from "@/context/SettingsContext"
@@ -10,7 +11,7 @@ interface Props {
   budgets: BudgetStatus[]
 }
 
-export function BudgetProgressCard({ budgets }: Props) {
+export const BudgetProgressCard = memo(function BudgetProgressCard({ budgets }: Props) {
   const { fmt } = useSettingsContext()
 
   if (budgets.length === 0) return null
@@ -56,4 +57,4 @@ export function BudgetProgressCard({ budgets }: Props) {
       </CardContent>
     </Card>
   )
-}
+})

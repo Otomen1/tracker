@@ -1,5 +1,6 @@
 "use client"
 
+import { memo } from "react"
 import { CategoryBreakdown } from "@/types"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from "recharts"
@@ -7,7 +8,7 @@ import { useSettingsContext } from "@/context/SettingsContext"
 
 interface Props { data: CategoryBreakdown[] }
 
-export function ExpensePieChart({ data }: Props) {
+export const ExpensePieChart = memo(function ExpensePieChart({ data }: Props) {
   const { fmt } = useSettingsContext()
 
   const CustomTooltip = ({ active, payload }: { active?: boolean; payload?: { payload: CategoryBreakdown }[] }) => {
@@ -41,17 +42,19 @@ export function ExpensePieChart({ data }: Props) {
         <CardTitle className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">Expenses by Category</CardTitle>
       </CardHeader>
       <CardContent>
-        <ResponsiveContainer width="100%" height={220}>
-          <PieChart>
-            <Pie data={data} cx="50%" cy="45%" innerRadius={55} outerRadius={80} paddingAngle={2} dataKey="total" nameKey="categoryName">
-              {data.map((entry) => (
-                <Cell key={entry.categoryId} fill={entry.color} />
-              ))}
-            </Pie>
-            <Tooltip content={<CustomTooltip />} />
-            <Legend iconType="circle" iconSize={8} formatter={(value) => <span className="text-xs text-zinc-600 dark:text-zinc-400">{value}</span>} />
-          </PieChart>
-        </ResponsiveContainer>
+        <div role="img" aria-label="Pie chart showing expense breakdown by category">
+          <ResponsiveContainer width="100%" height={220}>
+            <PieChart>
+              <Pie data={data} cx="50%" cy="45%" innerRadius={55} outerRadius={80} paddingAngle={2} dataKey="total" nameKey="categoryName">
+                {data.map((entry) => (
+                  <Cell key={entry.categoryId} fill={entry.color} />
+                ))}
+              </Pie>
+              <Tooltip content={<CustomTooltip />} />
+              <Legend iconType="circle" iconSize={8} formatter={(value) => <span className="text-xs text-zinc-600 dark:text-zinc-400">{value}</span>} />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
         <div className="mt-1 space-y-1">
           {data.slice(0, 4).map((item) => (
             <div key={item.categoryId} className="flex items-center justify-between text-xs">
@@ -66,4 +69,4 @@ export function ExpensePieChart({ data }: Props) {
       </CardContent>
     </Card>
   )
-}
+})

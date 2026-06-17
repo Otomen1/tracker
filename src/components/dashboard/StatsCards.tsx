@@ -19,9 +19,11 @@ function TrendBadge({ current, previous }: { current: number; previous: number }
   )
 }
 
+import { memo } from "react"
+
 interface Props { stats: DashboardStats }
 
-export function StatsCards({ stats }: Props) {
+export const StatsCards = memo(function StatsCards({ stats }: Props) {
   const { fmt } = useSettingsContext()
 
   return (
@@ -84,4 +86,4 @@ export function StatsCards({ stats }: Props) {
       </Card>
     </div>
   )
-}
+})

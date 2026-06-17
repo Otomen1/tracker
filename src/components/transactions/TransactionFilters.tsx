@@ -1,11 +1,12 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { TransactionFilters, Category, TransactionType } from "@/types"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
-import { X } from "lucide-react"
+import { SlidersHorizontal, X } from "lucide-react"
+import { cn } from "@/lib/utils"
 
 interface Props {
   filters: TransactionFilters
@@ -16,13 +17,18 @@ interface Props {
 
 export function TransactionFiltersBar({ filters, categories, tags, onChange }: Props) {
   const [search, setSearch] = useState(filters.search ?? "")
+  const [mobileOpen, setMobileOpen] = useState(false)
+  const filtersRef = useRef(filters)
+  filtersRef.current = filters
+  const onChangeRef = useRef(onChange)
+  onChangeRef.current = onChange
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      onChange({ ...filters, search })
+      onChangeRef.current({ ...filtersRef.current, search })
     }, 200)
     return () => clearTimeout(timer)
-  }, [search]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [search])
 
   const hasFilters =
     filters.type ||
@@ -40,17 +46,18 @@ export function TransactionFiltersBar({ filters, categories, tags, onChange }: P
   const clearFilters = () => {
     setSearch("")
     onChange({})
+    setMobileOpen(false)
   }
 
-  return (
-    <div className="flex flex-wrap gap-2 items-center">
+  const filterControls = (
+    <>
       <Select
         value={filters.type ?? "all"}
         onValueChange={(v) =>
           onChange({ ...filters, type: v === "all" ? "" : (v as TransactionType), categoryId: "" })
         }
       >
-        <SelectTrigger className="w-32 h-9 text-sm">
+        <SelectTrigger className="w-full sm:w-32 h-9 text-sm">
           <SelectValue placeholder="All types" />
         </SelectTrigger>
         <SelectContent>
@@ -66,7 +73,7 @@ export function TransactionFiltersBar({ filters, categories, tags, onChange }: P
           onChange({ ...filters, categoryId: v === "all" ? "" : v })
         }
       >
-        <SelectTrigger className="w-36 h-9 text-sm">
+        <SelectTrigger className="w-full sm:w-36 h-9 text-sm">
           <SelectValue placeholder="All categories" />
         </SelectTrigger>
         <SelectContent>
@@ -90,7 +97,7 @@ export function TransactionFiltersBar({ filters, categories, tags, onChange }: P
           value={filters.tag ?? "all"}
           onValueChange={(v) => onChange({ ...filters, tag: v === "all" ? "" : v })}
         >
-          <SelectTrigger className="w-32 h-9 text-sm">
+          <SelectTrigger className="w-full sm:w-32 h-9 text-sm">
             <SelectValue placeholder="All tags" />
           </SelectTrigger>
           <SelectContent>
@@ -104,24 +111,17 @@ export function TransactionFiltersBar({ filters, categories, tags, onChange }: P
 
       <Input
         type="date"
-        className="w-36 h-9 text-sm"
+        className="w-full sm:w-36 h-9 text-sm"
         value={filters.dateFrom ?? ""}
         onChange={(e) => onChange({ ...filters, dateFrom: e.target.value })}
         placeholder="From"
       />
       <Input
         type="date"
-        className="w-36 h-9 text-sm"
+        className="w-full sm:w-36 h-9 text-sm"
         value={filters.dateTo ?? ""}
         onChange={(e) => onChange({ ...filters, dateTo: e.target.value })}
         placeholder="To"
-      />
-
-      <Input
-        className="w-44 h-9 text-sm"
-        placeholder="Search..."
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
       />
 
       {hasFilters && (
@@ -135,6 +135,50 @@ export function TransactionFiltersBar({ filters, categories, tags, onChange }: P
           Clear
         </Button>
       )}
+    </>
+  )
+
+  return (
+    <div className="space-y-2">
+      {/* Mobile: search + toggle */}
+      <div className="flex items-center gap-2 sm:hidden">
+        <Input
+          className="flex-1 h-9 text-sm"
+          placeholder="Search..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+        <Button
+          variant={mobileOpen ? "secondary" : "outline"}
+          size="sm"
+          className="h-9 shrink-0"
+          aria-pressed={mobileOpen}
+          aria-label="Toggle filters"
+          onClick={() => setMobileOpen((o) => !o)}
+        >
+          <SlidersHorizontal className="w-3.5 h-3.5 mr-1.5" />
+          Filters
+          {hasFilters && <span className="ml-1.5 w-1.5 h-1.5 rounded-full bg-primary inline-block" />}
+        </Button>
+      </div>
+
+      {/* Mobile expanded filters */}
+      {mobileOpen && (
+        <div className={cn("flex flex-wrap gap-2 items-center sm:hidden")}>
+          {filterControls}
+        </div>
+      )}
+
+      {/* Desktop: always visible */}
+      <div className="hidden sm:flex flex-wrap gap-2 items-center">
+        {filterControls}
+        <Input
+          className="w-44 h-9 text-sm"
+          placeholder="Search..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+      </div>
     </div>
   )
 }

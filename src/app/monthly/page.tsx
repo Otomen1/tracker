@@ -1,6 +1,6 @@
 "use client"
 
-import { Suspense } from "react"
+import { Suspense, useMemo } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useTransactions } from "@/hooks/useTransactions"
 import { useCategories } from "@/hooks/useCategories"
@@ -21,10 +21,10 @@ function MonthlyPageContent() {
   const { transactions } = useTransactions()
   const { categories } = useCategories()
 
-  const stats = getDashboardStats(transactions, month)
-  const expenseBreakdown = getExpenseBreakdown(transactions, month, categories)
-  const budgetStatus = getBudgetStatus(transactions, month, categories)
-  const topTransactions = getTopTransactions(transactions, month, 8)
+  const stats = useMemo(() => getDashboardStats(transactions, month), [transactions, month])
+  const expenseBreakdown = useMemo(() => getExpenseBreakdown(transactions, month, categories), [transactions, month, categories])
+  const budgetStatus = useMemo(() => getBudgetStatus(transactions, month, categories), [transactions, month, categories])
+  const topTransactions = useMemo(() => getTopTransactions(transactions, month, 8), [transactions, month])
 
   const handleMonthChange = (newMonth: string) => {
     router.push(`/monthly?month=${newMonth}`)
