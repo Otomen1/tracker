@@ -1,12 +1,13 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState, useCallback } from "react"
 import { Transaction, Category, TransactionFormData } from "@/types"
 import { TransactionRow } from "./TransactionRow"
-import { ArrowLeftRight, ChevronLeft, ChevronRight } from "lucide-react"
+import { TransactionDialog } from "./TransactionDialog"
+import { DeleteConfirmDialog } from "./DeleteConfirmDialog"
+import { ArrowLeftRight, ChevronLeft, ChevronRight, Undo2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-
-const PAGE_SIZE = 25
+import { PAGE_SIZE, UNDO_TIMEOUT_MS } from "@/lib/constants"
 
 interface Props {
   transactions: Transaction[]
@@ -17,8 +18,41 @@ interface Props {
 
 export function TransactionList({ transactions, categories, onUpdate, onDelete }: Props) {
   const [page, setPage] = useState(0)
+  const [editTarget, setEditTarget] = useState<Transaction | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<Transaction | null>(null)
+  const [undoItem, setUndoItem] = useState<Transaction | null>(null)
+  const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => { setPage(0) }, [transactions])
+  useEffect(() => () => { if (undoTimerRef.current) clearTimeout(undoTimerRef.current) }, [])
+
+  const handleDeleteConfirm = useCallback(() => {
+    if (!deleteTarget) return
+    const deleted = deleteTarget
+    onDelete(deleted.id)
+    setDeleteTarget(null)
+    setUndoItem(deleted)
+    if (undoTimerRef.current) clearTimeout(undoTimerRef.current)
+    undoTimerRef.current = setTimeout(() => setUndoItem(null), UNDO_TIMEOUT_MS)
+  }, [deleteTarget, onDelete])
+
+  const handleUndo = useCallback(() => {
+    if (!undoItem) return
+    if (undoTimerRef.current) clearTimeout(undoTimerRef.current)
+    // Re-add as a new transaction with same data
+    onUpdate(undoItem.id, {
+      type: undoItem.type,
+      amount: String(undoItem.amount),
+      categoryId: undoItem.categoryId,
+      description: undoItem.description,
+      date: undoItem.date,
+      notes: undoItem.notes,
+      tags: undoItem.tags,
+      isRecurring: undoItem.isRecurring,
+      recurringDay: undoItem.recurringDay,
+    })
+    setUndoItem(null)
+  }, [undoItem, onUpdate])
 
   if (transactions.length === 0) {
     return (
@@ -37,6 +71,21 @@ export function TransactionList({ transactions, categories, onUpdate, onDelete }
 
   return (
     <div className="space-y-3">
+      {undoItem && (
+        <div className="flex items-center justify-between gap-2 px-3 py-2 bg-zinc-900 dark:bg-zinc-100 text-zinc-100 dark:text-zinc-900 rounded-lg text-sm">
+          <span>Transaction deleted</span>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-7 gap-1.5 text-zinc-100 dark:text-zinc-900 hover:bg-white/10 dark:hover:bg-black/10"
+            onClick={handleUndo}
+          >
+            <Undo2 className="w-3.5 h-3.5" />
+            Undo
+          </Button>
+        </div>
+      )}
+
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead>
@@ -55,8 +104,8 @@ export function TransactionList({ transactions, categories, onUpdate, onDelete }
                 key={t.id}
                 transaction={t}
                 categories={categories}
-                onUpdate={onUpdate}
-                onDelete={onDelete}
+                onEditRequest={setEditTarget}
+                onDeleteRequest={setDeleteTarget}
               />
             ))}
           </tbody>
@@ -93,6 +142,20 @@ export function TransactionList({ transactions, categories, onUpdate, onDelete }
           </div>
         </div>
       )}
+
+      <TransactionDialog
+        open={editTarget !== null}
+        onOpenChange={(open) => { if (!open) setEditTarget(null) }}
+        transaction={editTarget ?? undefined}
+        categories={categories}
+        onSubmit={(data) => { if (editTarget) { onUpdate(editTarget.id, data); setEditTarget(null) } }}
+      />
+      <DeleteConfirmDialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => { if (!open) setDeleteTarget(null) }}
+        description="Are you sure you want to delete this transaction? This cannot be undone."
+        onConfirm={handleDeleteConfirm}
+      />
     </div>
   )
 }

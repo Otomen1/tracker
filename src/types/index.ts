@@ -106,4 +106,6 @@ export interface TransactionFilters {
   dateTo?: string
   search?: string
   tag?: string
+  minAmount?: number
+  maxAmount?: number
 }

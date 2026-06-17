@@ -17,6 +17,8 @@ interface Props {
 
 export function TransactionFiltersBar({ filters, categories, tags, onChange }: Props) {
   const [search, setSearch] = useState(filters.search ?? "")
+  const [minAmount, setMinAmount] = useState(filters.minAmount !== undefined ? String(filters.minAmount) : "")
+  const [maxAmount, setMaxAmount] = useState(filters.maxAmount !== undefined ? String(filters.maxAmount) : "")
   const [mobileOpen, setMobileOpen] = useState(false)
   const filtersRef = useRef(filters)
   filtersRef.current = filters
@@ -30,13 +32,24 @@ export function TransactionFiltersBar({ filters, categories, tags, onChange }: P
     return () => clearTimeout(timer)
   }, [search])
 
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const min = minAmount !== "" ? parseFloat(minAmount) : undefined
+      const max = maxAmount !== "" ? parseFloat(maxAmount) : undefined
+      onChangeRef.current({ ...filtersRef.current, minAmount: isNaN(min!) ? undefined : min, maxAmount: isNaN(max!) ? undefined : max })
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [minAmount, maxAmount])
+
   const hasFilters =
     filters.type ||
     filters.categoryId ||
     filters.dateFrom ||
     filters.dateTo ||
     filters.search ||
-    filters.tag
+    filters.tag ||
+    filters.minAmount !== undefined ||
+    filters.maxAmount !== undefined
 
   const filteredCategories =
     filters.type
@@ -45,6 +58,8 @@ export function TransactionFiltersBar({ filters, categories, tags, onChange }: P
 
   const clearFilters = () => {
     setSearch("")
+    setMinAmount("")
+    setMaxAmount("")
     onChange({})
     setMobileOpen(false)
   }
@@ -122,6 +137,23 @@ export function TransactionFiltersBar({ filters, categories, tags, onChange }: P
         value={filters.dateTo ?? ""}
         onChange={(e) => onChange({ ...filters, dateTo: e.target.value })}
         placeholder="To"
+      />
+
+      <Input
+        type="number"
+        min="0"
+        className="w-full sm:w-28 h-9 text-sm"
+        value={minAmount}
+        onChange={(e) => setMinAmount(e.target.value)}
+        placeholder="Min $"
+      />
+      <Input
+        type="number"
+        min="0"
+        className="w-full sm:w-28 h-9 text-sm"
+        value={maxAmount}
+        onChange={(e) => setMaxAmount(e.target.value)}
+        placeholder="Max $"
       />
 
       {hasFilters && (

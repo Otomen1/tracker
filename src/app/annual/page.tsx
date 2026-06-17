@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { useTransactions } from "@/hooks/useTransactions"
 import { useCategories } from "@/hooks/useCategories"
 import { getAnnualSummary } from "@/lib/analytics"
@@ -15,7 +15,11 @@ export default function AnnualPage() {
   const { transactions } = useTransactions()
   const { categories } = useCategories()
 
-  const summary = getAnnualSummary(transactions, year, categories)
+  const summary = useMemo(() => getAnnualSummary(transactions, year, categories), [transactions, year, categories])
+  const prevYearSummary = useMemo(
+    () => (year < currentYear ? getAnnualSummary(transactions, year - 1, categories) : null),
+    [transactions, year, categories, currentYear]
+  )
 
   return (
     <div className="space-y-6">
@@ -32,7 +36,7 @@ export default function AnnualPage() {
         </div>
       </div>
 
-      <AnnualSummaryView summary={summary} />
+      <AnnualSummaryView summary={summary} prevYearSummary={prevYearSummary} />
     </div>
   )
 }

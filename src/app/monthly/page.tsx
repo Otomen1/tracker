@@ -8,7 +8,11 @@ import { getDashboardStats, getExpenseBreakdown, getBudgetStatus, getTopTransact
 import { getMonthKey } from "@/lib/formatters"
 import { MonthSelector } from "@/components/dashboard/MonthSelector"
 import { StatsCards } from "@/components/dashboard/StatsCards"
-import { ExpensePieChart } from "@/components/dashboard/ExpensePieChart"
+import dynamic from "next/dynamic"
+const ExpensePieChart = dynamic(
+  () => import("@/components/dashboard/ExpensePieChart").then((m) => ({ default: m.ExpensePieChart })),
+  { ssr: false, loading: () => <div className="h-[316px] rounded-xl animate-pulse bg-zinc-100 dark:bg-zinc-800" /> }
+)
 import { BudgetProgressCard } from "@/components/dashboard/BudgetProgressCard"
 import { TopTransactions } from "@/components/monthly/TopTransactions"
 

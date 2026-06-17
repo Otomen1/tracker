@@ -1,4 +1,4 @@
-import { format, parseISO } from "date-fns"
+import { format, parseISO, addMonths as dateFnsAddMonths } from "date-fns"
 
 export function formatCurrency(amount: number, currency = "USD"): string {
   try {
@@ -8,6 +8,7 @@ export function formatCurrency(amount: number, currency = "USD"): string {
       minimumFractionDigits: 2,
     }).format(amount)
   } catch {
+    console.warn("formatCurrency: invalid currency code", currency)
     return new Intl.NumberFormat("en-US", {
       style: "currency",
       currency: "USD",
@@ -51,8 +52,7 @@ export function getYearKey(date?: Date): number {
 
 export function addMonths(monthKey: string, delta: number): string {
   const date = parseISO(`${monthKey}-01`)
-  date.setMonth(date.getMonth() + delta)
-  return format(date, "yyyy-MM")
+  return format(dateFnsAddMonths(date, delta), "yyyy-MM")
 }
 
 export function getTodayString(): string {

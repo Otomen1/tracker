@@ -7,8 +7,15 @@ import { getDashboardStats, getExpenseBreakdown, getMonthlyTrend, getRecentTrans
 import { getMonthKey } from "@/lib/formatters"
 import { MonthSelector } from "@/components/dashboard/MonthSelector"
 import { StatsCards } from "@/components/dashboard/StatsCards"
-import { ExpensePieChart } from "@/components/dashboard/ExpensePieChart"
-import { MonthlyBarChart } from "@/components/dashboard/MonthlyBarChart"
+import dynamic from "next/dynamic"
+const ExpensePieChart = dynamic(
+  () => import("@/components/dashboard/ExpensePieChart").then((m) => ({ default: m.ExpensePieChart })),
+  { ssr: false, loading: () => <div className="h-[316px] rounded-xl animate-pulse bg-zinc-100 dark:bg-zinc-800" /> }
+)
+const MonthlyBarChart = dynamic(
+  () => import("@/components/dashboard/MonthlyBarChart").then((m) => ({ default: m.MonthlyBarChart })),
+  { ssr: false, loading: () => <div className="h-[316px] rounded-xl animate-pulse bg-zinc-100 dark:bg-zinc-800" /> }
+)
 import { RecentTransactions } from "@/components/dashboard/RecentTransactions"
 import { SavingsGoalCard } from "@/components/dashboard/SavingsGoalCard"
 import { BudgetProgressCard } from "@/components/dashboard/BudgetProgressCard"

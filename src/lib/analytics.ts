@@ -126,43 +126,61 @@ export function getAnnualSummary(
   categories: Category[]
 ): AnnualSummary {
   const yearStr = year.toString()
-  const yearTxns = transactions.filter((t) => t.date.startsWith(yearStr))
-  const totalIncome = round2(yearTxns.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0))
-  const totalExpenses = round2(yearTxns.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0))
+
+  // Single-pass accumulator over all transactions
+  type MonthBucket = { inc: number; exp: number; count: number }
+  const monthly: Record<string, MonthBucket> = {}
+  const catMap: Record<string, { sum: number; count: number }> = {}
+  let totalIncome = 0
+  let totalExpenses = 0
+
+  for (const t of transactions) {
+    if (!t.date.startsWith(yearStr)) continue
+    const monthKey = t.date.slice(0, 7)
+    const bucket = monthly[monthKey] ?? (monthly[monthKey] = { inc: 0, exp: 0, count: 0 })
+    bucket.count += 1
+    if (t.type === "income") {
+      totalIncome += t.amount
+      bucket.inc += t.amount
+    } else {
+      totalExpenses += t.amount
+      bucket.exp += t.amount
+      const entry = catMap[t.categoryId] ?? (catMap[t.categoryId] = { sum: 0, count: 0 })
+      entry.sum += t.amount
+      entry.count += 1
+    }
+  }
 
   const monthlyBreakdown = Array.from({ length: 12 }, (_, i) => {
-    const month = String(i + 1).padStart(2, "0")
-    const monthKey = `${yearStr}-${month}`
-    const monthTxns = yearTxns.filter((t) => t.date.startsWith(monthKey))
-    const inc = round2(monthTxns.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0))
-    const exp = round2(monthTxns.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0))
-    return { month: monthKey, totalIncome: inc, totalExpenses: exp, netBalance: round2(inc - exp), transactionCount: monthTxns.length }
+    const monthKey = `${yearStr}-${String(i + 1).padStart(2, "0")}`
+    const b = monthly[monthKey] ?? { inc: 0, exp: 0, count: 0 }
+    const inc = round2(b.inc)
+    const exp = round2(b.exp)
+    return { month: monthKey, totalIncome: inc, totalExpenses: exp, netBalance: round2(inc - exp), transactionCount: b.count }
   })
 
-  const yearExpenses = yearTxns.filter((t) => t.type === "expense")
-  const yearExpTotal = yearExpenses.reduce((s, t) => s + t.amount, 0)
-  const grouped = yearExpenses.reduce<Record<string, { sum: number; count: number }>>((acc, t) => {
-    const entry = acc[t.categoryId] ?? { sum: 0, count: 0 }
-    entry.sum += t.amount
-    entry.count += 1
-    acc[t.categoryId] = entry
-    return acc
-  }, {})
-  const topExpenseCategories: CategoryBreakdown[] = Object.entries(grouped)
+  const topExpenseCategories: CategoryBreakdown[] = Object.entries(catMap)
     .map(([categoryId, { sum, count }]) => {
       const cat = categories.find((c) => c.id === categoryId)
       return {
         categoryId,
         categoryName: cat?.name ?? "Unknown",
         color: cat?.color ?? "#6b7280",
-        total: sum,
-        percentage: yearExpTotal > 0 ? (sum / yearExpTotal) * 100 : 0,
+        total: round2(sum),
+        percentage: totalExpenses > 0 ? round2((sum / totalExpenses) * 100) : 0,
         count,
       }
     })
     .sort((a, b) => b.total - a.total)
 
-  return { year, totalIncome, totalExpenses, netBalance: round2(totalIncome - totalExpenses), monthlyBreakdown, topExpenseCategories }
+  return {
+    year,
+    totalIncome: round2(totalIncome),
+    totalExpenses: round2(totalExpenses),
+    netBalance: round2(totalIncome - totalExpenses),
+    monthlyBreakdown,
+    topExpenseCategories,
+  }
 }
 
 export function filterTransactions(
@@ -175,6 +193,8 @@ export function filterTransactions(
     if (filters.dateFrom && t.date < filters.dateFrom) return false
     if (filters.dateTo && t.date > filters.dateTo) return false
     if (filters.tag && !(t.tags ?? []).includes(filters.tag)) return false
+    if (filters.minAmount !== undefined && t.amount < filters.minAmount) return false
+    if (filters.maxAmount !== undefined && t.amount > filters.maxAmount) return false
     if (filters.search) {
       const q = filters.search.toLowerCase()
       const matchDesc = t.description.toLowerCase().includes(q)
