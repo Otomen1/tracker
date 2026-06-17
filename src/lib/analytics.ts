@@ -41,21 +41,24 @@ export function getExpenseBreakdown(
   const total = expenses.reduce((s, t) => s + t.amount, 0)
   if (total === 0) return []
 
-  const grouped = expenses.reduce<Record<string, number>>((acc, t) => {
-    acc[t.categoryId] = (acc[t.categoryId] ?? 0) + t.amount
+  const grouped = expenses.reduce<Record<string, { sum: number; count: number }>>((acc, t) => {
+    const entry = acc[t.categoryId] ?? { sum: 0, count: 0 }
+    entry.sum += t.amount
+    entry.count += 1
+    acc[t.categoryId] = entry
     return acc
   }, {})
 
   return Object.entries(grouped)
-    .map(([categoryId, amount]) => {
+    .map(([categoryId, { sum, count }]) => {
       const cat = categories.find((c) => c.id === categoryId)
       return {
         categoryId,
         categoryName: cat?.name ?? "Unknown",
         color: cat?.color ?? "#6b7280",
-        total: amount,
-        percentage: (amount / total) * 100,
-        count: expenses.filter((t) => t.categoryId === categoryId).length,
+        total: sum,
+        percentage: (sum / total) * 100,
+        count,
       }
     })
     .sort((a, b) => b.total - a.total)
@@ -75,10 +78,13 @@ export function getBudgetStatus(
     (t) => t.type === "expense" && t.date.startsWith(monthKey)
   )
 
+  const spentByCategory = expenses.reduce<Record<string, number>>((acc, t) => {
+    acc[t.categoryId] = (acc[t.categoryId] ?? 0) + t.amount
+    return acc
+  }, {})
+
   return budgetedCategories.map((cat) => {
-    const spent = expenses
-      .filter((t) => t.categoryId === cat.id)
-      .reduce((s, t) => s + t.amount, 0)
+    const spent = spentByCategory[cat.id] ?? 0
     const budget = cat.budget!
     return {
       categoryId: cat.id,
@@ -133,20 +139,23 @@ export function getAnnualSummary(
 
   const yearExpenses = yearTxns.filter((t) => t.type === "expense")
   const yearExpTotal = yearExpenses.reduce((s, t) => s + t.amount, 0)
-  const grouped = yearExpenses.reduce<Record<string, number>>((acc, t) => {
-    acc[t.categoryId] = (acc[t.categoryId] ?? 0) + t.amount
+  const grouped = yearExpenses.reduce<Record<string, { sum: number; count: number }>>((acc, t) => {
+    const entry = acc[t.categoryId] ?? { sum: 0, count: 0 }
+    entry.sum += t.amount
+    entry.count += 1
+    acc[t.categoryId] = entry
     return acc
   }, {})
   const topExpenseCategories: CategoryBreakdown[] = Object.entries(grouped)
-    .map(([categoryId, amount]) => {
+    .map(([categoryId, { sum, count }]) => {
       const cat = categories.find((c) => c.id === categoryId)
       return {
         categoryId,
         categoryName: cat?.name ?? "Unknown",
         color: cat?.color ?? "#6b7280",
-        total: amount,
-        percentage: yearExpTotal > 0 ? (amount / yearExpTotal) * 100 : 0,
-        count: yearExpenses.filter((t) => t.categoryId === categoryId).length,
+        total: sum,
+        percentage: yearExpTotal > 0 ? (sum / yearExpTotal) * 100 : 0,
+        count,
       }
     })
     .sort((a, b) => b.total - a.total)

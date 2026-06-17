@@ -1,5 +1,44 @@
+import { z } from "zod"
 import { Transaction, Category, Settings } from "@/types"
 import { DEFAULT_CATEGORIES, DEFAULT_SETTINGS, STORAGE_KEYS, SCHEMA_VERSION } from "./constants"
+
+const transactionSchema = z.object({
+  id: z.string(),
+  type: z.enum(["income", "expense"]),
+  amount: z.number(),
+  categoryId: z.string(),
+  description: z.string(),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  notes: z.string().optional(),
+  tags: z.array(z.string()).optional(),
+  isRecurring: z.boolean().optional(),
+  recurringDay: z.number().optional(),
+  recurringId: z.string().optional(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+})
+
+const categorySchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  type: z.enum(["income", "expense", "both"]),
+  color: z.string(),
+  isDefault: z.boolean(),
+  budget: z.number().optional(),
+  createdAt: z.string(),
+})
+
+const settingsSchema = z.object({
+  currency: z.string(),
+  theme: z.enum(["light", "dark", "system"]),
+  monthlySavingsGoal: z.number(),
+})
+
+const backupSchema = z.object({
+  transactions: z.array(transactionSchema),
+  categories: z.array(categorySchema).optional(),
+  settings: settingsSchema.optional(),
+})
 
 function safeRead<T>(key: string, fallback: T): T {
   if (typeof window === "undefined") return fallback
@@ -58,20 +97,22 @@ export function exportAllData(): string {
 }
 
 export function importAllData(json: string): { success: boolean; error?: string } {
+  let parsed: unknown
   try {
-    const data = JSON.parse(json)
-    if (!data.transactions || !Array.isArray(data.transactions)) {
-      return { success: false, error: "Invalid backup file: missing transactions" }
-    }
-    if (data.categories && Array.isArray(data.categories)) {
-      saveCategories(data.categories)
-    }
-    saveTransactions(data.transactions)
-    if (data.settings) saveSettings(data.settings)
-    return { success: true }
+    parsed = JSON.parse(json)
   } catch {
     return { success: false, error: "Could not parse backup file" }
   }
+  const result = backupSchema.safeParse(parsed)
+  if (!result.success) {
+    const msg = result.error.issues[0]?.message ?? "Invalid backup file"
+    return { success: false, error: `Invalid backup file: ${msg}` }
+  }
+  const data = result.data
+  if (data.categories) saveCategories(data.categories)
+  saveTransactions(data.transactions)
+  if (data.settings) saveSettings(data.settings)
+  return { success: true }
 }
 
 export function initializeStorage(): void {
