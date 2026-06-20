@@ -2,15 +2,26 @@
 
 import { useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { exportAllData, importAllData } from "@/lib/storage"
 import { Download, Upload, CheckCircle, AlertCircle } from "lucide-react"
 import { DeleteConfirmDialog } from "@/components/transactions/DeleteConfirmDialog"
 import { BACKUP_MAX_FILE_SIZE_MB } from "@/lib/constants"
+import { useSettingsContext } from "@/context/SettingsContext"
+
+const BACKUP_INTERVAL_LABELS: Record<string, string> = {
+  never: "Never",
+  daily: "Daily",
+  weekly: "Weekly",
+  monthly: "Monthly",
+}
 
 export function BackupRestore() {
   const fileRef = useRef<HTMLInputElement>(null)
   const [status, setStatus] = useState<{ type: "success" | "error"; message: string } | null>(null)
   const [pendingFile, setPendingFile] = useState<File | null>(null)
+  const { settings, updateSettings } = useSettingsContext()
+  const backupInterval = settings.backupInterval ?? "never"
 
   const handleExport = () => {
     const data = exportAllData()
@@ -73,6 +84,36 @@ export function BackupRestore() {
         </div>
       )}
       <p className="text-xs text-zinc-400">Export saves all transactions, categories, and settings to a JSON file. Import restores from a previous backup.</p>
+
+      <div className="flex items-center gap-3 pt-1">
+        <span className="text-sm text-zinc-700 dark:text-zinc-300 shrink-0">Auto backup</span>
+        <Select
+          value={backupInterval}
+          onValueChange={(v) => {
+            const next = v as "never" | "daily" | "weekly" | "monthly"
+            // Only clear lastBackupAt when activating a schedule for the first time
+            // (switching between two active intervals should preserve the timestamp)
+            const patch = backupInterval === "never" && next !== "never"
+              ? { backupInterval: next, lastBackupAt: undefined }
+              : { backupInterval: next }
+            updateSettings(patch)
+          }}
+        >
+          <SelectTrigger className="w-32 h-8 text-sm">
+            <SelectValue>{BACKUP_INTERVAL_LABELS[backupInterval]}</SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            {Object.entries(BACKUP_INTERVAL_LABELS).map(([value, label]) => (
+              <SelectItem key={value} value={value}>{label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {backupInterval !== "never" && settings.lastBackupAt && (
+          <span className="text-xs text-zinc-400">
+            Last: {new Date(settings.lastBackupAt).toLocaleDateString()}
+          </span>
+        )}
+      </div>
 
       <DeleteConfirmDialog
         open={pendingFile !== null}

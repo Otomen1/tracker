@@ -18,7 +18,7 @@ import { formatDate } from "@/lib/formatters"
 import { cn } from "@/lib/utils"
 
 export default function TransactionsPage() {
-  const { transactions, addTransaction, updateTransaction, deleteTransaction, deleteWithCascade } = useTransactions()
+  const { transactions, addTransaction, updateTransaction, deleteTransaction, deleteWithCascade, restoreTransaction } = useTransactions()
   const { categories } = useCategories()
   const { fmt, settings } = useSettingsContext()
   const { showToast } = useToast()
@@ -163,6 +163,7 @@ export default function TransactionsPage() {
             filters={filters}
             categories={categories}
             tags={allTags}
+            fmt={fmt}
             onChange={setFilters}
           />
           <ExportButton
@@ -182,7 +183,7 @@ export default function TransactionsPage() {
           transactions={filtered}
           categories={categories}
           filterKey={filterKey}
-          onAdd={handleAdd}
+          onRestore={restoreTransaction}
           onUpdate={handleUpdate}
           onDelete={handleDelete}
         />

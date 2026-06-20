@@ -32,6 +32,8 @@ export interface Settings {
   currency: string
   theme: "light" | "dark" | "system"
   monthlySavingsGoal: number
+  backupInterval?: "never" | "daily" | "weekly" | "monthly"
+  lastBackupAt?: string
 }
 
 export interface MonthlySummary {

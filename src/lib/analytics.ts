@@ -207,6 +207,31 @@ export function filterTransactions(
   })
 }
 
+export function getCumulativeBalance(transactions: Transaction[]): { month: string; balance: number }[] {
+  if (transactions.length === 0) return []
+
+  const sorted = [...transactions].sort((a, b) => a.date.localeCompare(b.date))
+  const firstMonth = sorted[0].date.slice(0, 7)
+  const currentMonth = getMonthKey()
+  if (firstMonth > currentMonth) return []
+
+  const monthlyNet: Record<string, number> = {}
+  for (const t of sorted) {
+    const m = t.date.slice(0, 7)
+    monthlyNet[m] = (monthlyNet[m] ?? 0) + (t.type === "income" ? t.amount : -t.amount)
+  }
+
+  const result: { month: string; balance: number }[] = []
+  let cumulative = 0
+  let m = firstMonth
+  while (m <= currentMonth) {
+    cumulative = round2(cumulative + (monthlyNet[m] ?? 0))
+    result.push({ month: m, balance: cumulative })
+    m = addMonths(m, 1)
+  }
+  return result
+}
+
 export function getRecentTransactions(transactions: Transaction[], count = 5): Transaction[] {
   return getSortedTransactions(transactions).slice(0, count)
 }

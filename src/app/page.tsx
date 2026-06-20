@@ -5,7 +5,7 @@ import dynamic from "next/dynamic"
 import { useTransactions } from "@/hooks/useTransactions"
 import { useCategories } from "@/hooks/useCategories"
 import { useHydrated } from "@/hooks/useHydrated"
-import { getDashboardStats, getExpenseBreakdown, getMonthlyTrend, getRecentTransactions, getBudgetStatus, getSpendingInsights } from "@/lib/analytics"
+import { getDashboardStats, getExpenseBreakdown, getMonthlyTrend, getRecentTransactions, getBudgetStatus, getSpendingInsights, getCumulativeBalance } from "@/lib/analytics"
 import { getMonthKey } from "@/lib/formatters"
 import { MONTHS_IN_CHART, RECENT_TRANSACTIONS_COUNT } from "@/lib/constants"
 import { useSettingsContext } from "@/context/SettingsContext"
@@ -28,6 +28,11 @@ const MonthlyBarChart = dynamic(
   { loading: () => <ChartSkeleton height={260} />, ssr: false }
 )
 
+const CumulativeNetChart = dynamic(
+  () => import("@/components/dashboard/CumulativeNetChart").then((m) => ({ default: m.CumulativeNetChart })),
+  { loading: () => <ChartSkeleton height={200} />, ssr: false }
+)
+
 export default function DashboardPage() {
   const [selectedMonth, setSelectedMonth] = useState(getMonthKey())
   const isHydrated = useHydrated()
@@ -41,6 +46,7 @@ export default function DashboardPage() {
   const recentTransactions = useMemo(() => getRecentTransactions(transactions, RECENT_TRANSACTIONS_COUNT), [transactions])
   const budgetStatus = useMemo(() => getBudgetStatus(transactions, selectedMonth, categories), [transactions, selectedMonth, categories])
   const insights = useMemo(() => getSpendingInsights(transactions, selectedMonth, categories, fmt), [transactions, selectedMonth, categories, fmt])
+  const cumulativeBalance = useMemo(() => getCumulativeBalance(transactions), [transactions])
 
   const overBudgetCategories = useMemo(() => budgetStatus.filter((b) => b.isOverBudget), [budgetStatus])
 
@@ -98,6 +104,8 @@ export default function DashboardPage() {
         <ExpensePieChart data={expenseBreakdown} />
         <MonthlyBarChart data={monthlyTrend} />
       </div>
+
+      <CumulativeNetChart data={cumulativeBalance} />
 
       <RecentTransactions transactions={recentTransactions} categories={categories} />
     </div>

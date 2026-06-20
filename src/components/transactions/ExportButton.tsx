@@ -24,9 +24,9 @@ interface Preset {
   getRangeLabel: () => string
 }
 
-function buildPresets(): Preset[] {
+const PRESETS: Preset[] = (() => {
   const cur = getMonthKey()
-  const [curYear, curMon] = cur.split("-")
+  const [curYear] = cur.split("-")
 
   return [
     {
@@ -75,7 +75,7 @@ function buildPresets(): Preset[] {
       getRangeLabel: () => "All time",
     },
   ]
-}
+})()
 
 function filterByRange(transactions: Transaction[], range: { from: string; to: string } | null) {
   if (!range) return transactions
@@ -86,15 +86,21 @@ export function ExportButton({ allTransactions, transactions, categories, curren
   const [open, setOpen] = useState(false)
   const [pdfLoading, setPdfLoading] = useState<string | null>(null)
   const ref = useRef<HTMLDivElement>(null)
-  const presets = buildPresets()
   const isEmpty = allTransactions.length === 0
 
   useEffect(() => {
     const handleOutside = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
     }
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false)
+    }
     document.addEventListener("mousedown", handleOutside)
-    return () => document.removeEventListener("mousedown", handleOutside)
+    document.addEventListener("keydown", handleKeyDown)
+    return () => {
+      document.removeEventListener("mousedown", handleOutside)
+      document.removeEventListener("keydown", handleKeyDown)
+    }
   }, [])
 
   const handleCSV = (txns: Transaction[], filename: string) => {
@@ -113,7 +119,7 @@ export function ExportButton({ allTransactions, transactions, categories, curren
   }
 
   const rows: Array<{ label: string; txns: Transaction[]; csvFile: string; pdfFile: string; rangeLabel: string }> = [
-    ...presets.map((p) => ({
+    ...PRESETS.map((p) => ({
       label: p.label,
       txns: filterByRange(allTransactions, p.getRange()),
       csvFile: p.getFilename("csv"),
@@ -136,6 +142,8 @@ export function ExportButton({ allTransactions, transactions, categories, curren
         size="sm"
         disabled={isEmpty}
         onClick={() => setOpen((v) => !v)}
+        aria-haspopup="menu"
+        aria-expanded={open}
         className="gap-1.5"
       >
         <Download className="w-4 h-4" />
@@ -144,7 +152,7 @@ export function ExportButton({ allTransactions, transactions, categories, curren
       </Button>
 
       {open && (
-        <div className="absolute left-0 sm:left-auto sm:right-0 top-full mt-1 z-20 w-72 max-w-[calc(100vw-1rem)] rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 shadow-lg overflow-hidden">
+        <div role="menu" className="absolute left-0 sm:left-auto sm:right-0 top-full mt-1 z-20 w-72 max-w-[calc(100vw-1rem)] rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 shadow-lg overflow-hidden">
           {/* Column headers */}
           <div className="flex items-center px-3 py-2 border-b border-zinc-100 dark:border-zinc-800">
             <span className="flex-1 text-xs font-medium text-zinc-400 uppercase tracking-wide">Date range</span>
@@ -157,7 +165,7 @@ export function ExportButton({ allTransactions, transactions, categories, curren
               {i === rows.length - 1 && (
                 <div className="border-t border-zinc-100 dark:border-zinc-800" />
               )}
-              <div className="flex items-center px-3 py-1.5 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors">
+              <div role="menuitem" className="flex items-center px-3 py-1.5 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors">
                 <span className="flex-1 text-sm text-zinc-700 dark:text-zinc-300">{row.label}</span>
 
                 {/* CSV */}

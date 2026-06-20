@@ -21,6 +21,7 @@ export const STORAGE_KEYS = {
   CATEGORIES: "tracker_categories",
   SCHEMA_VERSION: "tracker_schema_version",
   SETTINGS: "tracker_settings",
+  ONBOARDED: "tracker_onboarded",
 } as const
 
 export const SCHEMA_VERSION = "1"
@@ -50,6 +51,7 @@ export const DEFAULT_SETTINGS: Settings = {
   currency: "USD",
   theme: "system",
   monthlySavingsGoal: 0,
+  backupInterval: "never",
 }
 
 export const PAGE_SIZE = 25

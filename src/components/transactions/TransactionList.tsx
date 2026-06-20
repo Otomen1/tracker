@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState, useCallback } from "react"
+import { useEffect, useMemo, useRef, useState, useCallback } from "react"
 import { Transaction, Category, TransactionFormData } from "@/types"
 import { TransactionRow } from "./TransactionRow"
 import { TransactionDialog } from "./TransactionDialog"
@@ -14,12 +14,12 @@ interface Props {
   transactions: Transaction[]
   categories: Category[]
   filterKey?: string
-  onAdd: (data: TransactionFormData) => void
+  onRestore: (transaction: Transaction) => void
   onUpdate: (id: string, data: TransactionFormData) => void
   onDelete: (id: string, cascade: boolean) => void
 }
 
-export function TransactionList({ transactions, categories, filterKey, onAdd, onUpdate, onDelete }: Props) {
+export function TransactionList({ transactions, categories, filterKey, onRestore, onUpdate, onDelete }: Props) {
   const { fmt } = useSettingsContext()
   const [page, setPage] = useState(0)
   const [editTarget, setEditTarget] = useState<Transaction | null>(null)
@@ -59,18 +59,8 @@ export function TransactionList({ transactions, categories, filterKey, onAdd, on
     if (timer) clearTimeout(timer)
     undoTimersRef.current.delete(item.id)
     setUndoQueue((q) => q.slice(1))
-    onAdd({
-      type: item.type,
-      amount: String(item.amount),
-      categoryId: item.categoryId,
-      description: item.description,
-      date: item.date,
-      notes: item.notes,
-      tags: item.tags,
-      isRecurring: item.isRecurring,
-      recurringDay: item.recurringDay,
-    })
-  }, [undoQueue, onAdd])
+    onRestore(item)
+  }, [undoQueue, onRestore])
 
   if (transactions.length === 0) {
     return (
@@ -83,12 +73,15 @@ export function TransactionList({ transactions, categories, filterKey, onAdd, on
   }
 
   // Build recurring instance count map for cascade delete UI
-  const instanceCountMap = new Map<string, number>()
-  transactions.forEach((t) => {
-    if (t.recurringId) {
-      instanceCountMap.set(t.recurringId, (instanceCountMap.get(t.recurringId) ?? 0) + 1)
-    }
-  })
+  const instanceCountMap = useMemo(() => {
+    const map = new Map<string, number>()
+    transactions.forEach((t) => {
+      if (t.recurringId) {
+        map.set(t.recurringId, (map.get(t.recurringId) ?? 0) + 1)
+      }
+    })
+    return map
+  }, [transactions])
 
   const totalPages = Math.ceil(transactions.length / PAGE_SIZE)
   const pageItems = transactions.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE)
