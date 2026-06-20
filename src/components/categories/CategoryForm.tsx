@@ -81,6 +81,7 @@ export function CategoryForm({ category, defaultType = "expense", existingNames 
               <button
                 key={t}
                 type="button"
+                aria-pressed={selectedType === t}
                 onClick={() => setValue("type", t)}
                 className={cn(
                   "flex-1 py-2 text-sm font-medium capitalize transition-colors",

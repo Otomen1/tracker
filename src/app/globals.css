@@ -57,3 +57,10 @@
     @apply bg-background text-foreground;
   }
 }
+
+@media print {
+  aside, nav, .no-print { display: none !important; }
+  body { background: white !important; color: black !important; }
+  * { box-shadow: none !important; }
+  main { padding-left: 0 !important; }
+}

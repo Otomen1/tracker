@@ -20,13 +20,14 @@
     "@radix-ui/react-select": "^2.1.2",
     "@radix-ui/react-separator": "^1.1.0",
     "@radix-ui/react-slot": "^1.1.0",
+    "@tanstack/react-virtual": "^3.14.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "date-fns": "^3.6.0",
     "jspdf": "^4.2.1",
     "jspdf-autotable": "^5.0.8",
     "lucide-react": "^0.454.0",
-    "next": "14.2.15",
+    "next": "^15.5.19",
     "next-themes": "^0.4.6",
     "react": "^18",
     "react-dom": "^18",
@@ -37,17 +38,21 @@
   },
   "devDependencies": {
     "@next/bundle-analyzer": "^14.2.35",
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.1.0",
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
+    "@vitejs/plugin-react": "^4.3.4",
     "autoprefixer": "^10.4.20",
     "eslint": "^8",
     "eslint-config-next": "14.2.15",
     "happy-dom": "^20.10.2",
+    "jsdom": "^25.0.1",
     "postcss": "^8.4.49",
     "tailwindcss": "^3.4.15",
     "tailwindcss-animate": "^1.0.7",
     "typescript": "^5",
-    "vitest": "^4.1.8"
+    "vitest": "^2.1.8"
   }
 }

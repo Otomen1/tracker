@@ -50,7 +50,7 @@ function CategoryBudgetRow({ name, color, budget, onSave }: {
 
 export function BudgetLimitsForm() {
   const { categories, updateCategory } = useCategories()
-  const expenseCategories = categories.filter((c) => c.type === "expense" || c.type === "both")
+  const expenseCategories = categories.filter((c) => c.type === "expense")
 
   if (expenseCategories.length === 0) {
     return <p className="text-sm text-zinc-400">Add expense categories first.</p>

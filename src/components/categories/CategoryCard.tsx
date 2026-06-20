@@ -32,7 +32,7 @@ export function CategoryCard({ category, existingNames, hasTransactions, onUpdat
 
   return (
     <>
-      <div className="group flex items-center justify-between px-4 py-3 rounded-lg border border-zinc-200/60 dark:border-zinc-800/60 bg-white/60 dark:bg-zinc-800/30 backdrop-blur-sm hover:border-zinc-300/80 dark:hover:border-zinc-700/60 transition-colors">
+      <div className="group flex items-center justify-between px-4 py-3 rounded-lg border border-zinc-200/60 dark:border-zinc-800/60 bg-white/60 dark:bg-zinc-800/30 backdrop-blur-sm hover:border-zinc-300/80 dark:hover:border-zinc-700/60 hover:bg-white/80 dark:hover:bg-zinc-800/50 transition-colors">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-full shrink-0" style={{ backgroundColor: category.color }} />
           <div>

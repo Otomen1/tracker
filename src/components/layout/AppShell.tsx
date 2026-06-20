@@ -1,45 +1,31 @@
 "use client"
 
-import { useEffect, useState } from "react"
 import { Sidebar } from "./Sidebar"
 import { MobileNav } from "./MobileNav"
+import { QuickAddFAB } from "./QuickAddFAB"
+import { StorageQuotaBanner } from "./StorageQuotaBanner"
+import { OnboardingModal } from "./OnboardingModal"
 import { ErrorBoundary } from "./ErrorBoundary"
 
 export function AppShell({ children }: { children: React.ReactNode }) {
-  const [quotaWarning, setQuotaWarning] = useState(false)
-
-  useEffect(() => {
-    const handler = () => setQuotaWarning(true)
-    window.addEventListener("storage-quota-exceeded", handler)
-    return () => window.removeEventListener("storage-quota-exceeded", handler)
-  }, [])
-
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950">
-      {quotaWarning && (
-        <div
-          role="alert"
-          className="bg-amber-50 dark:bg-amber-950 border-b border-amber-200 dark:border-amber-800 px-4 py-2 flex items-center justify-between text-sm text-amber-800 dark:text-amber-200"
-        >
-          <span>
-            Storage is full — your last change was not saved. Free up space by exporting and clearing data.
-          </span>
-          <button
-            onClick={() => setQuotaWarning(false)}
-            aria-label="Dismiss storage warning"
-            className="ml-4 shrink-0 text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-200 transition-colors"
-          >
-            ×
-          </button>
-        </div>
-      )}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:z-[60] focus:top-2 focus:left-2 focus:px-4 focus:py-2 focus:bg-white focus:text-zinc-900 focus:rounded-lg focus:shadow-lg focus:text-sm focus:font-medium"
+      >
+        Skip to main content
+      </a>
+      <StorageQuotaBanner />
       <Sidebar />
-      <main className="lg:pl-56 pb-16 lg:pb-0">
+      <main id="main-content" className="lg:pl-56 pb-16 lg:pb-0">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6">
           <ErrorBoundary>{children}</ErrorBoundary>
         </div>
       </main>
       <MobileNav />
+      <QuickAddFAB />
+      <OnboardingModal />
     </div>
   )
 }

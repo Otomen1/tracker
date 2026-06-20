@@ -1,5 +1,6 @@
 "use client"
 
+import { memo } from "react"
 import { DashboardStats } from "@/types"
 import { Card, CardContent } from "@/components/ui/card"
 import { TrendingUp, TrendingDown, Minus, ArrowUpRight, ArrowDownRight } from "lucide-react"
@@ -21,7 +22,7 @@ function TrendBadge({ current, previous }: { current: number; previous: number }
 
 interface Props { stats: DashboardStats }
 
-export function StatsCards({ stats }: Props) {
+export const StatsCards = memo(function StatsCards({ stats }: Props) {
   const { fmt } = useSettingsContext()
 
   return (
@@ -84,4 +85,4 @@ export function StatsCards({ stats }: Props) {
       </Card>
     </div>
   )
-}
+})

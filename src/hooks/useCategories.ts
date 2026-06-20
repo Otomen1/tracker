@@ -1,6 +1,5 @@
 "use client"
 
-import { useEffect } from "react"
 import { Category, CategoryFormData, TransactionType } from "@/types"
 import { useLocalStorage } from "./useLocalStorage"
 import { DEFAULT_CATEGORIES, STORAGE_KEYS } from "@/lib/constants"
@@ -8,16 +7,8 @@ import { DEFAULT_CATEGORIES, STORAGE_KEYS } from "@/lib/constants"
 export function useCategories() {
   const [categories, setCategories] = useLocalStorage<Category[]>(
     STORAGE_KEYS.CATEGORIES,
-    []
+    DEFAULT_CATEGORIES
   )
-
-  useEffect(() => {
-    if (typeof window === "undefined") return
-    const stored = localStorage.getItem(STORAGE_KEYS.CATEGORIES)
-    if (!stored || JSON.parse(stored).length === 0) {
-      setCategories(DEFAULT_CATEGORIES)
-    }
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const addCategory = (data: CategoryFormData): Category => {
     const newCategory: Category = {
@@ -54,7 +45,7 @@ export function useCategories() {
   }
 
   const getCategoriesForType = (type: TransactionType): Category[] => {
-    return categories.filter((c) => c.type === type || c.type === "both")
+    return categories.filter((c) => c.type === type)
   }
 
   return { categories, addCategory, updateCategory, deleteCategory, getCategoriesForType }

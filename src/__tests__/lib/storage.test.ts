@@ -56,21 +56,18 @@ describe("importAllData", () => {
     expect(result.error).toContain("missing transactions")
   })
 
-  it("filters out malformed transactions (missing type)", () => {
+  it("rejects import when a transaction has missing type", () => {
     const bad = { ...validTransaction, type: undefined }
     const json = JSON.stringify({ transactions: [bad, validTransaction] })
-    importAllData(json)
-    const saved = JSON.parse(localStorage.getItem("tracker_transactions") ?? "[]")
-    expect(saved).toHaveLength(1)
-    expect(saved[0].id).toBe("t1")
+    const result = importAllData(json)
+    expect(result.success).toBe(false)
   })
 
-  it("filters out malformed transactions (missing amount)", () => {
+  it("rejects import when a transaction has non-numeric amount", () => {
     const bad = { ...validTransaction, id: "t-bad", amount: "not-a-number" }
     const json = JSON.stringify({ transactions: [bad, validTransaction] })
-    importAllData(json)
-    const saved = JSON.parse(localStorage.getItem("tracker_transactions") ?? "[]")
-    expect(saved).toHaveLength(1)
+    const result = importAllData(json)
+    expect(result.success).toBe(false)
   })
 
   it("filters out malformed categories (missing id)", () => {

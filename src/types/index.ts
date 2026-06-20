@@ -16,7 +16,7 @@ export interface Transaction {
   updatedAt: string
 }
 
-export type CategoryType = "income" | "expense" | "both"
+export type CategoryType = "income" | "expense"
 
 export interface Category {
   id: string
@@ -113,5 +113,7 @@ export interface TransactionFilters {
   dateTo?: string
   search?: string
   tag?: string
+  minAmount?: number
+  maxAmount?: number
   recurring?: boolean
 }

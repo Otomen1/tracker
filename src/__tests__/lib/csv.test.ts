@@ -66,22 +66,22 @@ describe("transactionsToCSV", () => {
   it("neutralises = formula injection in description", () => {
     const t = makeTransaction({ description: "=SUM(A1:A10)" })
     const csv = transactionsToCSV([t], [makeCategory()])
-    expect(csv).toContain('"\t=SUM')
+    expect(csv).toContain("\"'=SUM")
   })
 
   it("neutralises + formula injection", () => {
     const t = makeTransaction({ description: "+cmd|' /C calc'" })
-    expect(transactionsToCSV([t], [makeCategory()])).toContain("\t+cmd")
+    expect(transactionsToCSV([t], [makeCategory()])).toContain("\"'+cmd")
   })
 
   it("neutralises - formula injection", () => {
     const t = makeTransaction({ description: "-2+3" })
-    expect(transactionsToCSV([t], [makeCategory()])).toContain("\t-2+3")
+    expect(transactionsToCSV([t], [makeCategory()])).toContain("\"'-2+3")
   })
 
   it("neutralises formula injection in category name", () => {
     const t = makeTransaction({ categoryId: "cat_bad" })
     const cat = makeCategory({ id: "cat_bad", name: "=EVIL()" })
-    expect(transactionsToCSV([t], [cat])).toContain("\t=EVIL()")
+    expect(transactionsToCSV([t], [cat])).toContain("\"'=EVIL()")
   })
 })

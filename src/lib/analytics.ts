@@ -4,6 +4,8 @@ import {
 } from "@/types"
 import { getMonthKey, addMonths } from "./formatters"
 
+const round2 = (n: number) => Math.round(n * 100) / 100
+
 export function getDashboardStats(
   transactions: Transaction[],
   monthKey: string
@@ -12,18 +14,18 @@ export function getDashboardStats(
   const currentMonth = transactions.filter((t) => t.date.startsWith(monthKey))
   const prevMonth = transactions.filter((t) => t.date.startsWith(prevMonthKey))
 
-  const currentMonthIncome = currentMonth.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0)
-  const currentMonthExpenses = currentMonth.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0)
-  const previousMonthIncome = prevMonth.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0)
-  const previousMonthExpenses = prevMonth.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0)
-  const allTimeIncome = transactions.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0)
-  const allTimeExpenses = transactions.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0)
+  const currentMonthIncome = round2(currentMonth.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0))
+  const currentMonthExpenses = round2(currentMonth.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0))
+  const previousMonthIncome = round2(prevMonth.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0))
+  const previousMonthExpenses = round2(prevMonth.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0))
+  const allTimeIncome = round2(transactions.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0))
+  const allTimeExpenses = round2(transactions.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0))
 
   return {
     currentMonthIncome,
     currentMonthExpenses,
-    currentMonthNet: currentMonthIncome - currentMonthExpenses,
-    allTimeBalance: allTimeIncome - allTimeExpenses,
+    currentMonthNet: round2(currentMonthIncome - currentMonthExpenses),
+    allTimeBalance: round2(allTimeIncome - allTimeExpenses),
     previousMonthIncome,
     previousMonthExpenses,
     transactionCountThisMonth: currentMonth.length,
@@ -41,23 +43,23 @@ export function getExpenseBreakdown(
   const total = expenses.reduce((s, t) => s + t.amount, 0)
   if (total === 0) return []
 
-  const grouped = expenses.reduce<Record<string, { amount: number; count: number }>>((acc, t) => {
-    const entry = acc[t.categoryId] ?? { amount: 0, count: 0 }
-    entry.amount += t.amount
+  const grouped = expenses.reduce<Record<string, { sum: number; count: number }>>((acc, t) => {
+    const entry = acc[t.categoryId] ?? { sum: 0, count: 0 }
+    entry.sum += t.amount
     entry.count += 1
     acc[t.categoryId] = entry
     return acc
   }, {})
 
   return Object.entries(grouped)
-    .map(([categoryId, { amount, count }]) => {
+    .map(([categoryId, { sum, count }]) => {
       const cat = categories.find((c) => c.id === categoryId)
       return {
         categoryId,
         categoryName: cat?.name ?? "Unknown",
         color: cat?.color ?? "#6b7280",
-        total: amount,
-        percentage: (amount / total) * 100,
+        total: round2(sum),
+        percentage: round2((sum / total) * 100),
         count,
       }
     })
@@ -78,13 +80,13 @@ export function getBudgetStatus(
     (t) => t.type === "expense" && t.date.startsWith(monthKey)
   )
 
-  const spentByCategory = new Map<string, number>()
-  for (const t of expenses) {
-    spentByCategory.set(t.categoryId, (spentByCategory.get(t.categoryId) ?? 0) + t.amount)
-  }
+  const spentByCategory = expenses.reduce<Record<string, number>>((acc, t) => {
+    acc[t.categoryId] = (acc[t.categoryId] ?? 0) + t.amount
+    return acc
+  }, {})
 
   return budgetedCategories.map((cat) => {
-    const spent = spentByCategory.get(cat.id) ?? 0
+    const spent = round2(spentByCategory[cat.id] ?? 0)
     const budget = cat.budget!
     return {
       categoryId: cat.id,
@@ -92,7 +94,7 @@ export function getBudgetStatus(
       color: cat.color,
       budget,
       spent,
-      percentage: (spent / budget) * 100,
+      percentage: round2((spent / budget) * 100),
       isOverBudget: spent > budget,
     }
   }).sort((a, b) => b.percentage - a.percentage)
@@ -106,13 +108,13 @@ export function getMonthlyTrend(
   return Array.from({ length: monthCount }, (_, i) => {
     const monthKey = addMonths(currentMonthKey, -(monthCount - 1 - i))
     const monthTxns = transactions.filter((t) => t.date.startsWith(monthKey))
-    const totalIncome = monthTxns.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0)
-    const totalExpenses = monthTxns.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0)
+    const totalIncome = round2(monthTxns.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0))
+    const totalExpenses = round2(monthTxns.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0))
     return {
       month: monthKey,
       totalIncome,
       totalExpenses,
-      netBalance: totalIncome - totalExpenses,
+      netBalance: round2(totalIncome - totalExpenses),
       transactionCount: monthTxns.length,
     }
   })
@@ -124,43 +126,61 @@ export function getAnnualSummary(
   categories: Category[]
 ): AnnualSummary {
   const yearStr = year.toString()
-  const yearTxns = transactions.filter((t) => t.date.startsWith(yearStr))
-  const totalIncome = yearTxns.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0)
-  const totalExpenses = yearTxns.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0)
+
+  // Single-pass accumulator over all transactions
+  type MonthBucket = { inc: number; exp: number; count: number }
+  const monthly: Record<string, MonthBucket> = {}
+  const catMap: Record<string, { sum: number; count: number }> = {}
+  let totalIncome = 0
+  let totalExpenses = 0
+
+  for (const t of transactions) {
+    if (!t.date.startsWith(yearStr)) continue
+    const monthKey = t.date.slice(0, 7)
+    const bucket = monthly[monthKey] ?? (monthly[monthKey] = { inc: 0, exp: 0, count: 0 })
+    bucket.count += 1
+    if (t.type === "income") {
+      totalIncome += t.amount
+      bucket.inc += t.amount
+    } else {
+      totalExpenses += t.amount
+      bucket.exp += t.amount
+      const entry = catMap[t.categoryId] ?? (catMap[t.categoryId] = { sum: 0, count: 0 })
+      entry.sum += t.amount
+      entry.count += 1
+    }
+  }
 
   const monthlyBreakdown = Array.from({ length: 12 }, (_, i) => {
-    const month = String(i + 1).padStart(2, "0")
-    const monthKey = `${yearStr}-${month}`
-    const monthTxns = yearTxns.filter((t) => t.date.startsWith(monthKey))
-    const inc = monthTxns.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0)
-    const exp = monthTxns.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0)
-    return { month: monthKey, totalIncome: inc, totalExpenses: exp, netBalance: inc - exp, transactionCount: monthTxns.length }
+    const monthKey = `${yearStr}-${String(i + 1).padStart(2, "0")}`
+    const b = monthly[monthKey] ?? { inc: 0, exp: 0, count: 0 }
+    const inc = round2(b.inc)
+    const exp = round2(b.exp)
+    return { month: monthKey, totalIncome: inc, totalExpenses: exp, netBalance: round2(inc - exp), transactionCount: b.count }
   })
 
-  const yearExpenses = yearTxns.filter((t) => t.type === "expense")
-  const yearExpTotal = yearExpenses.reduce((s, t) => s + t.amount, 0)
-  const grouped = yearExpenses.reduce<Record<string, { amount: number; count: number }>>((acc, t) => {
-    const entry = acc[t.categoryId] ?? { amount: 0, count: 0 }
-    entry.amount += t.amount
-    entry.count += 1
-    acc[t.categoryId] = entry
-    return acc
-  }, {})
-  const topExpenseCategories: CategoryBreakdown[] = Object.entries(grouped)
-    .map(([categoryId, { amount, count }]) => {
+  const topExpenseCategories: CategoryBreakdown[] = Object.entries(catMap)
+    .map(([categoryId, { sum, count }]) => {
       const cat = categories.find((c) => c.id === categoryId)
       return {
         categoryId,
         categoryName: cat?.name ?? "Unknown",
         color: cat?.color ?? "#6b7280",
-        total: amount,
-        percentage: yearExpTotal > 0 ? (amount / yearExpTotal) * 100 : 0,
+        total: round2(sum),
+        percentage: totalExpenses > 0 ? round2((sum / totalExpenses) * 100) : 0,
         count,
       }
     })
     .sort((a, b) => b.total - a.total)
 
-  return { year, totalIncome, totalExpenses, netBalance: totalIncome - totalExpenses, monthlyBreakdown, topExpenseCategories }
+  return {
+    year,
+    totalIncome: round2(totalIncome),
+    totalExpenses: round2(totalExpenses),
+    netBalance: round2(totalIncome - totalExpenses),
+    monthlyBreakdown,
+    topExpenseCategories,
+  }
 }
 
 export function filterTransactions(
@@ -173,6 +193,8 @@ export function filterTransactions(
     if (filters.dateFrom && t.date < filters.dateFrom) return false
     if (filters.dateTo && t.date > filters.dateTo) return false
     if (filters.tag && !(t.tags ?? []).includes(filters.tag)) return false
+    if (filters.minAmount !== undefined && t.amount < filters.minAmount) return false
+    if (filters.maxAmount !== undefined && t.amount > filters.maxAmount) return false
     if (filters.recurring && !t.isRecurring) return false
     if (filters.search) {
       const q = filters.search.toLowerCase()
@@ -187,6 +209,13 @@ export function filterTransactions(
 
 export function getRecentTransactions(transactions: Transaction[], count = 5): Transaction[] {
   return getSortedTransactions(transactions).slice(0, count)
+}
+
+export function getTopTransactions(transactions: Transaction[], monthKey: string, count = 5): Transaction[] {
+  return transactions
+    .filter((t) => t.date.startsWith(monthKey))
+    .sort((a, b) => b.amount - a.amount)
+    .slice(0, count)
 }
 
 export function getSortedTransactions(transactions: Transaction[]): Transaction[] {

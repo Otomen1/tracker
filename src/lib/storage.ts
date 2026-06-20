@@ -1,8 +1,52 @@
+import { z } from "zod"
 import { Transaction, Category, Settings } from "@/types"
 import { DEFAULT_CATEGORIES, DEFAULT_SETTINGS, STORAGE_KEYS, SCHEMA_VERSION } from "./constants"
 import { isValidHexColor } from "./utils"
 
 const FALLBACK_COLOR = "#6b7280"
+
+const validDate = z.string().refine((v) => !isNaN(new Date(v).getTime()), "Invalid date")
+
+const transactionSchema = z.object({
+  id: z.string(),
+  type: z.enum(["income", "expense"]),
+  amount: z.number().finite().safe().positive(),
+  categoryId: z.string(),
+  description: z.string().max(200),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine((v) => !isNaN(new Date(v).getTime()), "Invalid date"),
+  notes: z.string().max(500).optional(),
+  tags: z.array(z.string().max(50)).max(20).optional(),
+  isRecurring: z.boolean().optional(),
+  recurringDay: z.number().optional(),
+  recurringId: z.string().optional(),
+  createdAt: validDate,
+  updatedAt: validDate,
+})
+
+const categorySchema = z.object({
+  id: z.string(),
+  name: z.string().max(30),
+  type: z.preprocess(
+    (v) => (v === "both" ? "expense" : v),
+    z.enum(["income", "expense"])
+  ),
+  color: z.string().regex(/^#[0-9A-Fa-f]{3,6}$/, "Invalid color"),
+  isDefault: z.boolean(),
+  budget: z.number().optional(),
+  createdAt: validDate,
+})
+
+const settingsSchema = z.object({
+  currency: z.string(),
+  theme: z.enum(["light", "dark", "system"]),
+  monthlySavingsGoal: z.number(),
+})
+
+const backupSchema = z.object({
+  transactions: z.array(transactionSchema).max(50000),
+  categories: z.array(categorySchema).max(500).optional(),
+  settings: settingsSchema.optional(),
+})
 
 function safeRead<T>(key: string, fallback: T): T {
   if (typeof window === "undefined") return fallback
@@ -26,22 +70,7 @@ function safeWrite(key: string, value: unknown): void {
   }
 }
 
-// --- Import validators ---
-
-function isValidTransaction(t: unknown): boolean {
-  if (!t || typeof t !== "object") return false
-  const o = t as Record<string, unknown>
-  return (
-    typeof o.id === "string" &&
-    (o.type === "income" || o.type === "expense") &&
-    typeof o.amount === "number" &&
-    typeof o.categoryId === "string" &&
-    typeof o.description === "string" &&
-    typeof o.date === "string" &&
-    typeof o.createdAt === "string" &&
-    typeof o.updatedAt === "string"
-  )
-}
+// --- Import validators (used for lenient import path) ---
 
 function isValidCategory(c: unknown): boolean {
   if (!c || typeof c !== "object") return false
@@ -115,36 +144,68 @@ export function exportAllData(): string {
 }
 
 export function importAllData(json: string): { success: boolean; error?: string } {
+  let parsed: unknown
   try {
-    const data = JSON.parse(json)
-    if (!data.transactions || !Array.isArray(data.transactions)) {
-      return { success: false, error: "Invalid backup file: missing transactions" }
-    }
+    parsed = JSON.parse(json)
+  } catch {
+    return { success: false, error: "Could not parse backup file" }
+  }
 
-    const validTransactions = data.transactions.filter(isValidTransaction) as Transaction[]
-    if (validTransactions.length !== data.transactions.length) {
-      console.warn(
-        `Import: skipped ${data.transactions.length - validTransactions.length} invalid transaction(s)`
-      )
-    }
+  // Basic structure check: must have a transactions array
+  if (!parsed || typeof parsed !== "object") {
+    return { success: false, error: "Invalid backup file: missing transactions" }
+  }
+  const raw = parsed as Record<string, unknown>
+  if (!raw.transactions || !Array.isArray(raw.transactions)) {
+    return { success: false, error: "Invalid backup file: missing transactions" }
+  }
 
-    if (data.categories && Array.isArray(data.categories)) {
-      const validCategories = data.categories
+  // Try strict Zod validation first (enforces data integrity: amounts, dates, limits)
+  const result = backupSchema.safeParse(parsed)
+  if (result.success) {
+    const data = result.data
+    if (data.categories) saveCategories(data.categories)
+    saveTransactions(data.transactions)
+    if (data.settings) saveSettings(data.settings)
+
+    const version = localStorage.getItem(STORAGE_KEYS.SCHEMA_VERSION)
+    if (!version) {
+      if (!data.categories) saveCategories(DEFAULT_CATEGORIES)
+      safeWrite(STORAGE_KEYS.SCHEMA_VERSION, SCHEMA_VERSION)
+    }
+    return { success: true }
+  }
+
+  // Check if Zod failed due to transactions data integrity (not just format compat)
+  // If transactions array has data errors, propagate the Zod error
+  const txnSchema = z.array(transactionSchema).max(50000)
+  const txnCheck = txnSchema.safeParse(raw.transactions)
+  if (!txnCheck.success) {
+    const msg = txnCheck.error.issues[0]?.message ?? "Invalid backup file"
+    return { success: false, error: `Invalid backup file: ${msg}` }
+  }
+
+  // Fall back to lenient validation for category format compatibility
+  // (e.g., old "both" category type from earlier app versions)
+  try {
+    if (raw.categories && Array.isArray(raw.categories)) {
+      const validCategories = raw.categories
         .filter(isValidCategory)
         .map((c: Category) => ({
           ...c,
+          type: c.type === ("both" as string) ? "expense" : c.type,
           color: isValidHexColor(c.color) ? c.color : FALLBACK_COLOR,
         })) as Category[]
-      if (validCategories.length !== data.categories.length) {
+      if (validCategories.length !== raw.categories.length) {
         console.warn(
-          `Import: skipped ${data.categories.length - validCategories.length} invalid category(s)`
+          `Import: skipped ${raw.categories.length - validCategories.length} invalid category(s)`
         )
       }
       saveCategories(validCategories)
     }
 
-    saveTransactions(validTransactions)
-    if (data.settings) saveSettings(data.settings)
+    saveTransactions(txnCheck.data)
+    if (raw.settings) saveSettings(raw.settings as Settings)
     return { success: true }
   } catch {
     return { success: false, error: "Could not parse backup file" }

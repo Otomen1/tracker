@@ -20,10 +20,7 @@ const SettingsContext = createContext<SettingsContextValue>({
 
 export function SettingsProvider({ children }: { children: React.ReactNode }) {
   const { settings, updateSettings } = useSettings()
-  const fmt = useCallback(
-    (amount: number) => _formatCurrency(amount, settings.currency),
-    [settings.currency]
-  )
+  const fmt = useCallback((amount: number) => _formatCurrency(amount, settings.currency), [settings.currency])
 
   return (
     <SettingsContext.Provider value={{ settings, updateSettings, fmt }}>
