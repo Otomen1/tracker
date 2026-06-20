@@ -6,8 +6,10 @@ import { QuickAddFAB } from "./QuickAddFAB"
 import { StorageQuotaBanner } from "./StorageQuotaBanner"
 import { OnboardingModal } from "./OnboardingModal"
 import { ErrorBoundary } from "./ErrorBoundary"
+import { useScheduledBackup } from "@/hooks/useScheduledBackup"
 
 export function AppShell({ children }: { children: React.ReactNode }) {
+  useScheduledBackup()
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950">
       <a

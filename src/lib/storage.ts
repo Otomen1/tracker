@@ -40,6 +40,8 @@ const settingsSchema = z.object({
   currency: z.string(),
   theme: z.enum(["light", "dark", "system"]),
   monthlySavingsGoal: z.number(),
+  backupInterval: z.enum(["never", "daily", "weekly", "monthly"]).optional(),
+  lastBackupAt: z.string().optional(),
 })
 
 const backupSchema = z.object({

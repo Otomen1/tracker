@@ -50,6 +50,7 @@ export const DEFAULT_SETTINGS: Settings = {
   currency: "USD",
   theme: "system",
   monthlySavingsGoal: 0,
+  backupInterval: "never",
 }
 
 export const PAGE_SIZE = 25
