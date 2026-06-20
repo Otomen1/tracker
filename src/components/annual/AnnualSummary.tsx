@@ -32,13 +32,13 @@ function AnnualBarTooltip({ active, payload, label, fmt }: AnnualBarTooltipProps
   )
 }
 
-function YoYBadge({ current, prev, label }: { current: number; prev: number; label: string }) {
+function YoYBadge({ current, prev, label, prevYear }: { current: number; prev: number; label: string; prevYear: number }) {
   if (prev === 0) return null
   const pct = ((current - prev) / prev) * 100
   const up = pct >= 0
   return (
     <div className="flex items-center gap-1 text-xs">
-      <span className="text-zinc-400">{label} vs {}</span>
+      <span className="text-zinc-400">{label} vs {prevYear}</span>
       <span className={cn("font-medium", up ? "text-emerald-600" : "text-rose-500")}>
         {up ? "+" : ""}{pct.toFixed(1)}%
       </span>
@@ -71,9 +71,9 @@ export function AnnualSummaryView({ summary, prevYearSummary }: Props) {
           <CardContent className="pt-4 pb-4">
             <p className="text-xs text-zinc-500 uppercase tracking-wide mb-2">vs {prevYearSummary.year}</p>
             <div className="flex flex-wrap gap-4">
-              <YoYBadge current={summary.totalIncome} prev={prevYearSummary.totalIncome} label="Income" />
-              <YoYBadge current={summary.totalExpenses} prev={prevYearSummary.totalExpenses} label="Expenses" />
-              <YoYBadge current={summary.netBalance} prev={prevYearSummary.netBalance} label="Net" />
+              <YoYBadge current={summary.totalIncome} prev={prevYearSummary.totalIncome} label="Income" prevYear={prevYearSummary.year} />
+              <YoYBadge current={summary.totalExpenses} prev={prevYearSummary.totalExpenses} label="Expenses" prevYear={prevYearSummary.year} />
+              <YoYBadge current={summary.netBalance} prev={prevYearSummary.netBalance} label="Net" prevYear={prevYearSummary.year} />
             </div>
           </CardContent>
         </Card>

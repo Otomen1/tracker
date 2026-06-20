@@ -45,7 +45,7 @@ export function useCategories() {
   }
 
   const getCategoriesForType = (type: TransactionType): Category[] => {
-    return categories.filter((c) => c.type === type || c.type === "both")
+    return categories.filter((c) => c.type === type)
   }
 
   return { categories, addCategory, updateCategory, deleteCategory, getCategoriesForType }

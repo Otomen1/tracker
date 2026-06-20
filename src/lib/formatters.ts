@@ -8,7 +8,9 @@ export function formatCurrency(amount: number, currency = "USD"): string {
       minimumFractionDigits: 2,
     }).format(amount)
   } catch {
-    console.warn("formatCurrency: invalid currency code", currency)
+    if (process.env.NODE_ENV === "development") {
+      console.warn("formatCurrency: invalid currency code", currency)
+    }
     return new Intl.NumberFormat("en-US", {
       style: "currency",
       currency: "USD",

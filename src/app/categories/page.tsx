@@ -9,12 +9,8 @@ export default function CategoriesPage() {
   const { transactions } = useTransactions()
   const { categories, addCategory, updateCategory, deleteCategory } = useCategories()
 
-  const incomeCategories = categories.filter(
-    (c) => c.type === "income" || c.type === "both"
-  )
-  const expenseCategories = categories.filter(
-    (c) => c.type === "expense" || c.type === "both"
-  )
+  const incomeCategories = categories.filter((c) => c.type === "income")
+  const expenseCategories = categories.filter((c) => c.type === "expense")
 
   return (
     <div className="space-y-6">

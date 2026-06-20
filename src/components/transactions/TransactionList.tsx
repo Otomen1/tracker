@@ -8,51 +8,69 @@ import { DeleteConfirmDialog } from "./DeleteConfirmDialog"
 import { ArrowLeftRight, ChevronLeft, ChevronRight, Undo2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { PAGE_SIZE, UNDO_TIMEOUT_MS } from "@/lib/constants"
+import { useSettingsContext } from "@/context/SettingsContext"
 
 interface Props {
   transactions: Transaction[]
   categories: Category[]
+  filterKey?: string
+  onAdd: (data: TransactionFormData) => void
   onUpdate: (id: string, data: TransactionFormData) => void
   onDelete: (id: string) => void
 }
 
-export function TransactionList({ transactions, categories, onUpdate, onDelete }: Props) {
+export function TransactionList({ transactions, categories, filterKey, onAdd, onUpdate, onDelete }: Props) {
+  const { fmt } = useSettingsContext()
   const [page, setPage] = useState(0)
   const [editTarget, setEditTarget] = useState<Transaction | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<Transaction | null>(null)
-  const [undoItem, setUndoItem] = useState<Transaction | null>(null)
-  const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  useEffect(() => { setPage(0) }, [transactions])
-  useEffect(() => () => { if (undoTimerRef.current) clearTimeout(undoTimerRef.current) }, [])
+  // Undo queue: each entry has a transaction and its own expiry timer
+  const [undoQueue, setUndoQueue] = useState<Transaction[]>([])
+  const undoTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
+
+  // Reset page when filter identity changes (not on individual transaction edits)
+  useEffect(() => { setPage(0) }, [filterKey])
+
+  // Cleanup all timers on unmount
+  useEffect(() => () => {
+    undoTimersRef.current.forEach((t) => clearTimeout(t))
+  }, [])
 
   const handleDeleteConfirm = useCallback(() => {
     if (!deleteTarget) return
     const deleted = deleteTarget
     onDelete(deleted.id)
     setDeleteTarget(null)
-    setUndoItem(deleted)
-    if (undoTimerRef.current) clearTimeout(undoTimerRef.current)
-    undoTimerRef.current = setTimeout(() => setUndoItem(null), UNDO_TIMEOUT_MS)
+
+    const timer = setTimeout(() => {
+      setUndoQueue((q) => q.filter((item) => item.id !== deleted.id))
+      undoTimersRef.current.delete(deleted.id)
+    }, UNDO_TIMEOUT_MS)
+
+    undoTimersRef.current.set(deleted.id, timer)
+    setUndoQueue((prev) => [deleted, ...prev])
   }, [deleteTarget, onDelete])
 
   const handleUndo = useCallback(() => {
-    if (!undoItem) return
-    if (undoTimerRef.current) clearTimeout(undoTimerRef.current)
-    // Re-add as a new transaction with same data
-    onUpdate(undoItem.id, {
-      type: undoItem.type,
-      amount: String(undoItem.amount),
-      categoryId: undoItem.categoryId,
-      description: undoItem.description,
-      date: undoItem.date,
-      notes: undoItem.notes,
-      tags: undoItem.tags,
-      isRecurring: undoItem.isRecurring,
-      recurringDay: undoItem.recurringDay,
+    if (undoQueue.length === 0) return
+    const item = undoQueue[0]
+    const timer = undoTimersRef.current.get(item.id)
+    if (timer) clearTimeout(timer)
+    undoTimersRef.current.delete(item.id)
+    setUndoQueue((q) => q.slice(1))
+    onAdd({
+      type: item.type,
+      amount: String(item.amount),
+      categoryId: item.categoryId,
+      description: item.description,
+      date: item.date,
+      notes: item.notes,
+      tags: item.tags,
+      isRecurring: item.isRecurring,
+      recurringDay: item.recurringDay,
     })
-    setUndoItem(null)
-  }, [undoItem, onUpdate])
+  }, [undoQueue, onAdd])
 
   if (transactions.length === 0) {
     return (
@@ -69,11 +87,24 @@ export function TransactionList({ transactions, categories, onUpdate, onDelete }
   const start = page * PAGE_SIZE + 1
   const end = Math.min((page + 1) * PAGE_SIZE, transactions.length)
 
+  const pendingUndo = undoQueue[0] ?? null
+
   return (
     <div className="space-y-3">
-      {undoItem && (
-        <div className="flex items-center justify-between gap-2 px-3 py-2 bg-zinc-900 dark:bg-zinc-100 text-zinc-100 dark:text-zinc-900 rounded-lg text-sm">
-          <span>Transaction deleted</span>
+      {pendingUndo && (
+        <div
+          role="alert"
+          aria-live="assertive"
+          className="flex items-center justify-between gap-2 px-3 py-2 bg-zinc-900 dark:bg-zinc-100 text-zinc-100 dark:text-zinc-900 rounded-lg text-sm"
+        >
+          <span>
+            Deleted{" "}
+            <span className="font-medium">{pendingUndo.description}</span>
+            {" · "}{fmt(pendingUndo.amount)}
+            {undoQueue.length > 1 && (
+              <span className="opacity-60"> (+{undoQueue.length - 1} more)</span>
+            )}
+          </span>
           <Button
             size="sm"
             variant="ghost"
@@ -153,7 +184,7 @@ export function TransactionList({ transactions, categories, onUpdate, onDelete }
       <DeleteConfirmDialog
         open={deleteTarget !== null}
         onOpenChange={(open) => { if (!open) setDeleteTarget(null) }}
-        description="Are you sure you want to delete this transaction? This cannot be undone."
+        description="Delete this transaction? You can undo within a few seconds."
         onConfirm={handleDeleteConfirm}
       />
     </div>

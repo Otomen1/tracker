@@ -17,7 +17,7 @@ const schema = z.object({
   type: z.enum(["income", "expense"]),
   amount: z.string().refine((v) => parseFloat(v) > 0, "Must be a positive number"),
   categoryId: z.string().min(1, "Please select a category"),
-  description: z.string().min(1, "Description is required").max(200),
+  description: z.string().trim().min(1, "Description is required").max(200),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date"),
   notes: z.string().max(500).optional(),
   isRecurring: z.boolean().optional(),
@@ -57,9 +57,7 @@ export function TransactionForm({ transaction, categories, onSubmit, onCancel }:
 
   const selectedType = watch("type")
   const isRecurring = watch("isRecurring")
-  const filteredCategories = categories.filter(
-    (c) => c.type === selectedType || c.type === "both"
-  )
+  const filteredCategories = categories.filter((c) => c.type === selectedType)
 
   useEffect(() => {
     const current = watch("categoryId")
@@ -195,14 +193,18 @@ export function TransactionForm({ transaction, categories, onSubmit, onCancel }:
             </span>
           ))}
         </div>
-        <Input
-          placeholder="Add tag..."
-          value={tagInput}
-          onChange={(e) => setTagInput(e.target.value)}
-          onKeyDown={handleTagKeyDown}
-          onBlur={addTag}
-          disabled={tags.length >= 5}
-        />
+        {tags.length >= 5
+          ? <p className="text-xs text-muted-foreground">Maximum 5 tags reached</p>
+          : (
+            <Input
+              placeholder="Add tag..."
+              value={tagInput}
+              onChange={(e) => setTagInput(e.target.value)}
+              onKeyDown={handleTagKeyDown}
+              onBlur={addTag}
+            />
+          )
+        }
       </div>
 
       <div className="flex items-start gap-3 p-3 rounded-md border border-input bg-muted/30">
@@ -227,6 +229,7 @@ export function TransactionForm({ transaction, categories, onSubmit, onCancel }:
                 className="mt-1 h-8 w-20 text-sm"
                 {...register("recurringDay", { valueAsNumber: true })}
               />
+              <p className="text-xs text-muted-foreground mt-1">In shorter months, the transaction uses the last available day.</p>
             </div>
           )}
         </div>

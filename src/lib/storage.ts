@@ -9,9 +9,9 @@ const transactionSchema = z.object({
   type: z.enum(["income", "expense"]),
   amount: z.number().finite().safe().positive(),
   categoryId: z.string(),
-  description: z.string(),
+  description: z.string().max(200),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine((v) => !isNaN(new Date(v).getTime()), "Invalid date"),
-  notes: z.string().optional(),
+  notes: z.string().max(500).optional(),
   tags: z.array(z.string().max(50)).max(20).optional(),
   isRecurring: z.boolean().optional(),
   recurringDay: z.number().optional(),
@@ -22,8 +22,11 @@ const transactionSchema = z.object({
 
 const categorySchema = z.object({
   id: z.string(),
-  name: z.string(),
-  type: z.enum(["income", "expense", "both"]),
+  name: z.string().max(30),
+  type: z.preprocess(
+    (v) => (v === "both" ? "expense" : v),
+    z.enum(["income", "expense"])
+  ),
   color: z.string().regex(/^#[0-9A-Fa-f]{3,6}$/, "Invalid color"),
   isDefault: z.boolean(),
   budget: z.number().optional(),

@@ -53,8 +53,19 @@ export function TransactionFiltersBar({ filters, categories, tags, onChange }: P
 
   const filteredCategories =
     filters.type
-      ? categories.filter((c) => c.type === filters.type || c.type === "both")
+      ? categories.filter((c) => c.type === filters.type)
       : categories
+
+  const activeFilterCount = [
+    filters.type,
+    filters.categoryId,
+    filters.dateFrom,
+    filters.dateTo,
+    filters.search,
+    filters.tag,
+    filters.minAmount !== undefined ? "1" : "",
+    filters.maxAmount !== undefined ? "1" : "",
+  ].filter(Boolean).length
 
   const clearFilters = () => {
     setSearch("")
@@ -190,7 +201,9 @@ export function TransactionFiltersBar({ filters, categories, tags, onChange }: P
         >
           <SlidersHorizontal className="w-3.5 h-3.5 mr-1.5" />
           Filters
-          {hasFilters && <span className="ml-1.5 w-1.5 h-1.5 rounded-full bg-primary inline-block" />}
+          {activeFilterCount > 0 && (
+            <span className="ml-1.5 text-xs font-semibold text-primary">({activeFilterCount})</span>
+          )}
         </Button>
       </div>
 
