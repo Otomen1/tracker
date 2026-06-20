@@ -5,7 +5,7 @@ import { TransactionFilters, Category, TransactionType } from "@/types"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
-import { SlidersHorizontal, X } from "lucide-react"
+import { SlidersHorizontal, X, RefreshCw } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 interface Props {
@@ -13,6 +13,22 @@ interface Props {
   categories: Category[]
   tags: string[]
   onChange: (filters: TransactionFilters) => void
+}
+
+function FilterChip({ label, onRemove }: { label: string; onRemove: () => void }) {
+  return (
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 rounded-full text-xs">
+      {label}
+      <button
+        type="button"
+        onClick={onRemove}
+        aria-label={`Remove ${label} filter`}
+        className="hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
+      >
+        <X className="w-3 h-3" />
+      </button>
+    </span>
+  )
 }
 
 export function TransactionFiltersBar({ filters, categories, tags, onChange }: Props) {
@@ -49,7 +65,8 @@ export function TransactionFiltersBar({ filters, categories, tags, onChange }: P
     filters.search ||
     filters.tag ||
     filters.minAmount !== undefined ||
-    filters.maxAmount !== undefined
+    filters.maxAmount !== undefined ||
+    filters.recurring
 
   const filteredCategories =
     filters.type
@@ -65,6 +82,7 @@ export function TransactionFiltersBar({ filters, categories, tags, onChange }: P
     filters.tag,
     filters.minAmount !== undefined ? "1" : "",
     filters.maxAmount !== undefined ? "1" : "",
+    filters.recurring ? "1" : "",
   ].filter(Boolean).length
 
   const clearFilters = () => {
@@ -74,6 +92,13 @@ export function TransactionFiltersBar({ filters, categories, tags, onChange }: P
     onChange({})
     setMobileOpen(false)
   }
+
+  const toggleRecurring = () =>
+    onChange({ ...filters, recurring: filters.recurring ? undefined : true })
+
+  const activeCategory = filters.categoryId
+    ? categories.find((c) => c.id === filters.categoryId)
+    : undefined
 
   const filterControls = (
     <>
@@ -138,16 +163,16 @@ export function TransactionFiltersBar({ filters, categories, tags, onChange }: P
       <Input
         type="date"
         className="w-full sm:w-36 h-9 text-sm"
+        aria-label="From date"
         value={filters.dateFrom ?? ""}
         onChange={(e) => onChange({ ...filters, dateFrom: e.target.value })}
-        placeholder="From"
       />
       <Input
         type="date"
         className="w-full sm:w-36 h-9 text-sm"
+        aria-label="To date"
         value={filters.dateTo ?? ""}
         onChange={(e) => onChange({ ...filters, dateTo: e.target.value })}
-        placeholder="To"
       />
 
       <Input
@@ -167,17 +192,16 @@ export function TransactionFiltersBar({ filters, categories, tags, onChange }: P
         placeholder="Max $"
       />
 
-      {hasFilters && (
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-9 text-zinc-500 hover:text-zinc-900"
-          onClick={clearFilters}
-        >
-          <X className="w-3.5 h-3.5 mr-1" />
-          Clear
-        </Button>
-      )}
+      <Button
+        variant={filters.recurring ? "default" : "outline"}
+        size="sm"
+        className="h-9 gap-1.5"
+        onClick={toggleRecurring}
+        aria-pressed={!!filters.recurring}
+      >
+        <RefreshCw className="w-3.5 h-3.5" />
+        Recurring
+      </Button>
     </>
   )
 
@@ -188,6 +212,7 @@ export function TransactionFiltersBar({ filters, categories, tags, onChange }: P
         <Input
           className="flex-1 h-9 text-sm"
           placeholder="Search..."
+          aria-label="Search transactions"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
@@ -211,6 +236,17 @@ export function TransactionFiltersBar({ filters, categories, tags, onChange }: P
       {mobileOpen && (
         <div className={cn("flex flex-wrap gap-2 items-center sm:hidden")}>
           {filterControls}
+          {hasFilters && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-9 text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100"
+              onClick={clearFilters}
+            >
+              <X className="w-3.5 h-3.5 mr-1" />
+              Clear all
+            </Button>
+          )}
         </div>
       )}
 
@@ -220,10 +256,82 @@ export function TransactionFiltersBar({ filters, categories, tags, onChange }: P
         <Input
           className="w-44 h-9 text-sm"
           placeholder="Search..."
+          aria-label="Search transactions"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
+        {hasFilters && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-9 text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100"
+            onClick={clearFilters}
+          >
+            <X className="w-3.5 h-3.5 mr-1" />
+            Clear all
+          </Button>
+        )}
       </div>
+
+      {/* Active filter chips */}
+      {hasFilters && (
+        <div className="flex flex-wrap gap-1.5">
+          {filters.type && (
+            <FilterChip
+              label={filters.type === "income" ? "Income" : "Expense"}
+              onRemove={() => onChange({ ...filters, type: "" as TransactionType, categoryId: "" })}
+            />
+          )}
+          {filters.categoryId && activeCategory && (
+            <FilterChip
+              label={activeCategory.name}
+              onRemove={() => onChange({ ...filters, categoryId: "" })}
+            />
+          )}
+          {filters.dateFrom && (
+            <FilterChip
+              label={`From: ${filters.dateFrom}`}
+              onRemove={() => onChange({ ...filters, dateFrom: "" })}
+            />
+          )}
+          {filters.dateTo && (
+            <FilterChip
+              label={`To: ${filters.dateTo}`}
+              onRemove={() => onChange({ ...filters, dateTo: "" })}
+            />
+          )}
+          {filters.search && (
+            <FilterChip
+              label={`"${filters.search}"`}
+              onRemove={() => { setSearch(""); onChange({ ...filters, search: "" }) }}
+            />
+          )}
+          {filters.tag && (
+            <FilterChip
+              label={`#${filters.tag}`}
+              onRemove={() => onChange({ ...filters, tag: "" })}
+            />
+          )}
+          {filters.minAmount !== undefined && (
+            <FilterChip
+              label={`Min: $${filters.minAmount}`}
+              onRemove={() => { setMinAmount(""); onChange({ ...filters, minAmount: undefined }) }}
+            />
+          )}
+          {filters.maxAmount !== undefined && (
+            <FilterChip
+              label={`Max: $${filters.maxAmount}`}
+              onRemove={() => { setMaxAmount(""); onChange({ ...filters, maxAmount: undefined }) }}
+            />
+          )}
+          {filters.recurring && (
+            <FilterChip
+              label="Recurring"
+              onRemove={() => onChange({ ...filters, recurring: undefined })}
+            />
+          )}
+        </div>
+      )}
     </div>
   )
 }

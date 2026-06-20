@@ -16,7 +16,7 @@ interface Props {
   filterKey?: string
   onAdd: (data: TransactionFormData) => void
   onUpdate: (id: string, data: TransactionFormData) => void
-  onDelete: (id: string) => void
+  onDelete: (id: string, cascade: boolean) => void
 }
 
 export function TransactionList({ transactions, categories, filterKey, onAdd, onUpdate, onDelete }: Props) {
@@ -37,10 +37,10 @@ export function TransactionList({ transactions, categories, filterKey, onAdd, on
     undoTimersRef.current.forEach((t) => clearTimeout(t))
   }, [])
 
-  const handleDeleteConfirm = useCallback(() => {
+  const handleDeleteConfirm = useCallback((cascade: boolean) => {
     if (!deleteTarget) return
     const deleted = deleteTarget
-    onDelete(deleted.id)
+    onDelete(deleted.id, cascade)
     setDeleteTarget(null)
 
     const timer = setTimeout(() => {
@@ -81,6 +81,14 @@ export function TransactionList({ transactions, categories, filterKey, onAdd, on
       </div>
     )
   }
+
+  // Build recurring instance count map for cascade delete UI
+  const instanceCountMap = new Map<string, number>()
+  transactions.forEach((t) => {
+    if (t.recurringId) {
+      instanceCountMap.set(t.recurringId, (instanceCountMap.get(t.recurringId) ?? 0) + 1)
+    }
+  })
 
   const totalPages = Math.ceil(transactions.length / PAGE_SIZE)
   const pageItems = transactions.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE)
@@ -137,6 +145,7 @@ export function TransactionList({ transactions, categories, filterKey, onAdd, on
                 categories={categories}
                 onEditRequest={setEditTarget}
                 onDeleteRequest={setDeleteTarget}
+                recurringInstanceCount={instanceCountMap.get(t.id) ?? 0}
               />
             ))}
           </tbody>
@@ -185,6 +194,7 @@ export function TransactionList({ transactions, categories, filterKey, onAdd, on
         open={deleteTarget !== null}
         onOpenChange={(open) => { if (!open) setDeleteTarget(null) }}
         description="Delete this transaction? You can undo within a few seconds."
+        cascadeCount={deleteTarget?.isRecurring ? (instanceCountMap.get(deleteTarget.id) ?? 0) : undefined}
         onConfirm={handleDeleteConfirm}
       />
     </div>

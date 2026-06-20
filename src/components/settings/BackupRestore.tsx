@@ -46,6 +46,9 @@ export function BackupRestore() {
         setStatus({ type: "error", message: result.error ?? "Import failed" })
       }
     }
+    reader.onerror = () => {
+      setStatus({ type: "error", message: "Could not read the file. Please try again." })
+    }
     reader.readAsText(pendingFile)
     setPendingFile(null)
   }

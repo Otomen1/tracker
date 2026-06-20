@@ -54,7 +54,7 @@ export function CategoryForm({ category, defaultType = "expense", existingNames 
       .filter((n) => n.toLowerCase() !== category?.name?.toLowerCase())
       .some((n) => n.toLowerCase() === data.name.toLowerCase())
     if (duplicate) {
-      setError("name", { message: "A category with this name already exists" })
+      setError("name", { type: "manual", message: "A category with this name already exists" })
       return
     }
     onSubmit({
@@ -69,7 +69,7 @@ export function CategoryForm({ category, defaultType = "expense", existingNames 
     <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4">
       <div className="space-y-1.5">
         <Label htmlFor="name">Name</Label>
-        <Input id="name" placeholder="Category name" {...register("name")} />
+        <Input id="name" placeholder="Category name" maxLength={30} {...register("name")} />
         {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
       </div>
 

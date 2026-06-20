@@ -5,6 +5,7 @@ import { MobileNav } from "./MobileNav"
 import { QuickAddFAB } from "./QuickAddFAB"
 import { StorageQuotaBanner } from "./StorageQuotaBanner"
 import { OnboardingModal } from "./OnboardingModal"
+import { ErrorBoundary } from "./ErrorBoundary"
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   return (
@@ -19,7 +20,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <Sidebar />
       <main id="main-content" className="lg:pl-56 pb-16 lg:pb-0">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6">
-          {children}
+          <ErrorBoundary>{children}</ErrorBoundary>
         </div>
       </main>
       <MobileNav />

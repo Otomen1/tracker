@@ -12,9 +12,10 @@ interface Props {
   categories: Category[]
   onEditRequest: (t: Transaction) => void
   onDeleteRequest: (t: Transaction) => void
+  recurringInstanceCount?: number
 }
 
-export function TransactionRow({ transaction, categories, onEditRequest, onDeleteRequest }: Props) {
+export function TransactionRow({ transaction, categories, onEditRequest, onDeleteRequest, recurringInstanceCount = 0 }: Props) {
   const { fmt } = useSettingsContext()
   const category = categories.find((c) => c.id === transaction.categoryId)
 
@@ -73,7 +74,7 @@ export function TransactionRow({ transaction, categories, onEditRequest, onDelet
         {transaction.type === "income" ? "+" : "-"}{fmt(transaction.amount)}
       </td>
       <td className="py-3 px-4 text-right">
-        <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity">
+        <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 group-focus-within:opacity-100 transition-opacity">
           <Button
             size="icon" variant="ghost" className="h-8 w-8"
             aria-label={`Edit ${transaction.description}`}

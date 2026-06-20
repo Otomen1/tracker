@@ -1,13 +1,19 @@
 "use client"
 
 import { useState, useMemo } from "react"
+import dynamic from "next/dynamic"
 import { useTransactions } from "@/hooks/useTransactions"
 import { useCategories } from "@/hooks/useCategories"
 import { getAnnualSummary } from "@/lib/analytics"
 import { getYearKey } from "@/lib/formatters"
 import { Button } from "@/components/ui/button"
 import { ChevronLeft, ChevronRight } from "lucide-react"
-import { AnnualSummaryView } from "@/components/annual/AnnualSummary"
+import { ChartSkeleton } from "@/components/ui/skeleton"
+
+const AnnualSummaryView = dynamic(
+  () => import("@/components/annual/AnnualSummary").then((m) => ({ default: m.AnnualSummaryView })),
+  { loading: () => <ChartSkeleton height={260} />, ssr: false }
+)
 
 export default function AnnualPage() {
   const currentYear = getYearKey()

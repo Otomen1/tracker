@@ -99,6 +99,13 @@ export interface CategoryFormData {
   budget?: number
 }
 
+export interface Insight {
+  id: string
+  type: "positive" | "warning" | "negative" | "neutral"
+  title: string
+  detail?: string
+}
+
 export interface TransactionFilters {
   type?: TransactionType | ""
   categoryId?: string
@@ -108,5 +115,5 @@ export interface TransactionFilters {
   tag?: string
   minAmount?: number
   maxAmount?: number
+  recurring?: boolean
 }
-

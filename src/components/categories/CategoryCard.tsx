@@ -32,7 +32,7 @@ export function CategoryCard({ category, existingNames, hasTransactions, onUpdat
 
   return (
     <>
-      <div className="group flex items-center justify-between px-4 py-3 rounded-lg border border-zinc-200/60 dark:border-zinc-800/50 bg-white/60 dark:bg-zinc-800/30 hover:border-zinc-300 dark:hover:border-zinc-700/60 hover:bg-white/80 dark:hover:bg-zinc-800/50 transition-colors">
+      <div className="group flex items-center justify-between px-4 py-3 rounded-lg border border-zinc-200/60 dark:border-zinc-800/60 bg-white/60 dark:bg-zinc-800/30 backdrop-blur-sm hover:border-zinc-300/80 dark:hover:border-zinc-700/60 hover:bg-white/80 dark:hover:bg-zinc-800/50 transition-colors">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-full shrink-0" style={{ backgroundColor: category.color }} />
           <div>
@@ -49,19 +49,20 @@ export function CategoryCard({ category, existingNames, hasTransactions, onUpdat
           </div>
         </div>
 
-        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity">
           {category.isDefault ? (
             <div className="w-7 h-7 flex items-center justify-center">
               <Lock className="w-3.5 h-3.5 text-zinc-300" />
             </div>
           ) : (
             <>
-              <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => { setDeleteError(""); setEditOpen(true) }}>
+              <Button size="icon" variant="ghost" className="h-7 w-7" aria-label="Edit category" onClick={() => { setDeleteError(""); setEditOpen(true) }}>
                 <Pencil className="w-3.5 h-3.5" />
               </Button>
               <Button
                 size="icon" variant="ghost"
                 className="h-7 w-7 text-rose-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950"
+                aria-label="Delete category"
                 onClick={() => { setDeleteError(""); setDeleteOpen(true) }}
               >
                 <Trash2 className="w-3.5 h-3.5" />

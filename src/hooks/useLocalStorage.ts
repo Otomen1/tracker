@@ -35,8 +35,10 @@ export function useLocalStorage<T>(key: string, initialValue: T) {
         if (typeof window !== "undefined") {
           try {
             window.localStorage.setItem(key, JSON.stringify(valueToStore))
-          } catch {
-            window.dispatchEvent(new CustomEvent("storageQuotaExceeded"))
+          } catch (e) {
+            if (e instanceof DOMException && e.name === "QuotaExceededError") {
+              window.dispatchEvent(new CustomEvent("storage-quota-exceeded"))
+            }
           }
         }
         return valueToStore

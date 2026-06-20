@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { ThemeToggle } from "@/components/settings/ThemeToggle"
 import { CurrencySelector } from "@/components/settings/CurrencySelector"
 import { SavingsGoalForm } from "@/components/settings/SavingsGoalForm"
+import { BudgetLimitsForm } from "@/components/settings/BudgetLimitsForm"
 import { BackupRestore } from "@/components/settings/BackupRestore"
 import { InstallPrompt } from "@/components/settings/InstallPrompt"
 import { Separator } from "@/components/ui/separator"
@@ -73,6 +74,12 @@ export default function SettingsPage() {
 
         <SettingSection title="Monthly Savings Goal" description="Target net savings per month">
           <SavingsGoalForm />
+        </SettingSection>
+
+        <Separator />
+
+        <SettingSection title="Category Budgets" description="Monthly spending limit per expense category">
+          <BudgetLimitsForm />
         </SettingSection>
 
         <Separator />

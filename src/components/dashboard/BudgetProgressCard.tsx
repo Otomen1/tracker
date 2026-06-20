@@ -1,6 +1,7 @@
 "use client"
 
 import { memo } from "react"
+import Link from "next/link"
 import { BudgetStatus } from "@/types"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { useSettingsContext } from "@/context/SettingsContext"
@@ -14,7 +15,21 @@ interface Props {
 export const BudgetProgressCard = memo(function BudgetProgressCard({ budgets }: Props) {
   const { fmt } = useSettingsContext()
 
-  if (budgets.length === 0) return null
+  if (budgets.length === 0) {
+    return (
+      <Card className="border-zinc-200 dark:border-zinc-800">
+        <CardContent className="py-4 flex items-center justify-between">
+          <span className="text-sm text-zinc-500 dark:text-zinc-400">No budget limits set</span>
+          <Link
+            href="/settings"
+            className="text-xs text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 underline underline-offset-2 transition-colors"
+          >
+            Set limits in Settings →
+          </Link>
+        </CardContent>
+      </Card>
+    )
+  }
 
   const overBudgetCount = budgets.filter((b) => b.isOverBudget).length
 
@@ -45,6 +60,11 @@ export const BudgetProgressCard = memo(function BudgetProgressCard({ budgets }: 
             </div>
             <div className="w-full bg-zinc-100 dark:bg-zinc-800 rounded-full h-1.5">
               <div
+                role="progressbar"
+                aria-valuenow={Math.min(b.percentage, 100)}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-label={`${b.categoryName} budget progress`}
                 className={cn("h-1.5 rounded-full transition-all", b.isOverBudget ? "bg-rose-500" : b.percentage > 80 ? "bg-amber-400" : "bg-emerald-500")}
                 style={{ width: `${Math.min(b.percentage, 100)}%` }}
               />

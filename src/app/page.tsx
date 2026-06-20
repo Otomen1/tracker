@@ -1,39 +1,46 @@
 "use client"
 
 import { useState, useMemo } from "react"
+import dynamic from "next/dynamic"
 import { useTransactions } from "@/hooks/useTransactions"
 import { useCategories } from "@/hooks/useCategories"
 import { useHydrated } from "@/hooks/useHydrated"
-import { getDashboardStats, getExpenseBreakdown, getMonthlyTrend, getRecentTransactions, getBudgetStatus } from "@/lib/analytics"
+import { getDashboardStats, getExpenseBreakdown, getMonthlyTrend, getRecentTransactions, getBudgetStatus, getSpendingInsights } from "@/lib/analytics"
 import { getMonthKey } from "@/lib/formatters"
 import { MONTHS_IN_CHART, RECENT_TRANSACTIONS_COUNT } from "@/lib/constants"
+import { useSettingsContext } from "@/context/SettingsContext"
 import { MonthSelector } from "@/components/dashboard/MonthSelector"
 import { StatsCards } from "@/components/dashboard/StatsCards"
-import dynamic from "next/dynamic"
-const ExpensePieChart = dynamic(
-  () => import("@/components/dashboard/ExpensePieChart").then((m) => ({ default: m.ExpensePieChart })),
-  { ssr: false, loading: () => <div className="h-[316px] rounded-xl animate-pulse bg-zinc-100 dark:bg-zinc-800" /> }
-)
-const MonthlyBarChart = dynamic(
-  () => import("@/components/dashboard/MonthlyBarChart").then((m) => ({ default: m.MonthlyBarChart })),
-  { ssr: false, loading: () => <div className="h-[316px] rounded-xl animate-pulse bg-zinc-100 dark:bg-zinc-800" /> }
-)
 import { RecentTransactions } from "@/components/dashboard/RecentTransactions"
 import { SavingsGoalCard } from "@/components/dashboard/SavingsGoalCard"
 import { BudgetProgressCard } from "@/components/dashboard/BudgetProgressCard"
+import { SpendingInsightsCard } from "@/components/dashboard/SpendingInsightsCard"
+import { ChartSkeleton } from "@/components/ui/skeleton"
 import { AlertTriangle } from "lucide-react"
+
+const ExpensePieChart = dynamic(
+  () => import("@/components/dashboard/ExpensePieChart").then((m) => ({ default: m.ExpensePieChart })),
+  { loading: () => <ChartSkeleton height={220} />, ssr: false }
+)
+
+const MonthlyBarChart = dynamic(
+  () => import("@/components/dashboard/MonthlyBarChart").then((m) => ({ default: m.MonthlyBarChart })),
+  { loading: () => <ChartSkeleton height={260} />, ssr: false }
+)
 
 export default function DashboardPage() {
   const [selectedMonth, setSelectedMonth] = useState(getMonthKey())
   const isHydrated = useHydrated()
   const { transactions } = useTransactions()
   const { categories } = useCategories()
+  const { fmt } = useSettingsContext()
 
   const stats = useMemo(() => getDashboardStats(transactions, selectedMonth), [transactions, selectedMonth])
   const expenseBreakdown = useMemo(() => getExpenseBreakdown(transactions, selectedMonth, categories), [transactions, selectedMonth, categories])
   const monthlyTrend = useMemo(() => getMonthlyTrend(transactions, MONTHS_IN_CHART), [transactions])
   const recentTransactions = useMemo(() => getRecentTransactions(transactions, RECENT_TRANSACTIONS_COUNT), [transactions])
   const budgetStatus = useMemo(() => getBudgetStatus(transactions, selectedMonth, categories), [transactions, selectedMonth, categories])
+  const insights = useMemo(() => getSpendingInsights(transactions, selectedMonth, categories, fmt), [transactions, selectedMonth, categories, fmt])
 
   const overBudgetCategories = useMemo(() => budgetStatus.filter((b) => b.isOverBudget), [budgetStatus])
 
@@ -80,6 +87,8 @@ export default function DashboardPage() {
       )}
 
       <StatsCards stats={stats} />
+
+      <SpendingInsightsCard insights={insights} selectedMonth={selectedMonth} />
 
       <SavingsGoalCard currentNet={stats.currentMonthNet} />
 
