@@ -151,7 +151,16 @@ export function importAllData(json: string): { success: boolean; error?: string 
     return { success: false, error: "Could not parse backup file" }
   }
 
-  // Try strict Zod validation first
+  // Basic structure check: must have a transactions array
+  if (!parsed || typeof parsed !== "object") {
+    return { success: false, error: "Invalid backup file: missing transactions" }
+  }
+  const raw = parsed as Record<string, unknown>
+  if (!raw.transactions || !Array.isArray(raw.transactions)) {
+    return { success: false, error: "Invalid backup file: missing transactions" }
+  }
+
+  // Try strict Zod validation first (enforces data integrity: amounts, dates, limits)
   const result = backupSchema.safeParse(parsed)
   if (result.success) {
     const data = result.data
@@ -167,53 +176,36 @@ export function importAllData(json: string): { success: boolean; error?: string 
     return { success: true }
   }
 
-  // Fall back to lenient validation (for backups from older/different versions)
+  // Check if Zod failed due to transactions data integrity (not just format compat)
+  // If transactions array has data errors, propagate the Zod error
+  const txnSchema = z.array(transactionSchema).max(50000)
+  const txnCheck = txnSchema.safeParse(raw.transactions)
+  if (!txnCheck.success) {
+    const msg = txnCheck.error.issues[0]?.message ?? "Invalid backup file"
+    return { success: false, error: `Invalid backup file: ${msg}` }
+  }
+
+  // Fall back to lenient validation for category format compatibility
+  // (e.g., old "both" category type from earlier app versions)
   try {
-    const data = parsed as Record<string, unknown>
-    if (!data.transactions || !Array.isArray(data.transactions)) {
-      const msg = result.error.issues[0]?.message ?? "Invalid backup file"
-      return { success: false, error: `Invalid backup file: ${msg}` }
-    }
-
-    const validTransactions = data.transactions.filter((t: unknown) => {
-      if (!t || typeof t !== "object") return false
-      const o = t as Record<string, unknown>
-      return (
-        typeof o.id === "string" &&
-        (o.type === "income" || o.type === "expense") &&
-        typeof o.amount === "number" &&
-        typeof o.categoryId === "string" &&
-        typeof o.description === "string" &&
-        typeof o.date === "string" &&
-        typeof o.createdAt === "string" &&
-        typeof o.updatedAt === "string"
-      )
-    }) as Transaction[]
-
-    if (validTransactions.length !== data.transactions.length) {
-      console.warn(
-        `Import: skipped ${data.transactions.length - validTransactions.length} invalid transaction(s)`
-      )
-    }
-
-    if (data.categories && Array.isArray(data.categories)) {
-      const validCategories = data.categories
+    if (raw.categories && Array.isArray(raw.categories)) {
+      const validCategories = raw.categories
         .filter(isValidCategory)
         .map((c: Category) => ({
           ...c,
           type: c.type === ("both" as string) ? "expense" : c.type,
           color: isValidHexColor(c.color) ? c.color : FALLBACK_COLOR,
         })) as Category[]
-      if (validCategories.length !== data.categories.length) {
+      if (validCategories.length !== raw.categories.length) {
         console.warn(
-          `Import: skipped ${data.categories.length - validCategories.length} invalid category(s)`
+          `Import: skipped ${raw.categories.length - validCategories.length} invalid category(s)`
         )
       }
       saveCategories(validCategories)
     }
 
-    saveTransactions(validTransactions)
-    if (data.settings) saveSettings(data.settings as Settings)
+    saveTransactions(txnCheck.data)
+    if (raw.settings) saveSettings(raw.settings as Settings)
     return { success: true }
   } catch {
     return { success: false, error: "Could not parse backup file" }
