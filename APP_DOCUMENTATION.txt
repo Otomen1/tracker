@@ -1,0 +1,735 @@
+================================================================================
+  EXPENSE TRACKER — COMPLETE APP DOCUMENTATION
+================================================================================
+Last updated: June 2026
+Version: 0.1.0
+
+
+--------------------------------------------------------------------------------
+1. OVERVIEW
+--------------------------------------------------------------------------------
+
+Expense Tracker is a local-first personal finance web app that runs entirely in
+the browser. There is no backend, no server, no user account, and no cloud sync.
+All data is stored in the browser's localStorage on the user's device. It is
+built as a Progressive Web App (PWA), meaning it can be installed to a home
+screen and used offline like a native app.
+
+Target user: A single person on a single device who wants to track income and
+expenses privately without signing up for anything.
+
+Key design principles:
+  - Zero data leaves the device
+  - Works offline after first load
+  - No registration, no passwords (single-user by design)
+  - Instant — no network latency, all reads/writes are synchronous localStorage
+
+
+--------------------------------------------------------------------------------
+2. TECH STACK
+--------------------------------------------------------------------------------
+
+  Framework       Next.js 15 (App Router, all "use client" — no SSR)
+  UI Library      React 18
+  Language        TypeScript (strict mode)
+  Styling         Tailwind CSS v3 + tailwind-merge
+  Components      shadcn/ui (Radix UI primitives: Dialog, Select, Label, etc.)
+  Charts          Recharts v2 (lazy-loaded via next/dynamic)
+  Forms           react-hook-form v7 + Zod v3 for schema validation
+  Date handling   date-fns v3
+  Icons           lucide-react
+  Theming         next-themes (light / dark / system)
+  PWA             @ducanh2912/next-pwa (Workbox-based service worker)
+  Virtual list    @tanstack/react-virtual v3
+  Testing         Vitest v2 + @testing-library/react + jsdom
+  Storage         Browser localStorage (no database, no IndexedDB)
+
+
+--------------------------------------------------------------------------------
+3. FOLDER STRUCTURE
+--------------------------------------------------------------------------------
+
+tracker/
+├── public/
+│   ├── manifest.json          PWA manifest (name, icons, display mode)
+│   ├── offline.html           Shown when app is offline and no cache exists
+│   ├── icon-192.png           PWA icon
+│   └── icon-512.png           PWA icon
+│
+├── src/
+│   ├── app/                   Next.js App Router pages
+│   │   ├── layout.tsx         Root layout (fonts, metadata, Providers + AppShell)
+│   │   ├── globals.css        Tailwind base + CSS variables + print styles
+│   │   ├── page.tsx           Dashboard (/)
+│   │   ├── transactions/
+│   │   │   └── page.tsx       Transactions list (/transactions)
+│   │   ├── categories/
+│   │   │   └── page.tsx       Category manager (/categories)
+│   │   ├── monthly/
+│   │   │   └── page.tsx       Monthly summary (/monthly)
+│   │   ├── annual/
+│   │   │   └── page.tsx       Annual summary (/annual)
+│   │   ├── settings/
+│   │   │   └── page.tsx       Settings (/settings)
+│   │   ├── error.tsx          Global error boundary
+│   │   └── not-found.tsx      404 page
+│   │
+│   ├── components/
+│   │   ├── layout/
+│   │   │   ├── AppShell.tsx         Root layout wrapper (sidebar + main + nav)
+│   │   │   ├── Sidebar.tsx          Desktop fixed left sidebar (lg+ screens)
+│   │   │   ├── MobileNav.tsx        Bottom tab bar (< lg screens)
+│   │   │   ├── QuickAddFAB.tsx      Floating action button for fast transaction entry
+│   │   │   ├── StorageQuotaBanner.tsx  Full-storage warning banner
+│   │   │   └── OnboardingModal.tsx  3-step first-run welcome dialog
+│   │   │
+│   │   ├── dashboard/
+│   │   │   ├── StatsCards.tsx       4 summary cards (income/expenses/net/balance)
+│   │   │   ├── MonthSelector.tsx    Month navigator (← YYYY-MM →)
+│   │   │   ├── ExpensePieChart.tsx  Donut chart: expenses by category
+│   │   │   ├── MonthlyBarChart.tsx  Bar chart: 6-month income vs expenses
+│   │   │   ├── RecentTransactions.tsx  Last 5 transactions card
+│   │   │   ├── SavingsGoalCard.tsx  Progress bar toward monthly savings target
+│   │   │   └── BudgetProgressCard.tsx  Per-category budget progress bars
+│   │   │
+│   │   ├── transactions/
+│   │   │   ├── TransactionList.tsx    Paginated table + lifted dialogs + undo
+│   │   │   ├── TransactionRow.tsx     Single table row with edit/delete actions
+│   │   │   ├── TransactionDialog.tsx  Add/edit transaction modal
+│   │   │   ├── TransactionForm.tsx    Form inside the dialog (react-hook-form)
+│   │   │   ├── TransactionFilters.tsx Filter bar (type, category, date, amount, tags, search)
+│   │   │   ├── ExportButton.tsx       Download filtered transactions as CSV
+│   │   │   └── DeleteConfirmDialog.tsx Reusable "are you sure?" modal
+│   │   │
+│   │   ├── categories/
+│   │   │   ├── CategoryList.tsx  List of all categories with edit/delete
+│   │   │   ├── CategoryCard.tsx  Single category row
+│   │   │   ├── CategoryDialog.tsx  Add/edit category modal
+│   │   │   └── CategoryForm.tsx   Form inside the dialog
+│   │   │
+│   │   ├── annual/
+│   │   │   └── AnnualSummary.tsx  Year-over-year comparison + monthly table + chart
+│   │   │
+│   │   ├── monthly/
+│   │   │   └── TopTransactions.tsx  Largest transactions for the selected month
+│   │   │
+│   │   ├── settings/
+│   │   │   ├── ThemeToggle.tsx       Light / Dark / System selector
+│   │   │   ├── CurrencySelector.tsx  Currency dropdown (12 currencies)
+│   │   │   ├── SavingsGoalForm.tsx   Set monthly savings target
+│   │   │   ├── BackupRestore.tsx     Export JSON / Import JSON with confirmation
+│   │   │   └── InstallPrompt.tsx     PWA "Add to Home Screen" button
+│   │   │
+│   │   ├── providers/
+│   │   │   └── Providers.tsx     ThemeProvider + SettingsContext wrapper
+│   │   │
+│   │   └── ui/                   shadcn/ui base components (unstyled Radix wrappers)
+│   │       ├── button.tsx
+│   │       ├── card.tsx
+│   │       ├── dialog.tsx
+│   │       ├── alert-dialog.tsx
+│   │       ├── input.tsx
+│   │       ├── label.tsx
+│   │       ├── select.tsx
+│   │       ├── badge.tsx
+│   │       └── separator.tsx
+│   │
+│   ├── context/
+│   │   └── SettingsContext.tsx   Provides currency formatter (fmt) app-wide
+│   │
+│   ├── hooks/
+│   │   ├── useLocalStorage.ts    Generic localStorage hook with cross-tab sync
+│   │   ├── useTransactions.ts    CRUD + recurring auto-generation
+│   │   ├── useCategories.ts      CRUD + deletion guard
+│   │   └── useSettings.ts        Read/write app settings
+│   │
+│   ├── lib/
+│   │   ├── analytics.ts     All data analysis functions (pure, no side effects)
+│   │   ├── storage.ts       Zod schemas + JSON export/import
+│   │   ├── csv.ts           CSV generation with formula-injection protection
+│   │   ├── constants.ts     DEFAULT_CATEGORIES, STORAGE_KEYS, magic numbers
+│   │   ├── formatters.ts    Date/currency/month formatting + addMonths utility
+│   │   └── utils.ts         cn() class merging helper
+│   │
+│   ├── types/
+│   │   └── index.ts         All TypeScript interfaces and types
+│   │
+│   └── test/
+│       ├── setup.ts
+│       └── __tests__/
+│           ├── analytics.test.ts   17 tests for analytics functions
+│           ├── csv.test.ts         9 tests for CSV export and injection protection
+│           ├── formatters.test.ts  Tests for date/currency formatters
+│           └── storage.test.ts     Tests for import/export and Zod validation
+│
+├── next.config.mjs            PWA config + HTTP security headers
+├── tailwind.config.ts         Tailwind setup
+├── vitest.config.ts           Test config (jsdom, path aliases)
+└── package.json
+
+
+--------------------------------------------------------------------------------
+4. DATA MODEL
+--------------------------------------------------------------------------------
+
+All data lives in 4 localStorage keys:
+
+  tracker_transactions      Array of Transaction objects
+  tracker_categories        Array of Category objects
+  tracker_settings          Settings object
+  tracker_schema_version    String "1" (for future migrations)
+
+--- Transaction ---
+  id            string      UUID (crypto.randomUUID())
+  type          "income" | "expense"
+  amount        number      Always positive; sign is derived from type
+  categoryId    string      FK to Category.id
+  description   string      Required
+  date          string      "YYYY-MM-DD"
+  notes         string?     Optional free text
+  tags          string[]?   Optional array of tag strings (max 50 chars each)
+  isRecurring   boolean?    True = this is a recurring template
+  recurringDay  number?     Day of month to generate (1–31)
+  recurringId   string?     If set, this was auto-generated from that template ID
+  createdAt     string      ISO 8601 timestamp
+  updatedAt     string      ISO 8601 timestamp
+
+--- Category ---
+  id            string      "cat_" + UUID for user-created; fixed IDs for defaults
+  name          string      Display name
+  type          "income" | "expense" | "both"
+  color         string      Hex color (#RRGGBB or #RGB), validated by regex
+  isDefault     boolean     Default categories cannot be deleted
+  budget        number?     Optional monthly spending limit (expenses only)
+  createdAt     string      ISO 8601 timestamp (static for defaults)
+
+--- Settings ---
+  currency            string    ISO 4217 currency code (default "USD")
+  theme               "light" | "dark" | "system"
+  monthlySavingsGoal  number    Target net savings per month (0 = disabled)
+
+--- Zod validation on all data ---
+  - ISO date strings are validated semantically (not just by regex)
+  - Amount must be finite, safe, and positive
+  - Category color must match /^#[0-9A-Fa-f]{3,6}$/
+  - Tags are capped at 50 characters each, max 20 per transaction
+  - Backup arrays are capped at 50,000 transactions and 500 categories
+  - Backup files are rejected if larger than 5 MB before parsing
+
+
+--------------------------------------------------------------------------------
+5. PAGES & FEATURES
+--------------------------------------------------------------------------------
+
+--- DASHBOARD (/) ---
+  Shows a summary of the currently selected month (defaults to current).
+
+  Components shown:
+    - Month selector (navigate to any past/future month)
+    - 4 stats cards: Income, Expenses, Net Balance, All-Time Balance
+      Each card shows the change vs the previous month as a % badge
+    - Savings Goal card: progress bar toward monthly net savings target
+      (hidden if no goal is set)
+    - Budget Progress card: per-category spend vs budget bars
+      (hidden if no budgets are set)
+    - Expense Pie Chart: donut chart with category breakdown (lazy-loaded)
+      Includes a screen-reader-accessible hidden data table
+    - 6-Month Bar Chart: income vs expenses trend (lazy-loaded)
+      Includes a screen-reader-accessible hidden data table
+    - Recent Transactions: last 5 transactions with "View all" link
+
+--- TRANSACTIONS (/transactions) ---
+  Full transaction list with filtering, sorting, and export.
+
+  Features:
+    - Add Transaction button (opens TransactionDialog)
+    - Quick-add FAB (bottom-right, also opens TransactionDialog)
+    - Recurring Templates section: collapsible panel showing all recurring
+      templates (description, category, day-of-month, amount)
+    - Filter bar:
+        Type (All / Income / Expense)
+        Category dropdown
+        Tags dropdown (only shown if tags exist)
+        Date From / Date To
+        Min Amount / Max Amount
+        Search (description, notes, tags — 200ms debounced)
+        Clear all filters button
+      On mobile: search is always visible; other filters hidden behind a
+      toggle button to save screen space
+    - Transaction count ("X transactions, filtered from Y")
+    - Paginated table (25 per page):
+        Columns: Date, Description, Category, Type (hidden on mobile), Amount
+        Each row shows tags and notes inline below the description
+        Edit and delete buttons visible on hover (desktop) or always visible
+        on touch-screen devices (detected via @media(hover:none))
+    - Edit opens TransactionDialog pre-filled with existing values
+    - Delete asks for confirmation, then shows a 4-second undo toast
+    - Export CSV button: downloads filtered transactions as a .csv file
+
+--- CATEGORIES (/categories) ---
+  Manage the category list.
+
+  Features:
+    - Add Category button
+    - List of all categories grouped with their type indicator and color swatch
+    - Budget amount shown if set
+    - Edit any category (name, color, budget)
+    - Delete custom categories (blocked if used by any transaction)
+    - Default categories cannot be deleted
+    - Duplicate name detection: shows an inline form error if the name is taken
+
+--- MONTHLY (/monthly?month=YYYY-MM) ---
+  Detailed breakdown for a specific month (URL-driven, sharable).
+
+  Features:
+    - Month selector updates the URL (back/forward navigation works)
+    - 4 stats cards (same as dashboard)
+    - Budget Progress card
+    - Expense Pie Chart for the selected month
+    - Top Transactions list: largest transactions for the month
+
+--- ANNUAL (/annual) ---
+  Year-over-year financial summary.
+
+  Features:
+    - Year navigator (← YEAR →), current year is the ceiling
+    - Year-over-year comparison card: income/expenses/net vs prior year,
+      shown as signed percentage change badges (hidden for earliest recorded year)
+    - 4 annual stats cards: Total Income, Total Expenses, Net Saved,
+      Avg Monthly Spend
+    - Full-year bar chart (12 monthly bars, income vs expenses)
+      Includes accessible hidden data table
+    - Month-by-month table: each row is clickable and navigates to that
+      month's Monthly page
+    - Top 5 expense categories with spend amount, % of total, and bar
+
+--- SETTINGS (/settings) ---
+  App configuration and data management.
+
+  Sections:
+    - Appearance: Light / Dark / System theme toggle
+    - Currency: dropdown of 12 currencies; changes all displayed amounts app-wide
+    - Monthly Savings Goal: numeric input; shown as progress on the dashboard
+    - Data Backup:
+        Export — downloads all data as a timestamped .json file
+        Import — opens file picker; shows confirmation dialog before overwriting;
+        rejects files over 5 MB; validates schema with Zod before applying
+    - Storage: progress bar showing approximate localStorage usage (of ~5 MB limit)
+    - Install App: "Add to Home Screen" button (only visible if the PWA install
+      prompt has fired and the app is not already installed)
+
+
+--------------------------------------------------------------------------------
+6. NAVIGATION
+--------------------------------------------------------------------------------
+
+Desktop (≥ 1024px):
+  Fixed left sidebar (56px wide), always visible. 6 nav items with icons and
+  labels. Active item is white on dark background. Sidebar is always dark,
+  independent of the light/dark theme.
+
+Mobile (< 1024px):
+  Bottom tab bar with 6 tabs and 10px labels. Fixed at the bottom, above
+  keyboard. A floating action button (+) sits above the tab bar for quick
+  transaction entry.
+
+Accessibility:
+  - aria-current="page" on the active nav link in both Sidebar and MobileNav
+  - Skip-navigation link at the top of the page (visible on keyboard focus only):
+    "Skip to main content" jumps to id="main-content"
+
+
+--------------------------------------------------------------------------------
+7. RECURRING TRANSACTIONS
+--------------------------------------------------------------------------------
+
+A transaction can be marked as "recurring" when created. Setting it as recurring
+requires choosing a day of the month (1–31).
+
+How it works:
+  1. The transaction is saved as a template (isRecurring: true, recurringId: null).
+  2. On app load, on tab focus, and on tab becoming visible after being hidden,
+     useTransactions scans all templates and generates a copy for the current
+     month if one doesn't already exist.
+  3. Generated copies have isRecurring: false and recurringId set to the
+     template's ID, so they won't be re-generated.
+  4. If the chosen day exceeds the month's length (e.g., day 31 in February),
+     it is clamped to the last day of that month.
+  5. Templates are visible in the Recurring Templates panel on the Transactions
+     page. Auto-generated copies appear in the normal transaction list.
+
+
+--------------------------------------------------------------------------------
+8. STATE MANAGEMENT
+--------------------------------------------------------------------------------
+
+All state is in localStorage, surfaced through custom hooks:
+
+useLocalStorage<T>(key, initialValue)
+  - Reads from localStorage on first render
+  - Writes back on every update (JSON.stringify)
+  - Listens to StorageEvent for cross-tab synchronization — changes in one tab
+    are reflected in all other open tabs automatically
+  - Dispatches a custom "storageQuotaExceeded" event if localStorage.setItem
+    throws (quota full); the StorageQuotaBanner listens for this event
+
+useTransactions()
+  → { transactions, addTransaction, updateTransaction, deleteTransaction }
+  Wraps useLocalStorage + recurring auto-generation logic
+
+useCategories()
+  → { categories, addCategory, updateCategory, deleteCategory, getCategoriesForType }
+  Guards deletions: default categories and categories in use cannot be deleted
+
+useSettings()
+  → { settings, updateSettings }
+  Thin wrapper over useLocalStorage for the Settings object
+
+SettingsContext
+  Provides fmt(amount) — a pre-bound Intl.NumberFormat formatter for the
+  selected currency — to all components without prop-drilling
+
+
+--------------------------------------------------------------------------------
+9. ANALYTICS (src/lib/analytics.ts)
+--------------------------------------------------------------------------------
+
+All analytics functions are pure (no side effects, no state mutation).
+
+getDashboardStats(transactions, monthKey)
+  Returns income, expenses, net, all-time balance, previous month figures,
+  and transaction count for the given month. All values rounded to 2 decimals.
+
+getExpenseBreakdown(transactions, monthKey, categories)
+  Returns expense totals grouped by category for the given month, sorted by
+  amount descending. Includes percentage of total per category.
+
+getBudgetStatus(transactions, monthKey, categories)
+  For categories with a budget set, returns spent amount, budget, percentage,
+  and whether over budget. Sorted by percentage descending.
+
+getMonthlyTrend(transactions, monthCount=6)
+  Returns the last N months of income/expenses/net summaries.
+
+getAnnualSummary(transactions, year, categories)
+  Single-pass accumulator: iterates all transactions once, building 12 monthly
+  buckets, a category expense map, and annual totals simultaneously. O(n).
+
+filterTransactions(transactions, filters)
+  Filters by: type, categoryId, dateFrom, dateTo, tag, minAmount, maxAmount,
+  and text search (description + notes + tags).
+
+getSortedTransactions(transactions)
+  Sorts by date descending, then createdAt descending as a tiebreaker.
+
+getTopTransactions(transactions, monthKey, count)
+  Returns the N largest transactions in the given month by amount.
+
+getRecentTransactions(transactions, count)
+  Returns the N most recent transactions across all time.
+
+
+--------------------------------------------------------------------------------
+10. CSV EXPORT (src/lib/csv.ts)
+--------------------------------------------------------------------------------
+
+transactionsToCSV(transactions, categories)
+  Generates a comma-separated string with columns:
+    Date, Type, Category, Description, Amount
+
+  Amounts are signed: positive for income, negative for expenses.
+
+  Formula injection protection (escapeCsvCell):
+    Values starting with =, +, -, @, tab, or carriage return are prefixed with
+    a single quote to prevent spreadsheet apps from executing them as formulas.
+    All values are double-quoted; internal double quotes are escaped as "".
+
+downloadCSV(content, filename)
+  Creates a Blob URL, triggers a click on a temporary <a> element, then
+  revokes the URL.
+
+
+--------------------------------------------------------------------------------
+11. BACKUP & RESTORE (src/lib/storage.ts)
+--------------------------------------------------------------------------------
+
+exportAllData()
+  Reads all 3 data keys from localStorage and returns a JSON string:
+  {
+    schemaVersion: "1",
+    exportedAt: "<ISO timestamp>",
+    transactions: [...],
+    categories: [...],
+    settings: {...}
+  }
+
+importAllData(json)
+  1. Parses the JSON string
+  2. Validates against a strict Zod schema:
+     - Transaction array: max 50,000 items
+     - Category array: max 500 items
+     - Each transaction: correct types, valid dates, bounded amounts
+     - Each category: valid color hex, valid type enum
+  3. If validation passes, writes to localStorage (categories, transactions,
+     settings separately so a partial backup still applies what it has)
+  4. Returns { success: true } or { success: false, error: "..." }
+
+File size is checked before reading in BackupRestore.tsx:
+  Files larger than 5 MB are rejected before FileReader.readAsText is called.
+
+A confirmation dialog is shown before any import to prevent accidental overwrites.
+
+
+--------------------------------------------------------------------------------
+12. PWA & OFFLINE SUPPORT
+--------------------------------------------------------------------------------
+
+Manifest (public/manifest.json):
+  name: "Expense Tracker"
+  short_name: "Tracker"
+  display: "standalone"
+  orientation: "portrait-primary"
+  categories: ["finance", "productivity"]
+  Icons: 192×192 and 512×512 PNG
+
+Service Worker (@ducanh2912/next-pwa / Workbox):
+  - Caches all static assets and pages on install
+  - "Cache first" strategy for navigation — app loads instantly from cache
+  - Falls back to /offline.html if a navigation request fails and there is
+    no cached version
+
+Offline page (public/offline.html):
+  Standalone HTML file styled to match the app. Shows an icon, message, and
+  a "Try again" button that calls window.location.reload(). Supports dark mode
+  via prefers-color-scheme media query.
+
+Install prompt (InstallPrompt.tsx):
+  Listens for the beforeinstallprompt browser event. Stores it and shows an
+  "Install App" button in Settings. Clicking it triggers the native install
+  dialog. Button disappears after the user accepts or dismisses.
+
+Disabled in development:
+  The service worker is disabled when NODE_ENV === "development" to avoid
+  caching issues during development.
+
+
+--------------------------------------------------------------------------------
+13. SECURITY
+--------------------------------------------------------------------------------
+
+HTTP Security Headers (next.config.mjs, applied to all routes):
+  X-Frame-Options: DENY                    (blocks iframe embedding / clickjacking)
+  X-Content-Type-Options: nosniff          (prevents MIME-type sniffing)
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=()
+
+XSS:
+  React's default JSX escaping prevents XSS via rendered content.
+  No dangerouslySetInnerHTML is used anywhere.
+
+CSV injection:
+  escapeCsvCell() prefixes formula characters to prevent spreadsheet execution.
+
+Data validation:
+  All external data (backup imports, form inputs) is validated with Zod schemas
+  before being trusted or written to storage.
+
+Limitations (by design, personal-use app):
+  - No authentication: all data is visible to anyone who opens the browser
+  - No encryption: localStorage is plaintext
+  - No network requests: nothing leaves the device
+
+
+--------------------------------------------------------------------------------
+14. ACCESSIBILITY
+--------------------------------------------------------------------------------
+
+Implemented:
+  - aria-current="page" on active nav links
+  - aria-pressed on type-toggle buttons (Income/Expense selectors)
+  - aria-invalid + aria-describedby on form fields with errors
+  - aria-label on icon-only buttons and tag-remove buttons
+  - scope="col" on all table <th> elements
+  - role="img" + aria-label on chart containers
+  - Screen-reader-only <table> inside each chart with the same data
+  - Skip navigation link: "Skip to main content" (visible on keyboard focus)
+  - Focus trapping in dialogs via Radix UI Dialog
+  - Error messages are associated to their inputs by ID
+
+Print styles (globals.css @media print):
+  - Sidebar, nav, and action buttons are hidden
+  - Background is forced white, text forced black
+  - Box shadows removed
+  - Main content padding reset for clean print output
+
+
+--------------------------------------------------------------------------------
+15. PERFORMANCE
+--------------------------------------------------------------------------------
+
+Lazy loading:
+  ExpensePieChart and MonthlyBarChart are loaded with next/dynamic + ssr:false.
+  Recharts (~228KB gzipped) is NOT in the critical render path.
+  A skeleton placeholder (animate-pulse div) is shown while they load.
+
+Memoization:
+  - All analytics calls are wrapped in useMemo on every page
+  - StatsCards, BudgetProgressCard, ExpensePieChart, MonthlyBarChart are
+    wrapped in React.memo
+  - Tooltip components (PieTooltip, BarTooltip, AnnualBarTooltip) are defined
+    as stable named functions at module scope (not recreated on every render)
+
+Dialogs:
+  TransactionDialog and DeleteConfirmDialog are rendered once at the
+  TransactionList level, not once per row. A full page (25 rows) mounts
+  2 Radix Dialog portals, not 50.
+
+Virtual scrolling:
+  @tanstack/react-virtual is installed for large transaction lists.
+
+Cross-tab sync:
+  useLocalStorage listens to the StorageEvent and updates React state in all
+  open tabs when data changes in one.
+
+Debouncing:
+  The search input in TransactionFilters is debounced by 200ms.
+  Amount range inputs are debounced by 300ms.
+
+
+--------------------------------------------------------------------------------
+16. TESTING
+--------------------------------------------------------------------------------
+
+Test runner: Vitest v2 + @testing-library/react + jsdom
+
+Test files:
+  src/lib/__tests__/analytics.test.ts   (17 tests)
+    - getDashboardStats: income/expense calculation, previous month, all-time balance
+    - getExpenseBreakdown: grouping, percentages, empty months
+    - getBudgetStatus: over-budget detection, sorting
+    - filterTransactions: all filter fields including minAmount/maxAmount
+    - getTopTransactions: count limiting, month scoping
+
+  src/lib/__tests__/csv.test.ts         (9 tests)
+    - CSV output: correct columns, row order, signed amounts
+    - Formula injection: =, +, -, @, tab, carriage return all prefixed with '
+    - Quote escaping: internal double quotes doubled
+
+  src/lib/__tests__/formatters.test.ts
+    - formatCurrency: valid currencies, invalid currency fallback + console.warn
+    - formatDate: valid ISO date, invalid input fallback
+    - addMonths: forward/backward navigation, year boundary
+
+  src/lib/__tests__/storage.test.ts
+    - exportAllData: structure, schemaVersion, exportedAt
+    - importAllData: valid data, invalid JSON, schema violations, file too large
+
+Run tests:
+  npm test          (single run)
+  npm run test:watch  (watch mode)
+
+
+--------------------------------------------------------------------------------
+17. DEFAULT CATEGORIES
+--------------------------------------------------------------------------------
+
+11 categories are seeded on first use (cannot be deleted):
+
+  Income:
+    Salary       (#22c55e green)
+    Freelance    (#3b82f6 blue)
+    Investment   (#8b5cf6 purple)
+    Other Income (#6b7280 gray)
+
+  Expense:
+    Food          (#f97316 orange)
+    Transport     (#eab308 yellow)
+    Entertainment (#ec4899 pink)
+    Health        (#14b8a6 teal)
+    Shopping      (#f43f5e rose)
+    Bills         (#64748b slate)
+    Other         (#9ca3af light gray)
+
+All default categories have a static createdAt of "2024-01-01T00:00:00.000Z"
+(not evaluated at runtime) to keep timestamps stable across cold starts.
+
+Users can create unlimited additional categories with a custom name, color
+(picked from 12 presets or any hex value), and optional monthly budget.
+
+
+--------------------------------------------------------------------------------
+18. CURRENCIES SUPPORTED
+--------------------------------------------------------------------------------
+
+  USD  US Dollar          $
+  MYR  Malaysian Ringgit  RM
+  EUR  Euro               €
+  GBP  British Pound      £
+  SGD  Singapore Dollar   S$
+  AUD  Australian Dollar  A$
+  CAD  Canadian Dollar    C$
+  JPY  Japanese Yen       ¥
+  INR  Indian Rupee       ₹
+  IDR  Indonesian Rupiah  Rp
+  THB  Thai Baht          ฿
+  CNY  Chinese Yuan       ¥
+
+Changing currency updates all displayed amounts immediately. The currency
+setting is cosmetic — no FX conversion is performed. Amounts are stored as
+plain numbers with no currency attached.
+
+
+--------------------------------------------------------------------------------
+19. ONBOARDING
+--------------------------------------------------------------------------------
+
+On first launch (no "tracker_onboarded" key in localStorage), a 3-step modal
+is shown automatically:
+
+  Step 1: Welcome — explains local-only privacy, no accounts needed
+  Step 2: Categories & Tags — explains organization features and budgets
+  Step 3: Ready — tells user how to add their first transaction
+
+The modal can be dismissed at any step. Once closed, the key is set and the
+modal never appears again. There is no way to re-trigger it from the UI
+(clearing localStorage resets it).
+
+
+--------------------------------------------------------------------------------
+20. KNOWN LIMITATIONS
+--------------------------------------------------------------------------------
+
+  - Single device only: data is in localStorage; no sync to other devices
+  - Single user only: no per-user data isolation in the browser
+  - No authentication: opening the app shows all financial data immediately
+  - Storage limit: ~5–10 MB in most browsers (~28,000 transactions at
+    ~350 bytes each before hitting the ceiling)
+  - No undo for category changes or settings changes (only transaction
+    deletes have a 4-second undo window)
+  - No bank statement import: CSV bank exports cannot be parsed/imported
+  - No multi-currency per transaction: the currency is a display setting only
+  - No recurring transaction manager: templates can only be edited/deleted
+    from the main transaction list (they appear in the Recurring Templates
+    panel but editing them opens the standard TransactionDialog)
+
+
+--------------------------------------------------------------------------------
+21. RUNNING LOCALLY
+--------------------------------------------------------------------------------
+
+Requirements: Node.js 18+, npm
+
+  npm install          Install dependencies
+  npm run dev          Start development server (http://localhost:3000)
+  npm run build        Production build
+  npm run start        Serve production build
+  npm test             Run test suite
+  npm run lint         ESLint check
+
+Note: The PWA service worker is disabled in development mode. To test offline
+behavior, run a production build with `npm run build && npm run start`.
+
+
+================================================================================
+  END OF DOCUMENTATION
+================================================================================
