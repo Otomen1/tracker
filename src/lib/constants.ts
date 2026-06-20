@@ -21,6 +21,7 @@ export const STORAGE_KEYS = {
   CATEGORIES: "tracker_categories",
   SCHEMA_VERSION: "tracker_schema_version",
   SETTINGS: "tracker_settings",
+  ONBOARDED: "tracker_onboarded",
 } as const
 
 export const SCHEMA_VERSION = "1"

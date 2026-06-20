@@ -8,8 +8,8 @@ export function StorageQuotaBanner() {
 
   useEffect(() => {
     const handler = () => setVisible(true)
-    window.addEventListener("storageQuotaExceeded", handler)
-    return () => window.removeEventListener("storageQuotaExceeded", handler)
+    window.addEventListener("storage-quota-exceeded", handler)
+    return () => window.removeEventListener("storage-quota-exceeded", handler)
   }, [])
 
   if (!visible) return null

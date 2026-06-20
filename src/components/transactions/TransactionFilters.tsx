@@ -12,6 +12,7 @@ interface Props {
   filters: TransactionFilters
   categories: Category[]
   tags: string[]
+  fmt: (n: number) => string
   onChange: (filters: TransactionFilters) => void
 }
 
@@ -31,7 +32,7 @@ function FilterChip({ label, onRemove }: { label: string; onRemove: () => void }
   )
 }
 
-export function TransactionFiltersBar({ filters, categories, tags, onChange }: Props) {
+export function TransactionFiltersBar({ filters, categories, tags, fmt, onChange }: Props) {
   const [search, setSearch] = useState(filters.search ?? "")
   const [minAmount, setMinAmount] = useState(filters.minAmount !== undefined ? String(filters.minAmount) : "")
   const [maxAmount, setMaxAmount] = useState(filters.maxAmount !== undefined ? String(filters.maxAmount) : "")
@@ -181,7 +182,7 @@ export function TransactionFiltersBar({ filters, categories, tags, onChange }: P
         className="w-full sm:w-28 h-9 text-sm"
         value={minAmount}
         onChange={(e) => setMinAmount(e.target.value)}
-        placeholder="Min $"
+        placeholder="Min amount"
       />
       <Input
         type="number"
@@ -189,7 +190,7 @@ export function TransactionFiltersBar({ filters, categories, tags, onChange }: P
         className="w-full sm:w-28 h-9 text-sm"
         value={maxAmount}
         onChange={(e) => setMaxAmount(e.target.value)}
-        placeholder="Max $"
+        placeholder="Max amount"
       />
 
       <Button
@@ -314,13 +315,13 @@ export function TransactionFiltersBar({ filters, categories, tags, onChange }: P
           )}
           {filters.minAmount !== undefined && (
             <FilterChip
-              label={`Min: $${filters.minAmount}`}
+              label={`Min: ${fmt(filters.minAmount)}`}
               onRemove={() => { setMinAmount(""); onChange({ ...filters, minAmount: undefined }) }}
             />
           )}
           {filters.maxAmount !== undefined && (
             <FilterChip
-              label={`Max: $${filters.maxAmount}`}
+              label={`Max: ${fmt(filters.maxAmount)}`}
               onRemove={() => { setMaxAmount(""); onChange({ ...filters, maxAmount: undefined }) }}
             />
           )}

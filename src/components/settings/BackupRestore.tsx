@@ -87,7 +87,18 @@ export function BackupRestore() {
 
       <div className="flex items-center gap-3 pt-1">
         <span className="text-sm text-zinc-700 dark:text-zinc-300 shrink-0">Auto backup</span>
-        <Select value={backupInterval} onValueChange={(v) => updateSettings({ backupInterval: v as "never" | "daily" | "weekly" | "monthly", lastBackupAt: undefined })}>
+        <Select
+          value={backupInterval}
+          onValueChange={(v) => {
+            const next = v as "never" | "daily" | "weekly" | "monthly"
+            // Only clear lastBackupAt when activating a schedule for the first time
+            // (switching between two active intervals should preserve the timestamp)
+            const patch = backupInterval === "never" && next !== "never"
+              ? { backupInterval: next, lastBackupAt: undefined }
+              : { backupInterval: next }
+            updateSettings(patch)
+          }}
+        >
           <SelectTrigger className="w-32 h-8 text-sm">
             <SelectValue>{BACKUP_INTERVAL_LABELS[backupInterval]}</SelectValue>
           </SelectTrigger>

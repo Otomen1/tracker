@@ -6,8 +6,7 @@ import {
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { TrendingUp, Tags, Settings, ArrowRight } from "lucide-react"
-
-const ONBOARDED_KEY = "tracker_onboarded"
+import { STORAGE_KEYS } from "@/lib/constants"
 
 const STEPS = [
   {
@@ -32,13 +31,13 @@ export function OnboardingModal() {
   const [step, setStep] = useState(0)
 
   useEffect(() => {
-    if (typeof window !== "undefined" && !localStorage.getItem(ONBOARDED_KEY)) {
+    if (typeof window !== "undefined" && !localStorage.getItem(STORAGE_KEYS.ONBOARDED)) {
       setOpen(true)
     }
   }, [])
 
   const handleFinish = () => {
-    localStorage.setItem(ONBOARDED_KEY, "1")
+    localStorage.setItem(STORAGE_KEYS.ONBOARDED, "1")
     setOpen(false)
   }
 
@@ -57,10 +56,13 @@ export function OnboardingModal() {
           <DialogDescription className="text-center">{current.description}</DialogDescription>
         </DialogHeader>
 
-        <div className="flex items-center justify-center gap-1.5 mt-2">
+        <div role="tablist" aria-label="Onboarding steps" className="flex items-center justify-center gap-1.5 mt-2">
           {STEPS.map((_, i) => (
             <span
               key={i}
+              role="tab"
+              aria-selected={i === step}
+              aria-label={`Step ${i + 1} of ${STEPS.length}`}
               className={`h-1.5 rounded-full transition-all ${i === step ? "w-6 bg-zinc-900 dark:bg-zinc-100" : "w-1.5 bg-zinc-200 dark:bg-zinc-700"}`}
             />
           ))}
