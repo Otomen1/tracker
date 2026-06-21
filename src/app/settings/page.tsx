@@ -6,6 +6,7 @@ import { CurrencySelector } from "@/components/settings/CurrencySelector"
 import { SavingsGoalForm } from "@/components/settings/SavingsGoalForm"
 import { BudgetLimitsForm } from "@/components/settings/BudgetLimitsForm"
 import { BackupRestore } from "@/components/settings/BackupRestore"
+import { ReminderSettings } from "@/components/settings/ReminderSettings"
 import { InstallPrompt } from "@/components/settings/InstallPrompt"
 import { Separator } from "@/components/ui/separator"
 
@@ -86,6 +87,12 @@ export default function SettingsPage() {
 
         <SettingSection title="Data Backup" description="Export or restore your data">
           <BackupRestore />
+        </SettingSection>
+
+        <Separator />
+
+        <SettingSection title="Daily Reminder" description="Get a notification to log your expenses each day">
+          <ReminderSettings />
         </SettingSection>
 
         <Separator />

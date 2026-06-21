@@ -34,6 +34,8 @@ export interface Settings {
   monthlySavingsGoal: number
   backupInterval?: "never" | "daily" | "weekly" | "monthly"
   lastBackupAt?: string
+  reminderEnabled?: boolean
+  reminderTime?: string // "HH:MM"
 }
 
 export interface MonthlySummary {

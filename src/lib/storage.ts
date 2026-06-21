@@ -42,6 +42,8 @@ const settingsSchema = z.object({
   monthlySavingsGoal: z.number(),
   backupInterval: z.enum(["never", "daily", "weekly", "monthly"]).optional(),
   lastBackupAt: z.string().optional(),
+  reminderEnabled: z.boolean().optional(),
+  reminderTime: z.string().regex(/^\d{2}:\d{2}$/).optional(),
 })
 
 const backupSchema = z.object({
