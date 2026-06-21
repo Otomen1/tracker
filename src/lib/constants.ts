@@ -52,6 +52,8 @@ export const DEFAULT_SETTINGS: Settings = {
   theme: "system",
   monthlySavingsGoal: 0,
   backupInterval: "never",
+  reminderEnabled: false,
+  reminderTime: "20:00",
 }
 
 export const PAGE_SIZE = 25
