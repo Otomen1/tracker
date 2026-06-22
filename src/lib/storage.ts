@@ -135,6 +135,11 @@ export function saveSettings(settings: Settings): void {
   safeWrite(STORAGE_KEYS.SETTINGS, settings)
 }
 
+// A09: structured security event log (console only — no financial data included)
+export function logSecurityEvent(event: string, meta?: Record<string, unknown>): void {
+  console.info(`[Security] ${new Date().toISOString()} ${event}`, meta ?? "")
+}
+
 export function exportAllData(): string {
   if (typeof window === "undefined") return "{}"
   const data = {
@@ -144,7 +149,9 @@ export function exportAllData(): string {
     categories: getCategories(),
     settings: getSettings(),
   }
-  return JSON.stringify(data, null, 2)
+  const json = JSON.stringify(data, null, 2)
+  logSecurityEvent("backup_export", { transactionCount: data.transactions.length })
+  return json
 }
 
 export function importAllData(json: string): { success: boolean; error?: string } {
@@ -177,6 +184,7 @@ export function importAllData(json: string): { success: boolean; error?: string 
       if (!data.categories) saveCategories(DEFAULT_CATEGORIES)
       safeWrite(STORAGE_KEYS.SCHEMA_VERSION, SCHEMA_VERSION)
     }
+    logSecurityEvent("backup_import_success", { transactionCount: data.transactions.length })
     return { success: true }
   }
 
@@ -186,6 +194,7 @@ export function importAllData(json: string): { success: boolean; error?: string 
   const txnCheck = txnSchema.safeParse(raw.transactions)
   if (!txnCheck.success) {
     const msg = txnCheck.error.issues[0]?.message ?? "Invalid backup file"
+    logSecurityEvent("backup_import_failure", { reason: "schema_validation", error: msg })
     return { success: false, error: `Invalid backup file: ${msg}` }
   }
 
@@ -210,8 +219,10 @@ export function importAllData(json: string): { success: boolean; error?: string 
 
     saveTransactions(txnCheck.data)
     if (raw.settings) saveSettings(raw.settings as Settings)
+    logSecurityEvent("backup_import_success_lenient", { transactionCount: txnCheck.data.length })
     return { success: true }
   } catch {
+    logSecurityEvent("backup_import_failure", { reason: "parse_error" })
     return { success: false, error: "Could not parse backup file" }
   }
 }
