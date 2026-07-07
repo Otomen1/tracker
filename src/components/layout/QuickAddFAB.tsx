@@ -4,17 +4,23 @@ import { useState } from "react"
 import { Plus } from "lucide-react"
 import { useTransactions } from "@/hooks/useTransactions"
 import { useCategories } from "@/hooks/useCategories"
+import { useBudgetCheck } from "@/hooks/useBudgetCheck"
+import { useToast } from "@/context/ToastContext"
 import { TransactionFormData } from "@/types"
 import { TransactionDialog } from "@/components/transactions/TransactionDialog"
 
 export function QuickAddFAB() {
   const [open, setOpen] = useState(false)
-  const { addTransaction } = useTransactions()
+  const { transactions, addTransaction } = useTransactions()
   const { categories } = useCategories()
+  const { checkBudget } = useBudgetCheck()
+  const { showToast } = useToast()
 
   const handleAdd = (data: TransactionFormData) => {
     addTransaction(data)
     setOpen(false)
+    showToast("Transaction added", "success")
+    checkBudget(data, transactions)
   }
 
   return (
