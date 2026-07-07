@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import Link from "next/link"
 import { ThemeToggle } from "@/components/settings/ThemeToggle"
 import { CurrencySelector } from "@/components/settings/CurrencySelector"
 import { SavingsGoalForm } from "@/components/settings/SavingsGoalForm"
@@ -8,7 +9,20 @@ import { BudgetLimitsForm } from "@/components/settings/BudgetLimitsForm"
 import { BackupRestore } from "@/components/settings/BackupRestore"
 import { ReminderSettings } from "@/components/settings/ReminderSettings"
 import { InstallPrompt } from "@/components/settings/InstallPrompt"
+import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
+
+function SettingGroup({ title, description, children }: { title: string; description?: string; children: React.ReactNode }) {
+  return (
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">{title}</h2>
+        {description && <p className="text-xs text-zinc-400 mt-0.5">{description}</p>}
+      </div>
+      <div className="space-y-6">{children}</div>
+    </div>
+  )
+}
 
 function SettingSection({ title, description, children }: { title: string; description?: string; children: React.ReactNode }) {
   return (
@@ -60,52 +74,62 @@ export default function SettingsPage() {
     <div className="space-y-6">
       <h1 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">Settings</h1>
 
-      <div className="bg-white/70 dark:bg-zinc-900/50 backdrop-blur-sm rounded-lg border border-zinc-200/60 dark:border-zinc-800/60 p-5 space-y-6">
-        <SettingSection title="Appearance" description="Choose your preferred color scheme">
-          <ThemeToggle />
-        </SettingSection>
+      <div className="bg-white/70 dark:bg-zinc-900/50 backdrop-blur-sm rounded-lg border border-zinc-200/60 dark:border-zinc-800/60 p-5 space-y-10">
+        <SettingGroup title="Preferences" description="Appearance and currency">
+          <SettingSection title="Appearance" description="Choose your preferred color scheme">
+            <ThemeToggle />
+          </SettingSection>
 
-        <Separator />
+          <Separator />
 
-        <SettingSection title="Currency" description="Used for all amounts in the app">
-          <CurrencySelector />
-        </SettingSection>
+          <SettingSection title="Currency" description="Used for all amounts in the app">
+            <CurrencySelector />
+          </SettingSection>
+        </SettingGroup>
 
-        <Separator />
+        <SettingGroup title="Finance" description="Categories, budgets, and savings goals">
+          <SettingSection title="Monthly Savings Goal" description="Target net savings per month">
+            <SavingsGoalForm />
+          </SettingSection>
 
-        <SettingSection title="Monthly Savings Goal" description="Target net savings per month">
-          <SavingsGoalForm />
-        </SettingSection>
+          <Separator />
 
-        <Separator />
+          <SettingSection title="Category Budgets" description="Monthly spending limit per expense category">
+            <BudgetLimitsForm />
+          </SettingSection>
 
-        <SettingSection title="Category Budgets" description="Monthly spending limit per expense category">
-          <BudgetLimitsForm />
-        </SettingSection>
+          <Separator />
 
-        <Separator />
+          <SettingSection title="Categories" description="Add, edit, or remove income and expense categories">
+            <Button variant="outline" size="sm" asChild>
+              <Link href="/categories">Manage Categories →</Link>
+            </Button>
+          </SettingSection>
+        </SettingGroup>
 
-        <SettingSection title="Data Backup" description="Export or restore your data">
-          <BackupRestore />
-        </SettingSection>
+        <SettingGroup title="Notifications" description="Reminders to keep your data up to date">
+          <SettingSection title="Daily Reminder" description="Get a notification to log your expenses each day">
+            <ReminderSettings />
+          </SettingSection>
+        </SettingGroup>
 
-        <Separator />
+        <SettingGroup title="Data & Backup" description="Export, restore, and storage usage">
+          <SettingSection title="Data Backup" description="Export or restore your data">
+            <BackupRestore />
+          </SettingSection>
 
-        <SettingSection title="Daily Reminder" description="Get a notification to log your expenses each day">
-          <ReminderSettings />
-        </SettingSection>
+          <Separator />
 
-        <Separator />
+          <SettingSection title="Storage" description="Local storage used by this app">
+            <StorageUsage />
+          </SettingSection>
+        </SettingGroup>
 
-        <SettingSection title="Storage" description="Local storage used by this app">
-          <StorageUsage />
-        </SettingSection>
-
-        <Separator />
-
-        <SettingSection title="Install App" description="Add to your home screen for a native-like experience">
-          <InstallPrompt />
-        </SettingSection>
+        <SettingGroup title="Application" description="Platform integration">
+          <SettingSection title="Install App" description="Add to your home screen for a native-like experience">
+            <InstallPrompt />
+          </SettingSection>
+        </SettingGroup>
       </div>
     </div>
   )

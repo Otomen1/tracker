@@ -17,7 +17,7 @@ const STEPS = [
   {
     icon: Tags,
     title: "Categories & Tags",
-    description: "Organize your spending with categories and custom tags. Set monthly budgets per category to stay on track.",
+    description: "Organize your spending with categories and custom tags. Manage categories and set monthly budgets anytime from Settings.",
   },
   {
     icon: Settings,
