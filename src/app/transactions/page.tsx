@@ -3,11 +3,10 @@
 import { useCallback, useMemo, useRef, useState } from "react"
 import { useTransactions } from "@/hooks/useTransactions"
 import { useCategories } from "@/hooks/useCategories"
-import { filterTransactions, getSortedTransactions, getBudgetStatus } from "@/lib/analytics"
-import { Transaction, TransactionFilters, TransactionFormData } from "@/types"
-import { getMonthKey } from "@/lib/formatters"
+import { useBudgetCheck } from "@/hooks/useBudgetCheck"
+import { filterTransactions, getSortedTransactions } from "@/lib/analytics"
+import { TransactionFilters, TransactionFormData } from "@/types"
 import { useSettingsContext } from "@/context/SettingsContext"
-import { useToast } from "@/context/ToastContext"
 import { Button } from "@/components/ui/button"
 import { Plus, RefreshCw, ChevronDown, CheckCircle } from "lucide-react"
 import { TransactionDialog } from "@/components/transactions/TransactionDialog"
@@ -21,7 +20,7 @@ export default function TransactionsPage() {
   const { transactions, addTransaction, updateTransaction, deleteTransaction, deleteWithCascade, restoreTransaction } = useTransactions()
   const { categories } = useCategories()
   const { fmt, settings } = useSettingsContext()
-  const { showToast } = useToast()
+  const { checkBudget } = useBudgetCheck()
   const [addOpen, setAddOpen] = useState(false)
   const [filters, setFilters] = useState<TransactionFilters>({})
   const [recurringOpen, setRecurringOpen] = useState(false)
@@ -44,41 +43,6 @@ export default function TransactionsPage() {
     setSuccessMessage(msg)
     successTimerRef.current = setTimeout(() => setSuccessMessage(null), 3000)
   }, [])
-
-  const checkBudget = useCallback((data: TransactionFormData, baseTransactions: Transaction[]) => {
-    const currentMonth = getMonthKey()
-    if (data.type !== "expense" || !data.date.startsWith(currentMonth)) return
-
-    const hypothetical: Transaction[] = [
-      ...baseTransactions,
-      {
-        id: "_budget_check",
-        type: data.type,
-        amount: parseFloat(data.amount),
-        categoryId: data.categoryId,
-        description: data.description,
-        date: data.date,
-        createdAt: "",
-        updatedAt: "",
-      },
-    ]
-
-    const budgets = getBudgetStatus(hypothetical, currentMonth, categories)
-    const b = budgets.find((b) => b.categoryId === data.categoryId)
-    if (!b) return
-
-    if (b.isOverBudget) {
-      showToast(
-        `${b.categoryName} is over budget — ${fmt(b.spent)} of ${fmt(b.budget)} spent`,
-        "error"
-      )
-    } else if (b.percentage >= 80) {
-      showToast(
-        `${b.categoryName} is at ${Math.round(b.percentage)}% of budget`,
-        "warning"
-      )
-    }
-  }, [categories, fmt, showToast])
 
   const handleAdd = useCallback((data: TransactionFormData) => {
     addTransaction(data)
