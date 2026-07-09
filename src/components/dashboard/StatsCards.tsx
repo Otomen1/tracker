@@ -3,7 +3,7 @@
 import { memo } from "react"
 import { DashboardStats } from "@/types"
 import { Card, CardContent } from "@/components/ui/card"
-import { TrendingUp, TrendingDown, Minus, ArrowUpRight, ArrowDownRight } from "lucide-react"
+import { TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight } from "lucide-react"
 import { useSettingsContext } from "@/context/SettingsContext"
 import { cn } from "@/lib/utils"
 
@@ -26,7 +26,7 @@ export const StatsCards = memo(function StatsCards({ stats }: Props) {
   const { fmt } = useSettingsContext()
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
       <Card className="border-zinc-200 dark:border-zinc-800">
         <CardContent className="pt-6">
           <div className="flex items-start justify-between">
@@ -59,27 +59,6 @@ export const StatsCards = memo(function StatsCards({ stats }: Props) {
           <div className="mt-2">
             <TrendBadge current={stats.currentMonthExpenses} previous={stats.previousMonthExpenses} />
             {stats.previousMonthExpenses > 0 && <span className="text-xs text-zinc-400 ml-1">vs last month</span>}
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card className="border-zinc-200 dark:border-zinc-800">
-        <CardContent className="pt-6">
-          <div className="flex items-start justify-between">
-            <div>
-              <p className="text-xs font-medium text-zinc-500 uppercase tracking-wide">Net Balance</p>
-              <p className={cn("text-2xl font-bold mt-1", stats.currentMonthNet >= 0 ? "text-zinc-900 dark:text-zinc-100" : "text-rose-500")}>
-                {stats.currentMonthNet >= 0 ? "+" : ""}{fmt(stats.currentMonthNet)}
-              </p>
-            </div>
-            <div className="w-8 h-8 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center">
-              <Minus className="w-4 h-4 text-zinc-600 dark:text-zinc-400" />
-            </div>
-          </div>
-          <div className="mt-2">
-            <span className="text-xs text-zinc-400">
-              {stats.transactionCountThisMonth} transaction{stats.transactionCountThisMonth !== 1 ? "s" : ""} this month
-            </span>
           </div>
         </CardContent>
       </Card>
