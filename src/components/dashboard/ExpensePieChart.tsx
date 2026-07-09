@@ -25,19 +25,31 @@ function PieTooltip({ active, payload, fmt }: TooltipProps & { fmt: (n: number) 
   )
 }
 
-interface Props { data: CategoryBreakdown[] }
+interface Props {
+  data: CategoryBreakdown[]
+  title?: string
+  emptyMessage?: string
+  ariaLabel?: string
+  tableCaption?: string
+}
 
-export const ExpensePieChart = memo(function ExpensePieChart({ data }: Props) {
+export const ExpensePieChart = memo(function ExpensePieChart({
+  data,
+  title = "Expenses by Category",
+  emptyMessage = "No expenses this month",
+  ariaLabel = "Pie chart showing expense breakdown by category",
+  tableCaption = "Expense breakdown by category",
+}: Props) {
   const { fmt } = useSettingsContext()
 
   if (data.length === 0) {
     return (
       <Card className="border-zinc-200 dark:border-zinc-800">
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">Expenses by Category</CardTitle>
+          <CardTitle className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">{title}</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="h-48 flex items-center justify-center text-zinc-400 text-sm">No expenses this month</div>
+          <div className="h-48 flex items-center justify-center text-zinc-400 text-sm">{emptyMessage}</div>
         </CardContent>
       </Card>
     )
@@ -46,10 +58,10 @@ export const ExpensePieChart = memo(function ExpensePieChart({ data }: Props) {
   return (
     <Card className="border-zinc-200 dark:border-zinc-800">
       <CardHeader className="pb-2">
-        <CardTitle className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">Expenses by Category</CardTitle>
+        <CardTitle className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">{title}</CardTitle>
       </CardHeader>
       <CardContent>
-        <div role="img" aria-label="Pie chart showing expense breakdown by category">
+        <div role="img" aria-label={ariaLabel}>
           <ResponsiveContainer width="100%" height={220}>
             <PieChart>
               <Pie data={data} cx="50%" cy="45%" innerRadius={55} outerRadius={80} paddingAngle={2} dataKey="total" nameKey="categoryName">
@@ -74,7 +86,7 @@ export const ExpensePieChart = memo(function ExpensePieChart({ data }: Props) {
           ))}
         </div>
         <table className="sr-only">
-          <caption>Expense breakdown by category</caption>
+          <caption>{tableCaption}</caption>
           <thead><tr><th>Category</th><th>Amount</th><th>Percentage</th></tr></thead>
           <tbody>
             {data.map((item) => (

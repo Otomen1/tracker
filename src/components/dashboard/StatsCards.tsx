@@ -20,9 +20,9 @@ function TrendBadge({ current, previous }: { current: number; previous: number }
   )
 }
 
-interface Props { stats: DashboardStats }
+interface Props { stats: DashboardStats; comparisonLabel?: string }
 
-export const StatsCards = memo(function StatsCards({ stats }: Props) {
+export const StatsCards = memo(function StatsCards({ stats, comparisonLabel = "vs last month" }: Props) {
   const { fmt } = useSettingsContext()
 
   return (
@@ -40,7 +40,7 @@ export const StatsCards = memo(function StatsCards({ stats }: Props) {
           </div>
           <div className="mt-2">
             <TrendBadge current={stats.currentMonthIncome} previous={stats.previousMonthIncome} />
-            {stats.previousMonthIncome > 0 && <span className="text-xs text-zinc-400 ml-1">vs last month</span>}
+            {stats.previousMonthIncome > 0 && <span className="text-xs text-zinc-400 ml-1">{comparisonLabel}</span>}
           </div>
         </CardContent>
       </Card>
@@ -58,7 +58,7 @@ export const StatsCards = memo(function StatsCards({ stats }: Props) {
           </div>
           <div className="mt-2">
             <TrendBadge current={stats.currentMonthExpenses} previous={stats.previousMonthExpenses} />
-            {stats.previousMonthExpenses > 0 && <span className="text-xs text-zinc-400 ml-1">vs last month</span>}
+            {stats.previousMonthExpenses > 0 && <span className="text-xs text-zinc-400 ml-1">{comparisonLabel}</span>}
           </div>
         </CardContent>
       </Card>
