@@ -1,15 +1,14 @@
 "use client"
 
 import { useState, useMemo } from "react"
-import dynamic from "next/dynamic"
 import { useTransactions } from "@/hooks/useTransactions"
 import { useCategories } from "@/hooks/useCategories"
 import { useHydrated } from "@/hooks/useHydrated"
 import { useBudgetCheck } from "@/hooks/useBudgetCheck"
 import { useToast } from "@/context/ToastContext"
-import { getDashboardStats, getExpenseBreakdown, getMonthlyTrend, getRecentTransactions, getBudgetStatus, getSpendingInsights, getCumulativeBalance } from "@/lib/analytics"
+import { getDashboardStats, getRecentTransactions, getBudgetStatus, getSpendingInsights } from "@/lib/analytics"
 import { getMonthKey, formatMonth } from "@/lib/formatters"
-import { MONTHS_IN_CHART, RECENT_TRANSACTIONS_COUNT } from "@/lib/constants"
+import { RECENT_TRANSACTIONS_COUNT } from "@/lib/constants"
 import { useSettingsContext } from "@/context/SettingsContext"
 import { TransactionFormData } from "@/types"
 import { MonthSelector } from "@/components/dashboard/MonthSelector"
@@ -18,25 +17,9 @@ import { QuickActions } from "@/components/dashboard/QuickActions"
 import { StatsCards } from "@/components/dashboard/StatsCards"
 import { RecentTransactions } from "@/components/dashboard/RecentTransactions"
 import { SavingsGoalCard } from "@/components/dashboard/SavingsGoalCard"
-import { BudgetProgressCard } from "@/components/dashboard/BudgetProgressCard"
 import { SpendingInsightsCard } from "@/components/dashboard/SpendingInsightsCard"
 import { TransactionDialog } from "@/components/transactions/TransactionDialog"
-import { ChartSkeleton, Skeleton } from "@/components/ui/skeleton"
-
-const ExpensePieChart = dynamic(
-  () => import("@/components/dashboard/ExpensePieChart").then((m) => ({ default: m.ExpensePieChart })),
-  { loading: () => <ChartSkeleton height={220} />, ssr: false }
-)
-
-const MonthlyBarChart = dynamic(
-  () => import("@/components/dashboard/MonthlyBarChart").then((m) => ({ default: m.MonthlyBarChart })),
-  { loading: () => <ChartSkeleton height={260} />, ssr: false }
-)
-
-const CumulativeNetChart = dynamic(
-  () => import("@/components/dashboard/CumulativeNetChart").then((m) => ({ default: m.CumulativeNetChart })),
-  { loading: () => <ChartSkeleton height={200} />, ssr: false }
-)
+import { Skeleton } from "@/components/ui/skeleton"
 
 export default function DashboardPage() {
   const [selectedMonth, setSelectedMonth] = useState(getMonthKey())
@@ -49,12 +32,9 @@ export default function DashboardPage() {
   const { showToast } = useToast()
 
   const stats = useMemo(() => getDashboardStats(transactions, selectedMonth), [transactions, selectedMonth])
-  const expenseBreakdown = useMemo(() => getExpenseBreakdown(transactions, selectedMonth, categories), [transactions, selectedMonth, categories])
-  const monthlyTrend = useMemo(() => getMonthlyTrend(transactions, MONTHS_IN_CHART), [transactions])
   const recentTransactions = useMemo(() => getRecentTransactions(transactions, RECENT_TRANSACTIONS_COUNT), [transactions])
   const budgetStatus = useMemo(() => getBudgetStatus(transactions, selectedMonth, categories), [transactions, selectedMonth, categories])
   const insights = useMemo(() => getSpendingInsights(transactions, selectedMonth, categories, fmt), [transactions, selectedMonth, categories, fmt])
-  const cumulativeBalance = useMemo(() => getCumulativeBalance(transactions), [transactions])
 
   const overBudgetCategories = useMemo(() => budgetStatus.filter((b) => b.isOverBudget), [budgetStatus])
 
@@ -83,10 +63,6 @@ export default function DashboardPage() {
           <Skeleton className="h-24 rounded-xl" />
           <Skeleton className="h-24 rounded-xl" />
         </div>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <Skeleton className="h-[220px] rounded-xl" />
-          <Skeleton className="h-[260px] rounded-xl" />
-        </div>
       </div>
     )
   }
@@ -113,15 +89,6 @@ export default function DashboardPage() {
       <SpendingInsightsCard insights={insightsForList} selectedMonth={selectedMonth} />
 
       <SavingsGoalCard currentNet={stats.currentMonthNet} />
-
-      <BudgetProgressCard budgets={budgetStatus} />
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <ExpensePieChart data={expenseBreakdown} />
-        <MonthlyBarChart data={monthlyTrend} />
-      </div>
-
-      <CumulativeNetChart data={cumulativeBalance} />
 
       <RecentTransactions transactions={recentTransactions} categories={categories} />
 
