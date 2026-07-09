@@ -6,18 +6,29 @@ import { getMonthKey, addMonths } from "./formatters"
 
 const round2 = (n: number) => Math.round(n * 100) / 100
 
+// A period key is either a month ("YYYY-MM") or a year ("YYYY"). Transaction
+// dates are "YYYY-MM-DD" strings, so `date.startsWith(periodKey)` already
+// matches the correct range for both shapes without any further branching.
+function isYearKey(periodKey: string): boolean {
+  return /^\d{4}$/.test(periodKey)
+}
+
+function previousPeriodKey(periodKey: string): string {
+  return isYearKey(periodKey) ? String(Number(periodKey) - 1) : addMonths(periodKey, -1)
+}
+
 export function getDashboardStats(
   transactions: Transaction[],
-  monthKey: string
+  periodKey: string
 ): DashboardStats {
-  const prevMonthKey = addMonths(monthKey, -1)
-  const currentMonth = transactions.filter((t) => t.date.startsWith(monthKey))
-  const prevMonth = transactions.filter((t) => t.date.startsWith(prevMonthKey))
+  const prevPeriodKey = previousPeriodKey(periodKey)
+  const currentPeriod = transactions.filter((t) => t.date.startsWith(periodKey))
+  const prevPeriod = transactions.filter((t) => t.date.startsWith(prevPeriodKey))
 
-  const currentMonthIncome = round2(currentMonth.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0))
-  const currentMonthExpenses = round2(currentMonth.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0))
-  const previousMonthIncome = round2(prevMonth.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0))
-  const previousMonthExpenses = round2(prevMonth.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0))
+  const currentMonthIncome = round2(currentPeriod.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0))
+  const currentMonthExpenses = round2(currentPeriod.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0))
+  const previousMonthIncome = round2(prevPeriod.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0))
+  const previousMonthExpenses = round2(prevPeriod.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0))
   const allTimeIncome = round2(transactions.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0))
   const allTimeExpenses = round2(transactions.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0))
 
@@ -28,22 +39,23 @@ export function getDashboardStats(
     allTimeBalance: round2(allTimeIncome - allTimeExpenses),
     previousMonthIncome,
     previousMonthExpenses,
-    transactionCountThisMonth: currentMonth.length,
+    transactionCountThisMonth: currentPeriod.length,
   }
 }
 
-export function getExpenseBreakdown(
+function computeCategoryBreakdown(
   transactions: Transaction[],
-  monthKey: string,
-  categories: Category[]
+  periodKey: string,
+  categories: Category[],
+  type: Transaction["type"]
 ): CategoryBreakdown[] {
-  const expenses = transactions.filter(
-    (t) => t.type === "expense" && t.date.startsWith(monthKey)
+  const filtered = transactions.filter(
+    (t) => t.type === type && t.date.startsWith(periodKey)
   )
-  const total = expenses.reduce((s, t) => s + t.amount, 0)
+  const total = filtered.reduce((s, t) => s + t.amount, 0)
   if (total === 0) return []
 
-  const grouped = expenses.reduce<Record<string, { sum: number; count: number }>>((acc, t) => {
+  const grouped = filtered.reduce<Record<string, { sum: number; count: number }>>((acc, t) => {
     const entry = acc[t.categoryId] ?? { sum: 0, count: 0 }
     entry.sum += t.amount
     entry.count += 1
@@ -64,6 +76,22 @@ export function getExpenseBreakdown(
       }
     })
     .sort((a, b) => b.total - a.total)
+}
+
+export function getExpenseBreakdown(
+  transactions: Transaction[],
+  periodKey: string,
+  categories: Category[]
+): CategoryBreakdown[] {
+  return computeCategoryBreakdown(transactions, periodKey, categories, "expense")
+}
+
+export function getIncomeBreakdown(
+  transactions: Transaction[],
+  periodKey: string,
+  categories: Category[]
+): CategoryBreakdown[] {
+  return computeCategoryBreakdown(transactions, periodKey, categories, "income")
 }
 
 export function getBudgetStatus(
