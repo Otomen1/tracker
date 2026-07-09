@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest"
-import { getDashboardStats, getExpenseBreakdown, getIncomeBreakdown, getBudgetStatus, getMonthlyTrend, getCumulativeBalance, getPeriodDateRange, filterTransactions, getTopTransactions } from "../analytics"
+import { getDashboardStats, getExpenseBreakdown, getIncomeBreakdown, getBudgetStatus, getMonthlyTrend, getCumulativeBalance, getPeriodDateRange, getSavingsTrend, filterTransactions, getTopTransactions } from "../analytics"
+import { getMonthKey } from "../formatters"
 import { Transaction, Category } from "@/types"
 
 const makeTransaction = (overrides: Partial<Transaction>): Transaction => ({
@@ -23,6 +24,8 @@ const makeCategory = (overrides: Partial<Category>): Category => ({
   createdAt: "2026-01-01T00:00:00Z",
   ...overrides,
 })
+
+const round = (n: number): number => Math.round(n * 100) / 100
 
 describe("getDashboardStats", () => {
   it("sums income and expenses for the given month", () => {
@@ -377,4 +380,134 @@ describe("getIncomeBreakdown", () => {
     const transactions = [makeTransaction({ id: "1", type: "expense", categoryId: "cat2", amount: 40, date: "2026-06-01" })]
     expect(getIncomeBreakdown(transactions, "2026-06", categories)).toHaveLength(0)
   })
+})
+
+describe("getSavingsTrend", () => {
+  // Fixed reference month, always in the past relative to "today" in any CI run,
+  // so month-mode fixtures below are never affected by the elapsed-months logic.
+  const REF_MONTH = "2020-06"
+
+  it("computes positive savings below goal (hand-computed: 1000-800=200, 200/500*100=40%)", () => {
+    const transactions = [
+      makeTransaction({ id: "1", type: "income", amount: 1000, date: `${REF_MONTH}-01` }),
+      makeTransaction({ id: "2", type: "expense", amount: 800, date: `${REF_MONTH}-05` }),
+    ]
+    const trend = getSavingsTrend(transactions, REF_MONTH, 500, 1)
+    expect(trend.points).toHaveLength(1)
+    expect(trend.points[0]).toEqual({ month: REF_MONTH, actual: 200, goal: 500, achievementRate: 40 })
+  })
+
+  it("computes savings exactly equal to goal (hand-computed: 1000-500=500, 500/500*100=100%)", () => {
+    const transactions = [
+      makeTransaction({ id: "1", type: "income", amount: 1000, date: `${REF_MONTH}-01` }),
+      makeTransaction({ id: "2", type: "expense", amount: 500, date: `${REF_MONTH}-05` }),
+    ]
+    const trend = getSavingsTrend(transactions, REF_MONTH, 500, 1)
+    expect(trend.points[0].actual).toBe(500)
+    expect(trend.points[0].achievementRate).toBe(100)
+  })
+
+  it("computes savings above goal (hand-computed: 1000-300=700, 700/500*100=140%)", () => {
+    const transactions = [
+      makeTransaction({ id: "1", type: "income", amount: 1000, date: `${REF_MONTH}-01` }),
+      makeTransaction({ id: "2", type: "expense", amount: 300, date: `${REF_MONTH}-05` }),
+    ]
+    const trend = getSavingsTrend(transactions, REF_MONTH, 500, 1)
+    expect(trend.points[0].actual).toBe(700)
+    expect(trend.points[0].achievementRate).toBe(140)
+  })
+
+  it("computes negative savings without flooring (hand-computed: 300-500=-200, -200/500*100=-40%)", () => {
+    const transactions = [
+      makeTransaction({ id: "1", type: "income", amount: 300, date: `${REF_MONTH}-01` }),
+      makeTransaction({ id: "2", type: "expense", amount: 500, date: `${REF_MONTH}-05` }),
+    ]
+    const trend = getSavingsTrend(transactions, REF_MONTH, 500, 1)
+    expect(trend.points[0].actual).toBe(-200)
+    expect(trend.points[0].achievementRate).toBe(-40)
+  })
+
+  it("treats a zero goal as no achievement rate (null, not 0 or Infinity)", () => {
+    const transactions = [makeTransaction({ id: "1", type: "income", amount: 500, date: `${REF_MONTH}-01` })]
+    const trend = getSavingsTrend(transactions, REF_MONTH, 0, 1)
+    expect(trend.points[0].goal).toBe(0)
+    expect(trend.points[0].achievementRate).toBeNull()
+    expect(trend.achievementRate).toBeNull()
+  })
+
+  it("treats no goal configured (undefined-like, passed as 0) the same as a zero goal", () => {
+    const transactions = [makeTransaction({ id: "1", type: "income", amount: 500, date: `${REF_MONTH}-01` })]
+    const trend = getSavingsTrend(transactions, REF_MONTH, 0, 1)
+    expect(trend.points[0].achievementRate).toBeNull()
+    expect(trend.totalGoal).toBe(0)
+  })
+
+  it("returns a zero-actual point for an empty month, achievementRate 0% against a real goal", () => {
+    const trend = getSavingsTrend([], REF_MONTH, 500, 1)
+    expect(trend.points[0].actual).toBe(0)
+    expect(trend.points[0].achievementRate).toBe(0)
+  })
+
+  it("returns all-zero points for an empty year", () => {
+    const trend = getSavingsTrend([], "2020", 500)
+    expect(trend.points).toHaveLength(12)
+    expect(trend.points.every((p) => p.actual === 0)).toBe(true)
+  })
+
+  it("computes multiple months correctly in a trailing window", () => {
+    const transactions = [
+      makeTransaction({ id: "1", type: "income", amount: 1000, date: "2020-04-01" }),
+      makeTransaction({ id: "2", type: "expense", amount: 700, date: "2020-04-05" }), // Apr: +300
+      makeTransaction({ id: "3", type: "income", amount: 200, date: "2020-05-01" }),
+      makeTransaction({ id: "4", type: "expense", amount: 500, date: "2020-05-05" }), // May: -300
+    ]
+    const trend = getSavingsTrend(transactions, "2020-05", 100, 2)
+    expect(trend.points.map((p) => p.month)).toEqual(["2020-04", "2020-05"])
+    expect(trend.points[0].actual).toBe(300)
+    expect(trend.points[1].actual).toBe(-300)
+  })
+
+  it("handles the December -> January month boundary correctly", () => {
+    const transactions = [makeTransaction({ id: "1", type: "income", amount: 100, date: "2019-12-20" })]
+    const trend = getSavingsTrend(transactions, "2020-01", 100, 2)
+    expect(trend.points.map((p) => p.month)).toEqual(["2019-12", "2020-01"])
+    expect(trend.points[0].actual).toBe(100)
+    expect(trend.points[1].actual).toBe(0)
+  })
+
+  it("does not leak an adjacent year's data into year mode", () => {
+    const transactions = [
+      makeTransaction({ id: "1", type: "income", amount: 1000, date: "2020-03-01" }),
+      makeTransaction({ id: "2", type: "income", amount: 99999, date: "2019-03-01" }),
+      makeTransaction({ id: "3", type: "income", amount: 88888, date: "2021-03-01" }),
+    ]
+    const trend = getSavingsTrend(transactions, "2020", 100)
+    expect(trend.points).toHaveLength(12)
+    expect(trend.points[2].actual).toBe(1000) // March = index 2
+    expect(trend.points.reduce((s, p) => s + p.actual, 0)).toBe(1000)
+  })
+
+  it("aggregates a fully-elapsed past year over all 12 months (hand-computed: goal 100*12=1200)", () => {
+    const transactions = [
+      makeTransaction({ id: "1", type: "income", amount: 100, date: "2020-01-01" }),
+      makeTransaction({ id: "2", type: "income", amount: 100, date: "2020-06-01" }),
+    ]
+    const trend = getSavingsTrend(transactions, "2020", 100)
+    expect(trend.totalGoal).toBe(1200)
+    expect(trend.totalActual).toBe(200)
+    expect(trend.achievementRate).toBe(round((200 / 1200) * 100))
+  })
+
+  it("aggregates a partial current year using only elapsed months, not the full 12", () => {
+    const currentYear = getMonthKey().slice(0, 4)
+    const currentMonthNum = Number(getMonthKey().slice(5, 7))
+    const transactions = [makeTransaction({ id: "1", type: "income", amount: 100, date: `${currentYear}-01-01` })]
+    const trend = getSavingsTrend(transactions, currentYear, 100)
+    expect(trend.points).toHaveLength(12) // all 12 points still render
+    expect(trend.totalGoal).toBe(100 * currentMonthNum) // only elapsed months count toward the goal total
+  })
+
+  // "Goal changed mid-period" is intentionally not tested: monthlySavingsGoal has
+  // no persisted history (see SavingsGoalForm - a single mutable value with no
+  // effective-dates), so there is no historical goal value to assert against.
 })

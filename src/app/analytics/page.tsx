@@ -5,7 +5,8 @@ import dynamic from "next/dynamic"
 import { useTransactions } from "@/hooks/useTransactions"
 import { useCategories } from "@/hooks/useCategories"
 import { useAnalyticsPeriod } from "@/hooks/useAnalyticsPeriod"
-import { getDashboardStats, getExpenseBreakdown, getIncomeBreakdown, getBudgetStatus, getMonthlyTrend, getCumulativeBalance, getPeriodDateRange } from "@/lib/analytics"
+import { useSettingsContext } from "@/context/SettingsContext"
+import { getDashboardStats, getExpenseBreakdown, getIncomeBreakdown, getBudgetStatus, getMonthlyTrend, getCumulativeBalance, getPeriodDateRange, getSavingsTrend } from "@/lib/analytics"
 import { PeriodSwitcher } from "@/components/analytics/PeriodSwitcher"
 import { StatsCards } from "@/components/dashboard/StatsCards"
 import { BudgetProgressCard } from "@/components/dashboard/BudgetProgressCard"
@@ -26,10 +27,16 @@ const CumulativeNetChart = dynamic(
   { loading: () => <ChartSkeleton height={200} />, ssr: false }
 )
 
+const SavingsTrendChart = dynamic(
+  () => import("@/components/analytics/SavingsTrendChart").then((m) => ({ default: m.SavingsTrendChart })),
+  { loading: () => <ChartSkeleton height={240} />, ssr: false }
+)
+
 function AnalyticsPageContent() {
   const { type, month, year, setType, setMonth, setYear } = useAnalyticsPeriod()
   const { transactions } = useTransactions()
   const { categories } = useCategories()
+  const { settings } = useSettingsContext()
 
   const periodKey = type === "month" ? month : String(year)
   const periodLabel = type === "month" ? "this month" : "this year"
@@ -42,6 +49,10 @@ function AnalyticsPageContent() {
   const monthlyTrend = useMemo(() => getMonthlyTrend(transactions, trendWindow, periodKey), [transactions, trendWindow, periodKey])
   const cumulativeBalance = useMemo(() => getCumulativeBalance(transactions, periodKey), [transactions, periodKey])
   const periodDateRange = useMemo(() => getPeriodDateRange(periodKey), [periodKey])
+  const savingsTrend = useMemo(
+    () => getSavingsTrend(transactions, periodKey, settings.monthlySavingsGoal, trendWindow),
+    [transactions, periodKey, settings.monthlySavingsGoal, trendWindow]
+  )
 
   return (
     <div className="space-y-5">
@@ -94,6 +105,11 @@ function AnalyticsPageContent() {
           enableDeepLinks
         />
         <CumulativeNetChart data={cumulativeBalance} />
+      </div>
+
+      <div className="space-y-3">
+        <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">Savings</h2>
+        <SavingsTrendChart trend={savingsTrend} />
       </div>
     </div>
   )
