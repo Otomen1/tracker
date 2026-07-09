@@ -1,3 +1,4 @@
+import { endOfMonth, parseISO, format } from "date-fns"
 import {
   Transaction, Category, DashboardStats, CategoryBreakdown,
   MonthlySummary, TransactionFilters, BudgetStatus, AnnualSummary, Insight
@@ -15,6 +16,16 @@ function isYearKey(periodKey: string): boolean {
 
 function previousPeriodKey(periodKey: string): string {
   return isYearKey(periodKey) ? String(Number(periodKey) - 1) : addMonths(periodKey, -1)
+}
+
+// Converts a period key into an inclusive [dateFrom, dateTo] range, used to
+// build Transactions deep-links from a chart mark's period.
+export function getPeriodDateRange(periodKey: string): { dateFrom: string; dateTo: string } {
+  if (isYearKey(periodKey)) {
+    return { dateFrom: `${periodKey}-01-01`, dateTo: `${periodKey}-12-31` }
+  }
+  const monthStart = parseISO(`${periodKey}-01`)
+  return { dateFrom: `${periodKey}-01`, dateTo: format(endOfMonth(monthStart), "yyyy-MM-dd") }
 }
 
 export function getDashboardStats(
@@ -94,9 +105,13 @@ export function getIncomeBreakdown(
   return computeCategoryBreakdown(transactions, periodKey, categories, "income")
 }
 
+// Category budgets are defined as a *monthly* limit (see Settings copy). When
+// the period is a full year, the comparison basis is annualized (x12) so the
+// percentage reflects the same monthly limit applied across the longer
+// window, instead of every category showing as wildly over budget.
 export function getBudgetStatus(
   transactions: Transaction[],
-  monthKey: string,
+  periodKey: string,
   categories: Category[]
 ): BudgetStatus[] {
   const budgetedCategories = categories.filter(
@@ -105,7 +120,7 @@ export function getBudgetStatus(
   if (budgetedCategories.length === 0) return []
 
   const expenses = transactions.filter(
-    (t) => t.type === "expense" && t.date.startsWith(monthKey)
+    (t) => t.type === "expense" && t.date.startsWith(periodKey)
   )
 
   const spentByCategory = expenses.reduce<Record<string, number>>((acc, t) => {
@@ -113,9 +128,11 @@ export function getBudgetStatus(
     return acc
   }, {})
 
+  const budgetMultiplier = isYearKey(periodKey) ? 12 : 1
+
   return budgetedCategories.map((cat) => {
     const spent = round2(spentByCategory[cat.id] ?? 0)
-    const budget = cat.budget!
+    const budget = round2(cat.budget! * budgetMultiplier)
     return {
       categoryId: cat.id,
       categoryName: cat.name,
@@ -128,24 +145,36 @@ export function getBudgetStatus(
   }).sort((a, b) => b.percentage - a.percentage)
 }
 
+function computeMonthSummary(transactions: Transaction[], monthKey: string): MonthlySummary {
+  const monthTxns = transactions.filter((t) => t.date.startsWith(monthKey))
+  const totalIncome = round2(monthTxns.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0))
+  const totalExpenses = round2(monthTxns.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0))
+  return {
+    month: monthKey,
+    totalIncome,
+    totalExpenses,
+    netBalance: round2(totalIncome - totalExpenses),
+    transactionCount: monthTxns.length,
+  }
+}
+
+// `periodKey` generalizes the trend's anchor from a hardcoded "today" to any
+// selected month or year. A month periodKey returns `monthCount` trailing
+// months ending there (unchanged default behavior when omitted); a year
+// periodKey returns that year's 12 months (Jan-Dec), ignoring monthCount.
 export function getMonthlyTrend(
   transactions: Transaction[],
-  monthCount = 6
+  monthCount = 6,
+  periodKey: string = getMonthKey()
 ): MonthlySummary[] {
-  const currentMonthKey = getMonthKey()
-  return Array.from({ length: monthCount }, (_, i) => {
-    const monthKey = addMonths(currentMonthKey, -(monthCount - 1 - i))
-    const monthTxns = transactions.filter((t) => t.date.startsWith(monthKey))
-    const totalIncome = round2(monthTxns.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0))
-    const totalExpenses = round2(monthTxns.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0))
-    return {
-      month: monthKey,
-      totalIncome,
-      totalExpenses,
-      netBalance: round2(totalIncome - totalExpenses),
-      transactionCount: monthTxns.length,
-    }
-  })
+  if (isYearKey(periodKey)) {
+    return Array.from({ length: 12 }, (_, i) =>
+      computeMonthSummary(transactions, `${periodKey}-${String(i + 1).padStart(2, "0")}`)
+    )
+  }
+  return Array.from({ length: monthCount }, (_, i) =>
+    computeMonthSummary(transactions, addMonths(periodKey, -(monthCount - 1 - i)))
+  )
 }
 
 export function getAnnualSummary(
@@ -235,13 +264,21 @@ export function filterTransactions(
   })
 }
 
-export function getCumulativeBalance(transactions: Transaction[]): { month: string; balance: number }[] {
+// `periodKey` generalizes the trend's end boundary from a hardcoded "today"
+// to the end of any selected month or year, so viewing a past period doesn't
+// leak later months' data into what should be a period-bounded view. The
+// start boundary is always the first transaction - cumulative balance is
+// only meaningful with a full history baseline.
+export function getCumulativeBalance(
+  transactions: Transaction[],
+  periodKey: string = getMonthKey()
+): { month: string; balance: number }[] {
   if (transactions.length === 0) return []
 
   const sorted = [...transactions].sort((a, b) => a.date.localeCompare(b.date))
   const firstMonth = sorted[0].date.slice(0, 7)
-  const currentMonth = getMonthKey()
-  if (firstMonth > currentMonth) return []
+  const endMonth = isYearKey(periodKey) ? `${periodKey}-12` : periodKey
+  if (firstMonth > endMonth) return []
 
   const monthlyNet: Record<string, number> = {}
   for (const t of sorted) {
@@ -252,7 +289,7 @@ export function getCumulativeBalance(transactions: Transaction[]): { month: stri
   const result: { month: string; balance: number }[] = []
   let cumulative = 0
   let m = firstMonth
-  while (m <= currentMonth) {
+  while (m <= endMonth) {
     cumulative = round2(cumulative + (monthlyNet[m] ?? 0))
     result.push({ month: m, balance: cumulative })
     m = addMonths(m, 1)

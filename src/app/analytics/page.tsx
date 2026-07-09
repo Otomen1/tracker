@@ -5,14 +5,25 @@ import dynamic from "next/dynamic"
 import { useTransactions } from "@/hooks/useTransactions"
 import { useCategories } from "@/hooks/useCategories"
 import { useAnalyticsPeriod } from "@/hooks/useAnalyticsPeriod"
-import { getDashboardStats, getExpenseBreakdown, getIncomeBreakdown } from "@/lib/analytics"
+import { getDashboardStats, getExpenseBreakdown, getIncomeBreakdown, getBudgetStatus, getMonthlyTrend, getCumulativeBalance, getPeriodDateRange } from "@/lib/analytics"
 import { PeriodSwitcher } from "@/components/analytics/PeriodSwitcher"
 import { StatsCards } from "@/components/dashboard/StatsCards"
+import { BudgetProgressCard } from "@/components/dashboard/BudgetProgressCard"
 import { ChartSkeleton } from "@/components/ui/skeleton"
 
 const ExpensePieChart = dynamic(
   () => import("@/components/dashboard/ExpensePieChart").then((m) => ({ default: m.ExpensePieChart })),
   { loading: () => <ChartSkeleton height={220} />, ssr: false }
+)
+
+const MonthlyBarChart = dynamic(
+  () => import("@/components/dashboard/MonthlyBarChart").then((m) => ({ default: m.MonthlyBarChart })),
+  { loading: () => <ChartSkeleton height={260} />, ssr: false }
+)
+
+const CumulativeNetChart = dynamic(
+  () => import("@/components/dashboard/CumulativeNetChart").then((m) => ({ default: m.CumulativeNetChart })),
+  { loading: () => <ChartSkeleton height={200} />, ssr: false }
 )
 
 function AnalyticsPageContent() {
@@ -22,10 +33,15 @@ function AnalyticsPageContent() {
 
   const periodKey = type === "month" ? month : String(year)
   const periodLabel = type === "month" ? "this month" : "this year"
+  const trendWindow = type === "month" ? 6 : 12
 
   const stats = useMemo(() => getDashboardStats(transactions, periodKey), [transactions, periodKey])
   const expenseBreakdown = useMemo(() => getExpenseBreakdown(transactions, periodKey, categories), [transactions, periodKey, categories])
   const incomeBreakdown = useMemo(() => getIncomeBreakdown(transactions, periodKey, categories), [transactions, periodKey, categories])
+  const budgetStatus = useMemo(() => getBudgetStatus(transactions, periodKey, categories), [transactions, periodKey, categories])
+  const monthlyTrend = useMemo(() => getMonthlyTrend(transactions, trendWindow, periodKey), [transactions, trendWindow, periodKey])
+  const cumulativeBalance = useMemo(() => getCumulativeBalance(transactions, periodKey), [transactions, periodKey])
+  const periodDateRange = useMemo(() => getPeriodDateRange(periodKey), [periodKey])
 
   return (
     <div className="space-y-5">
@@ -61,6 +77,23 @@ function AnalyticsPageContent() {
             tableCaption="Income breakdown by category"
           />
         </div>
+      </div>
+
+      <div className="space-y-3">
+        <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">Budget Analysis</h2>
+        <BudgetProgressCard budgets={budgetStatus} periodDateRange={periodDateRange} />
+      </div>
+
+      <div className="space-y-3">
+        <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">Cash Flow</h2>
+        <MonthlyBarChart
+          data={monthlyTrend}
+          title={type === "month" ? "6-Month Overview" : `${year} Monthly Overview`}
+          ariaLabel={`Bar chart showing income and expenses ${type === "month" ? "over the last 6 months" : `for ${year}`}`}
+          tableCaption={`Income and expenses ${type === "month" ? "over the last 6 months" : `for ${year}`}`}
+          enableDeepLinks
+        />
+        <CumulativeNetChart data={cumulativeBalance} />
       </div>
     </div>
   )

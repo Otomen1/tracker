@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { getDashboardStats, getExpenseBreakdown, getIncomeBreakdown, getBudgetStatus, filterTransactions, getTopTransactions } from "../analytics"
+import { getDashboardStats, getExpenseBreakdown, getIncomeBreakdown, getBudgetStatus, getMonthlyTrend, getCumulativeBalance, getPeriodDateRange, filterTransactions, getTopTransactions } from "../analytics"
 import { Transaction, Category } from "@/types"
 
 const makeTransaction = (overrides: Partial<Transaction>): Transaction => ({
@@ -114,6 +114,108 @@ describe("getBudgetStatus", () => {
     const categories = [makeCategory()]
     const status = getBudgetStatus([], "2026-06", categories)
     expect(status).toHaveLength(0)
+  })
+
+  it("month mode matches the exact pre-migration month behavior (parity)", () => {
+    const categories = [makeCategory({ budget: 100 })]
+    const transactions = [makeTransaction({ id: "1", amount: 60, date: "2026-06-01" })]
+    const status = getBudgetStatus(transactions, "2026-06", categories)
+    expect(status[0].budget).toBe(100)
+    expect(status[0].percentage).toBe(60)
+  })
+
+  it("annualizes the monthly budget (x12) when the period is a year", () => {
+    const categories = [makeCategory({ budget: 100 })]
+    const transactions = [
+      makeTransaction({ id: "1", amount: 600, date: "2026-01-15" }),
+      makeTransaction({ id: "2", amount: 600, date: "2026-06-15" }),
+    ]
+    const status = getBudgetStatus(transactions, "2026", categories)
+    expect(status[0].budget).toBe(1200) // 100 * 12
+    expect(status[0].spent).toBe(1200)
+    expect(status[0].percentage).toBe(100)
+    expect(status[0].isOverBudget).toBe(false)
+  })
+})
+
+describe("getMonthlyTrend — period generalization", () => {
+  it("preserves the exact pre-migration default (6 trailing months ending today)", () => {
+    expect(getMonthlyTrend([])).toHaveLength(6)
+    expect(getMonthlyTrend([], 12)).toHaveLength(12)
+  })
+
+  it("supports a non-6-month trailing window ending at a specific month", () => {
+    const transactions = [
+      makeTransaction({ id: "1", type: "income", amount: 500, date: "2025-11-10" }),
+      makeTransaction({ id: "2", type: "expense", amount: 100, date: "2026-01-10" }),
+    ]
+    const trend = getMonthlyTrend(transactions, 3, "2026-01")
+    expect(trend).toHaveLength(3)
+    expect(trend.map((t) => t.month)).toEqual(["2025-11", "2025-12", "2026-01"])
+    expect(trend[0].totalIncome).toBe(500)
+    expect(trend[2].totalExpenses).toBe(100)
+  })
+
+  it("returns all 12 months of the selected year, ignoring monthCount", () => {
+    const transactions = [
+      makeTransaction({ id: "1", type: "income", amount: 1000, date: "2026-03-01" }),
+      makeTransaction({ id: "2", type: "expense", amount: 999, date: "2025-03-01" }),
+    ]
+    const trend = getMonthlyTrend(transactions, 6, "2026")
+    expect(trend).toHaveLength(12)
+    expect(trend[0].month).toBe("2026-01")
+    expect(trend[11].month).toBe("2026-12")
+    expect(trend[2].totalIncome).toBe(1000) // March = index 2
+    // 2025's data must not leak into 2026's year trend
+    expect(trend.every((t) => t.totalExpenses === 0)).toBe(true)
+  })
+
+  it("handles the year boundary correctly in trailing-window mode", () => {
+    const transactions = [makeTransaction({ id: "1", type: "income", amount: 200, date: "2025-12-20" })]
+    const trend = getMonthlyTrend(transactions, 2, "2026-01")
+    expect(trend.map((t) => t.month)).toEqual(["2025-12", "2026-01"])
+    expect(trend[0].totalIncome).toBe(200)
+  })
+})
+
+describe("getCumulativeBalance — period generalization", () => {
+  it("bounds the trend to the end of a selected past month, excluding later data", () => {
+    const transactions = [
+      makeTransaction({ id: "1", type: "income", amount: 100, date: "2026-01-15" }),
+      makeTransaction({ id: "2", type: "income", amount: 500, date: "2026-06-15" }),
+    ]
+    const result = getCumulativeBalance(transactions, "2026-01")
+    expect(result).toHaveLength(1)
+    expect(result[0].month).toBe("2026-01")
+    expect(result[0].balance).toBe(100)
+  })
+
+  it("bounds the trend to December of a selected year", () => {
+    const transactions = [
+      makeTransaction({ id: "1", type: "income", amount: 100, date: "2026-01-15" }),
+      makeTransaction({ id: "2", type: "income", amount: 50, date: "2027-01-15" }),
+    ]
+    const result = getCumulativeBalance(transactions, "2026")
+    expect(result[result.length - 1].month).toBe("2026-12")
+    expect(result[result.length - 1].balance).toBe(100)
+  })
+
+  it("returns an empty array for an empty period", () => {
+    expect(getCumulativeBalance([], "2026")).toEqual([])
+  })
+})
+
+describe("getPeriodDateRange", () => {
+  it("computes the full-month range for a month key", () => {
+    expect(getPeriodDateRange("2026-02")).toEqual({ dateFrom: "2026-02-01", dateTo: "2026-02-28" })
+  })
+
+  it("computes the correct leap-year February range", () => {
+    expect(getPeriodDateRange("2024-02")).toEqual({ dateFrom: "2024-02-01", dateTo: "2024-02-29" })
+  })
+
+  it("computes the full-year range for a year key", () => {
+    expect(getPeriodDateRange("2026")).toEqual({ dateFrom: "2026-01-01", dateTo: "2026-12-31" })
   })
 })
 

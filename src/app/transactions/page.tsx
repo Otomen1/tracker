@@ -1,10 +1,12 @@
 "use client"
 
-import { useCallback, useMemo, useRef, useState } from "react"
+import { Suspense, useCallback, useMemo, useRef, useState } from "react"
+import { useSearchParams } from "next/navigation"
 import { useTransactions } from "@/hooks/useTransactions"
 import { useCategories } from "@/hooks/useCategories"
 import { useBudgetCheck } from "@/hooks/useBudgetCheck"
 import { filterTransactions, getSortedTransactions } from "@/lib/analytics"
+import { parseTransactionsDeepLink } from "@/lib/deepLinks"
 import { TransactionFilters, TransactionFormData } from "@/types"
 import { useSettingsContext } from "@/context/SettingsContext"
 import { Button } from "@/components/ui/button"
@@ -16,13 +18,19 @@ import { ExportButton } from "@/components/transactions/ExportButton"
 import { formatDate } from "@/lib/formatters"
 import { cn } from "@/lib/utils"
 
-export default function TransactionsPage() {
+function TransactionsPageContent() {
+  const searchParams = useSearchParams()
   const { transactions, addTransaction, updateTransaction, deleteTransaction, deleteWithCascade, restoreTransaction } = useTransactions()
   const { categories } = useCategories()
   const { fmt, settings } = useSettingsContext()
   const { checkBudget } = useBudgetCheck()
   const [addOpen, setAddOpen] = useState(false)
-  const [filters, setFilters] = useState<TransactionFilters>({})
+  // Seeded once from any supported deep-link params on initial load only;
+  // manual filtering afterward behaves exactly as before, with no ongoing
+  // URL sync.
+  const [filters, setFilters] = useState<TransactionFilters>(
+    () => parseTransactionsDeepLink(searchParams, categories)
+  )
   const [recurringOpen, setRecurringOpen] = useState(false)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const successTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -160,5 +168,13 @@ export default function TransactionsPage() {
         onSubmit={handleAdd}
       />
     </div>
+  )
+}
+
+export default function TransactionsPage() {
+  return (
+    <Suspense fallback={null}>
+      <TransactionsPageContent />
+    </Suspense>
   )
 }
