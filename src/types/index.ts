@@ -46,6 +46,20 @@ export interface MonthlySummary {
   transactionCount: number
 }
 
+export interface SavingsTrendPoint {
+  month: string // "YYYY-MM"
+  actual: number // net savings (income - expenses) for that month
+  goal: number // the applicable monthly goal; 0 if none configured
+  achievementRate: number | null // actual/goal * 100; null when goal <= 0
+}
+
+export interface SavingsTrendResult {
+  points: SavingsTrendPoint[]
+  totalActual: number // summed over elapsed months only
+  totalGoal: number // goal * elapsed month count; 0 if no goal
+  achievementRate: number | null // totalActual/totalGoal * 100; null when totalGoal <= 0
+}
+
 export interface CategoryBreakdown {
   categoryId: string
   categoryName: string

@@ -1,7 +1,8 @@
 import { endOfMonth, parseISO, format } from "date-fns"
 import {
   Transaction, Category, DashboardStats, CategoryBreakdown,
-  MonthlySummary, TransactionFilters, BudgetStatus, AnnualSummary, Insight
+  MonthlySummary, TransactionFilters, BudgetStatus, AnnualSummary, Insight,
+  SavingsTrendPoint, SavingsTrendResult
 } from "@/types"
 import { getMonthKey, addMonths } from "./formatters"
 
@@ -158,23 +159,64 @@ function computeMonthSummary(transactions: Transaction[], monthKey: string): Mon
   }
 }
 
+// Shared by getMonthlyTrend and getSavingsTrend so both use the identical
+// month-window definition: a month periodKey returns `monthCount` trailing
+// months ending there; a year periodKey returns that year's 12 months (Jan-Dec).
+function getPeriodMonthKeys(periodKey: string, monthCount: number): string[] {
+  if (isYearKey(periodKey)) {
+    return Array.from({ length: 12 }, (_, i) => `${periodKey}-${String(i + 1).padStart(2, "0")}`)
+  }
+  return Array.from({ length: monthCount }, (_, i) => addMonths(periodKey, -(monthCount - 1 - i)))
+}
+
 // `periodKey` generalizes the trend's anchor from a hardcoded "today" to any
-// selected month or year. A month periodKey returns `monthCount` trailing
-// months ending there (unchanged default behavior when omitted); a year
-// periodKey returns that year's 12 months (Jan-Dec), ignoring monthCount.
+// selected month or year (unchanged default behavior when omitted).
 export function getMonthlyTrend(
   transactions: Transaction[],
   monthCount = 6,
   periodKey: string = getMonthKey()
 ): MonthlySummary[] {
-  if (isYearKey(periodKey)) {
-    return Array.from({ length: 12 }, (_, i) =>
-      computeMonthSummary(transactions, `${periodKey}-${String(i + 1).padStart(2, "0")}`)
-    )
+  return getPeriodMonthKeys(periodKey, monthCount).map((monthKey) => computeMonthSummary(transactions, monthKey))
+}
+
+// The current monthly savings goal has no persisted history (see
+// SavingsGoalForm - it's a single mutable value, overwritten in place with no
+// effective-dates). `monthlyGoal` is therefore applied uniformly to every
+// point in the trend, including past months - this is a deliberate,
+// documented choice, not an assumption that the goal was actually that value
+// historically. Callers must present this as "vs. current goal", not as a
+// historical claim. The aggregate achievement rate only sums over "elapsed"
+// months (<= today) so a partial current year doesn't average in future
+// months that have no data yet.
+export function getSavingsTrend(
+  transactions: Transaction[],
+  periodKey: string,
+  monthlyGoal: number,
+  monthCount = 6
+): SavingsTrendResult {
+  const currentMonthKey = getMonthKey()
+  const goal = monthlyGoal > 0 ? round2(monthlyGoal) : 0
+
+  const points: SavingsTrendPoint[] = getPeriodMonthKeys(periodKey, monthCount).map((monthKey) => {
+    const actual = computeMonthSummary(transactions, monthKey).netBalance
+    return {
+      month: monthKey,
+      actual,
+      goal,
+      achievementRate: goal > 0 ? round2((actual / goal) * 100) : null,
+    }
+  })
+
+  const elapsedPoints = points.filter((p) => p.month <= currentMonthKey)
+  const totalActual = round2(elapsedPoints.reduce((sum, p) => sum + p.actual, 0))
+  const totalGoal = round2(goal * elapsedPoints.length)
+
+  return {
+    points,
+    totalActual,
+    totalGoal,
+    achievementRate: totalGoal > 0 ? round2((totalActual / totalGoal) * 100) : null,
   }
-  return Array.from({ length: monthCount }, (_, i) =>
-    computeMonthSummary(transactions, addMonths(periodKey, -(monthCount - 1 - i)))
-  )
 }
 
 export function getAnnualSummary(
