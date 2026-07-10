@@ -26,7 +26,11 @@ const STEPS = [
   },
 ]
 
-export function OnboardingModal() {
+interface Props {
+  onFinish?: () => void
+}
+
+export function OnboardingModal({ onFinish }: Props) {
   const [open, setOpen] = useState(false)
   const [step, setStep] = useState(0)
 
@@ -39,6 +43,15 @@ export function OnboardingModal() {
   const handleFinish = () => {
     localStorage.setItem(STORAGE_KEYS.ONBOARDED, "1")
     setOpen(false)
+  }
+
+  // Only the explicit "Get Started" click opens Quick Add - dismissing via
+  // Escape/backdrop click (which also routes through handleFinish via
+  // onOpenChange below) still completes onboarding but shouldn't pop open a
+  // second modal the user didn't ask for.
+  const handleGetStarted = () => {
+    handleFinish()
+    onFinish?.()
   }
 
   const current = STEPS[step]
@@ -76,7 +89,7 @@ export function OnboardingModal() {
           )}
           <Button
             className="flex-1 gap-1.5"
-            onClick={() => isLast ? handleFinish() : setStep((s) => s + 1)}
+            onClick={() => isLast ? handleGetStarted() : setStep((s) => s + 1)}
           >
             {isLast ? "Get Started" : "Next"}
             {!isLast && <ArrowRight className="w-4 h-4" />}
