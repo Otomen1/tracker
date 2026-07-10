@@ -5,6 +5,7 @@ import { Transaction, TransactionFormData } from "@/types"
 import { useLocalStorage } from "./useLocalStorage"
 import { STORAGE_KEYS } from "@/lib/constants"
 import { getMonthKey, getTodayString } from "@/lib/formatters"
+import { applyBulkDelete, applyBulkRecategorize, applyBulkRestore } from "@/lib/transactionBatch"
 
 export function useTransactions() {
   const [transactions, setTransactions] = useLocalStorage<Transaction[]>(
@@ -115,5 +116,31 @@ export function useTransactions() {
     setTransactions((prev) => [transaction, ...prev])
   }
 
-  return { transactions, addTransaction, updateTransaction, deleteTransaction, deleteWithCascade, restoreTransaction }
+  // Additive batch methods for bulk actions (P14). Each performs exactly one
+  // setTransactions call - a batch of 1 or 100+ is always a single storage
+  // write - and is purely additive: none of the single-row methods above
+  // change behavior.
+  const bulkDeleteTransactions = (ids: string[], cascade: boolean): void => {
+    setTransactions((prev) => applyBulkDelete(prev, ids, cascade))
+  }
+
+  const bulkRestoreTransactions = (items: Transaction[]): void => {
+    setTransactions((prev) => applyBulkRestore(prev, items))
+  }
+
+  const bulkRecategorize = (ids: string[], categoryId: string): void => {
+    setTransactions((prev) => applyBulkRecategorize(prev, ids, categoryId, new Date().toISOString()))
+  }
+
+  return {
+    transactions,
+    addTransaction,
+    updateTransaction,
+    deleteTransaction,
+    deleteWithCascade,
+    restoreTransaction,
+    bulkDeleteTransactions,
+    bulkRestoreTransactions,
+    bulkRecategorize,
+  }
 }

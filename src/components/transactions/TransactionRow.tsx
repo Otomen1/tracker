@@ -13,14 +13,40 @@ interface Props {
   onEditRequest: (t: Transaction) => void
   onDeleteRequest: (t: Transaction) => void
   recurringInstanceCount?: number
+  selectMode?: boolean
+  selected?: boolean
+  onToggleSelect?: (id: string) => void
 }
 
-export function TransactionRow({ transaction, categories, onEditRequest, onDeleteRequest, recurringInstanceCount = 0 }: Props) {
+export function TransactionRow({
+  transaction,
+  categories,
+  onEditRequest,
+  onDeleteRequest,
+  recurringInstanceCount = 0,
+  selectMode = false,
+  selected = false,
+  onToggleSelect,
+}: Props) {
   const { fmt } = useSettingsContext()
   const category = categories.find((c) => c.id === transaction.categoryId)
 
   return (
-    <tr className="group border-b border-zinc-100 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors">
+    <tr className={cn(
+      "group border-b border-zinc-100 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors",
+      selected && "bg-zinc-50 dark:bg-zinc-800/50"
+    )}>
+      {selectMode && (
+        <td className="py-3 pl-4 pr-1 w-10">
+          <input
+            type="checkbox"
+            checked={selected}
+            onChange={() => onToggleSelect?.(transaction.id)}
+            aria-label={`Select ${transaction.description}`}
+            className="rounded border-zinc-300 dark:border-zinc-600 accent-zinc-900 dark:accent-zinc-100"
+          />
+        </td>
+      )}
       <td className="py-3 px-4 text-sm text-zinc-500 dark:text-zinc-400 whitespace-nowrap">
         {formatDate(transaction.date)}
       </td>
