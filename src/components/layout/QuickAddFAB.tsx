@@ -1,43 +1,19 @@
 "use client"
 
-import { useState } from "react"
 import { Plus } from "lucide-react"
-import { useTransactions } from "@/hooks/useTransactions"
-import { useCategories } from "@/hooks/useCategories"
-import { useBudgetCheck } from "@/hooks/useBudgetCheck"
-import { useToast } from "@/context/ToastContext"
-import { TransactionFormData } from "@/types"
-import { TransactionDialog } from "@/components/transactions/TransactionDialog"
 
-export function QuickAddFAB() {
-  const [open, setOpen] = useState(false)
-  const { transactions, addTransaction } = useTransactions()
-  const { categories } = useCategories()
-  const { checkBudget } = useBudgetCheck()
-  const { showToast } = useToast()
+interface Props {
+  onClick: () => void
+}
 
-  const handleAdd = (data: TransactionFormData) => {
-    addTransaction(data)
-    setOpen(false)
-    showToast("Transaction added", "success")
-    checkBudget(data, transactions)
-  }
-
+export function QuickAddFAB({ onClick }: Props) {
   return (
-    <>
-      <button
-        onClick={() => setOpen(true)}
-        aria-label="Add transaction"
-        className="fixed bottom-20 right-4 lg:bottom-6 lg:right-6 z-30 w-14 h-14 rounded-full bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 shadow-lg flex items-center justify-center hover:scale-105 active:scale-95 transition-transform"
-      >
-        <Plus className="w-6 h-6" />
-      </button>
-      <TransactionDialog
-        open={open}
-        onOpenChange={setOpen}
-        categories={categories}
-        onSubmit={handleAdd}
-      />
-    </>
+    <button
+      onClick={onClick}
+      aria-label="Add transaction"
+      className="fixed bottom-20 right-4 lg:bottom-6 lg:right-6 z-30 w-14 h-14 rounded-full bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 shadow-lg flex items-center justify-center hover:scale-105 active:scale-95 transition-transform"
+    >
+      <Plus className="w-6 h-6" />
+    </button>
   )
 }

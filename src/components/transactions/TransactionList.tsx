@@ -62,17 +62,11 @@ export function TransactionList({ transactions, categories, filterKey, onRestore
     onRestore(item)
   }, [undoQueue, onRestore])
 
-  if (transactions.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center py-16 text-zinc-400">
-        <ArrowLeftRight className="w-10 h-10 mb-3 opacity-30" />
-        <p className="text-sm font-medium">No transactions found</p>
-        <p className="text-xs mt-1">Add one above or adjust your filters</p>
-      </div>
-    )
-  }
-
-  // Build recurring instance count map for cascade delete UI
+  // Build recurring instance count map for cascade delete UI. Computed before
+  // the empty-state early return below - hooks must run unconditionally on
+  // every render, or the transactions list flipping from empty to non-empty
+  // (adding the very first transaction) changes the hook count mid-lifetime
+  // and crashes with "Rendered fewer hooks than expected".
   const instanceCountMap = useMemo(() => {
     const map = new Map<string, number>()
     transactions.forEach((t) => {
@@ -82,6 +76,16 @@ export function TransactionList({ transactions, categories, filterKey, onRestore
     })
     return map
   }, [transactions])
+
+  if (transactions.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 text-zinc-400">
+        <ArrowLeftRight className="w-10 h-10 mb-3 opacity-30" />
+        <p className="text-sm font-medium">No transactions found</p>
+        <p className="text-xs mt-1">Add one above or adjust your filters</p>
+      </div>
+    )
+  }
 
   const totalPages = Math.ceil(transactions.length / PAGE_SIZE)
   const pageItems = transactions.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE)
