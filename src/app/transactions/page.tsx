@@ -7,7 +7,7 @@ import { useCategories } from "@/hooks/useCategories"
 import { useBudgetCheck } from "@/hooks/useBudgetCheck"
 import { filterTransactions, getSortedTransactions } from "@/lib/analytics"
 import { parseTransactionsDeepLink } from "@/lib/deepLinks"
-import { TransactionFilters, TransactionFormData } from "@/types"
+import { Transaction, TransactionFilters, TransactionFormData } from "@/types"
 import { useSettingsContext } from "@/context/SettingsContext"
 import { Button } from "@/components/ui/button"
 import { Plus, RefreshCw, ChevronDown, CheckCircle } from "lucide-react"
@@ -20,10 +20,20 @@ import { cn } from "@/lib/utils"
 
 function TransactionsPageContent() {
   const searchParams = useSearchParams()
-  const { transactions, addTransaction, updateTransaction, deleteTransaction, deleteWithCascade, restoreTransaction } = useTransactions()
+  const {
+    transactions,
+    addTransaction,
+    updateTransaction,
+    deleteTransaction,
+    deleteWithCascade,
+    restoreTransaction,
+    bulkDeleteTransactions,
+    bulkRestoreTransactions,
+    bulkRecategorize,
+  } = useTransactions()
   const { categories } = useCategories()
   const { fmt, settings } = useSettingsContext()
-  const { checkBudget } = useBudgetCheck()
+  const { checkBudget, checkBudgetForCategory } = useBudgetCheck()
   const [addOpen, setAddOpen] = useState(false)
   // Seeded once from any supported deep-link params on initial load only;
   // manual filtering afterward behaves exactly as before, with no ongoing
@@ -69,6 +79,25 @@ function TransactionsPageContent() {
     if (cascade) deleteWithCascade(id)
     else deleteTransaction(id)
   }
+
+  const handleBulkDelete = useCallback((ids: string[], cascade: boolean) => {
+    bulkDeleteTransactions(ids, cascade)
+  }, [bulkDeleteTransactions])
+
+  const handleBulkRestore = useCallback((items: Transaction[]) => {
+    bulkRestoreTransactions(items)
+  }, [bulkRestoreTransactions])
+
+  const handleBulkRecategorize = useCallback((ids: string[], categoryId: string) => {
+    bulkRecategorize(ids, categoryId)
+    showSuccess(`${ids.length} transaction${ids.length !== 1 ? "s" : ""} recategorized`)
+    // Budget check needs the resulting state, not the pre-mutation snapshot
+    // still in `transactions` on this render - compute it directly rather
+    // than waiting a render for the hook to catch up.
+    const idSet = new Set(ids)
+    const resulting = transactions.map((t) => (idSet.has(t.id) ? { ...t, categoryId } : t))
+    checkBudgetForCategory(categoryId, resulting)
+  }, [bulkRecategorize, showSuccess, transactions, checkBudgetForCategory])
 
   return (
     <div className="space-y-5">
@@ -158,6 +187,9 @@ function TransactionsPageContent() {
           onRestore={restoreTransaction}
           onUpdate={handleUpdate}
           onDelete={handleDelete}
+          onBulkDelete={handleBulkDelete}
+          onBulkRestore={handleBulkRestore}
+          onBulkRecategorize={handleBulkRecategorize}
         />
       </div>
 
