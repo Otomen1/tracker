@@ -46,5 +46,5 @@ export function useScheduledBackup() {
   // Only re-check when the interval setting changes, not on every render
   // eslint-disable-next-line react-hooks/exhaustive-deps
     })()
-  }, [settings.backupInterval, settings.backupPassword])
+  }, [settings.backupInterval, settings.backupPassword, settings.lastBackupAt, updateSettings])
 }
