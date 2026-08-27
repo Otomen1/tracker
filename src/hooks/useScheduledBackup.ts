@@ -15,6 +15,7 @@ export function useScheduledBackup() {
   const { settings, updateSettings } = useSettingsContext()
 
   useEffect(() => {
+    void (async () => {
     const interval = settings.backupInterval
     if (!interval || interval === "never") return
 
@@ -44,5 +45,6 @@ export function useScheduledBackup() {
     updateSettings({ lastBackupAt: new Date().toISOString() })
   // Only re-check when the interval setting changes, not on every render
   // eslint-disable-next-line react-hooks/exhaustive-deps
+    })()
   }, [settings.backupInterval, settings.backupPassword])
 }
