@@ -218,7 +218,14 @@ export function importAllData(json: string): { success: boolean; error?: string 
     }
 
     saveTransactions(txnCheck.data)
-    if (raw.settings) saveSettings(raw.settings as Settings)
+    if (raw.settings) {
+      const settingsCheck = settingsSchema.safeParse(raw.settings)
+      if (!settingsCheck.success) {
+        logSecurityEvent("backup_import_failure", { reason: "settings_validation" })
+        return { success: false, error: "Invalid backup file: invalid settings" }
+      }
+      saveSettings(settingsCheck.data)
+    }
     logSecurityEvent("backup_import_success_lenient", { transactionCount: txnCheck.data.length })
     return { success: true }
   } catch {
