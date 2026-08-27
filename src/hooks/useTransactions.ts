@@ -45,7 +45,11 @@ export function useTransactions() {
           }
         }
 
-        return toAdd.length > 0 ? [...toAdd, ...prev] : prev
+        // Do not write when there is nothing to generate. Multiple components
+        // subscribe to this hook, and writing a stale unchanged snapshot here
+        // could overwrite a deletion made by another instance.
+        if (toAdd.length === 0) return prev
+        return [...toAdd, ...prev]
       })
     }
 
