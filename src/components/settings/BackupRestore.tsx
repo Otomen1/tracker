@@ -25,6 +25,7 @@ export function BackupRestore() {
   const fileRef = useRef<HTMLInputElement>(null)
   const { settings, updateSettings } = useSettingsContext()
   const backupInterval = settings.backupInterval ?? "never"
+  const [backupPassword, setBackupPassword] = useState(settings.backupPassword ?? "")
 
   const [status, setStatus] = useState<Status | null>(null)
   const [exporting, setExporting] = useState(false)
@@ -60,6 +61,11 @@ export function BackupRestore() {
 
       let finalContent: string
       let filename: string
+
+      if (exportEncrypt && !exportPassword) {
+        setStatus({ type: "error", message: "Enter a password before exporting an encrypted backup." })
+        return
+      }
 
       if (exportEncrypt && exportPassword) {
         const payload = await encryptData(signedJson, exportPassword)
@@ -247,6 +253,19 @@ export function BackupRestore() {
       <p className="text-xs text-zinc-400">
         Backups include a SHA-256 checksum. Use password protection for sensitive data.
       </p>
+
+      <div className="space-y-1 pt-1">
+        <label className="text-xs text-zinc-500">Automatic backup password (minimum 8 characters)</label>
+        <Input
+          type="password"
+          placeholder="Required for automatic backups"
+          className="h-8 w-64 text-sm"
+          value={backupPassword}
+          onChange={(e) => { setBackupPassword(e.target.value); updateSettings({ backupPassword: e.target.value || undefined }) }}
+          autoComplete="new-password"
+        />
+        <p className="text-xs text-zinc-400">Stored locally on this device. Automatic backups are skipped until configured.</p>
+      </div>
 
       {/* Auto backup interval */}
       <div className="flex items-center gap-3 pt-1">
