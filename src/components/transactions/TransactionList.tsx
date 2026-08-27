@@ -32,6 +32,8 @@ interface Props {
   onBulkDelete: (ids: string[], cascade: boolean) => void
   onBulkRestore: (transactions: Transaction[]) => void
   onBulkRecategorize: (ids: string[], categoryId: string) => void
+  hasTransactions?: boolean
+  onAddTransaction?: () => void
 }
 
 export function TransactionList({
@@ -44,6 +46,8 @@ export function TransactionList({
   onBulkDelete,
   onBulkRestore,
   onBulkRecategorize,
+  hasTransactions = false,
+  onAddTransaction,
 }: Props) {
   const { fmt } = useSettingsContext()
   const [page, setPage] = useState(0)
