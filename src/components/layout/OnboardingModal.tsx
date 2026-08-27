@@ -81,20 +81,26 @@ export function OnboardingModal({ onFinish }: Props) {
           ))}
         </div>
 
-        <div className="flex items-center justify-between mt-4">\n          <Button variant="ghost" size="sm" onClick={handleFinish}>Skip for now</Button>\n          <div className="flex gap-2">
-          {step > 0 && (
-            <Button variant="outline" className="flex-1" onClick={() => setStep((s) => s - 1)}>
-              Back
-            </Button>
-          )}
-          <Button
-            className="flex-1 gap-1.5"
-            onClick={() => isLast ? handleGetStarted() : setStep((s) => s + 1)}
-          >
-            {isLast ? "Get Started" : "Next"}
-            {!isLast && <ArrowRight className="w-4 h-4" />}
+        <div className="flex items-center justify-between mt-4">
+          <Button variant="ghost" size="sm" onClick={handleFinish}>
+            Skip for now
           </Button>
+          <div className="flex gap-2">
+            {step > 0 && (
+              <Button variant="outline" onClick={() => setStep((s) => s - 1)}>
+                Back
+              </Button>
+            )}
+            <Button
+              className="gap-1.5"
+              onClick={() => isLast ? handleGetStarted() : setStep((s) => s + 1)}
+            >
+              {isLast ? "Get Started" : "Next"}
+              {!isLast && <ArrowRight className="w-4 h-4" />}
+            </Button>
+          </div>
         </div>
+
       </DialogContent>
     </Dialog>
   )
