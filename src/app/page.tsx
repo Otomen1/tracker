@@ -1,6 +1,8 @@
 "use client"
 
 import { useState, useMemo } from "react"
+import Link from "next/link"
+import { ArrowRight, BarChart3, Tags, Upload } from "lucide-react"
 import { useTransactions } from "@/hooks/useTransactions"
 import { useCategories } from "@/hooks/useCategories"
 import { useHydrated } from "@/hooks/useHydrated"
@@ -83,6 +85,47 @@ export default function DashboardPage() {
       />
 
       <QuickActions onAddClick={() => setAddOpen(true)} />
+
+      {transactions.length === 0 && (
+        <section
+          aria-labelledby="getting-started-title"
+          className="rounded-xl border border-zinc-200/70 bg-white/80 p-5 shadow-sm dark:border-zinc-800/70 dark:bg-zinc-900/60"
+        >
+          <div className="flex items-start gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-zinc-100 dark:bg-zinc-800">
+              <BarChart3 className="h-5 w-5 text-zinc-700 dark:text-zinc-300" />
+            </div>
+            <div>
+              <h2 id="getting-started-title" className="font-semibold text-zinc-900 dark:text-zinc-100">
+                Your financial picture starts here
+              </h2>
+              <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+                Add a transaction or set up your workspace. Everything stays on this device.
+              </p>
+            </div>
+          </div>
+          <div className="mt-5 grid gap-2 sm:grid-cols-3">
+            <button
+              className="flex items-center justify-between rounded-lg bg-zinc-900 px-3 py-2.5 text-left text-sm font-medium text-white transition-colors hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300"
+              onClick={() => setAddOpen(true)}
+            >
+              Add first transaction <ArrowRight className="h-4 w-4" />
+            </button>
+            <Link
+              href="/categories"
+              className="flex items-center justify-between rounded-lg border border-zinc-200 px-3 py-2.5 text-sm font-medium text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+            >
+              Manage categories <Tags className="h-4 w-4" />
+            </Link>
+            <Link
+              href="/settings"
+              className="flex items-center justify-between rounded-lg border border-zinc-200 px-3 py-2.5 text-sm font-medium text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+            >
+              Import existing data <Upload className="h-4 w-4" />
+            </Link>
+          </div>
+        </section>
+      )}
 
       <StatsCards stats={stats} />
 
