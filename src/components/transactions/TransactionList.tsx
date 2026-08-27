@@ -250,10 +250,19 @@ export function TransactionList({
       )}
 
       {isEmpty ? (
-        <div className="flex flex-col items-center justify-center py-16 text-zinc-400">
+        <div className="flex flex-col items-center justify-center py-16 text-center text-zinc-400">
           <ArrowLeftRight className="w-10 h-10 mb-3 opacity-30" />
-          <p className="text-sm font-medium">No transactions found</p>
-          <p className="text-xs mt-1">Add one above or adjust your filters</p>
+          <p className="text-sm font-medium">
+            {hasTransactions ? "No matching transactions" : "No transactions yet"}
+          </p>
+          <p className="mt-1 max-w-xs text-xs">
+            {hasTransactions ? "Try clearing a filter or changing your search." : "Add your first transaction to start tracking your finances."}
+          </p>
+          {!hasTransactions && onAddTransaction && (
+            <Button size="sm" className="mt-4" onClick={onAddTransaction}>
+              Add transaction
+            </Button>
+          )}
         </div>
       ) : selectMode ? (
         <BulkActionBar
