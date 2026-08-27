@@ -22,7 +22,7 @@ const STEPS = [
   {
     icon: Settings,
     title: "Ready to go",
-    description: "Add your first transaction using the + button or the quick-add button at the bottom of the screen. Your data is auto-saved.",
+    description: "Add your first transaction now, or close this guide and explore at your own pace. Your data is auto-saved locally.",
   },
 ]
 
@@ -81,7 +81,7 @@ export function OnboardingModal({ onFinish }: Props) {
           ))}
         </div>
 
-        <div className="flex gap-2 mt-4">
+        <div className="flex items-center justify-between mt-4">\n          <Button variant="ghost" size="sm" onClick={handleFinish}>Skip for now</Button>\n          <div className="flex gap-2">
           {step > 0 && (
             <Button variant="outline" className="flex-1" onClick={() => setStep((s) => s - 1)}>
               Back
