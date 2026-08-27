@@ -2,7 +2,8 @@
 
 import { useEffect } from "react"
 import { useSettingsContext } from "@/context/SettingsContext"
-import { exportAllData } from "@/lib/storage"
+import { exportAllData, logSecurityEvent } from "@/lib/storage"
+import { encryptData } from "@/lib/crypto"
 
 const INTERVAL_MS: Record<string, number> = {
   daily: 24 * 60 * 60 * 1000,
@@ -24,17 +25,24 @@ export function useScheduledBackup() {
     const lastAt = settings.lastBackupAt ? new Date(settings.lastBackupAt).getTime() : 0
     if (now - lastAt < intervalMs) return
 
-    const data = exportAllData()
-    const blob = new Blob([data], { type: "application/json" })
+    const password = settings.backupPassword
+    if (!password) {
+      logSecurityEvent("scheduled_backup_skipped", { reason: "encryption_password_not_configured" })
+      return
+    }
+
+    const data = await encryptData(exportAllData(), password)
+    const payload = JSON.stringify({ encrypted: true, exportedAt: new Date().toISOString(), payload: data })
+    const blob = new Blob([payload], { type: "application/json" })
     const url = URL.createObjectURL(blob)
     const a = document.createElement("a")
     a.href = url
-    a.download = `expense-tracker-backup-${new Date().toISOString().slice(0, 10)}.json`
+    a.download = `expense-tracker-backup-${new Date().toISOString().slice(0, 10)}.enc.json`
     a.click()
     URL.revokeObjectURL(url)
 
     updateSettings({ lastBackupAt: new Date().toISOString() })
   // Only re-check when the interval setting changes, not on every render
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [settings.backupInterval])
+  }, [settings.backupInterval, settings.backupPassword])
 }
