@@ -180,8 +180,11 @@ export function BackupRestore() {
 
   return (
     <div className="space-y-3">
-      {/* Export */}
       <div className="space-y-2">
+        <div>
+          <p className="text-sm font-medium text-zinc-800 dark:text-zinc-200">Manual backup</p>
+          <p className="text-xs text-zinc-400">Download a copy of your data now. Password protection is recommended.</p>
+        </div>
         <div className="flex flex-wrap gap-2">
           <Button
             variant="outline" size="sm" className="gap-2"
@@ -268,7 +271,12 @@ export function BackupRestore() {
       </div>
 
       {/* Auto backup interval */}
-      <div className="flex items-center gap-3 pt-1">
+      <div className="space-y-2 border-t border-zinc-200/70 pt-4 dark:border-zinc-800/70">
+        <div>
+          <p className="text-sm font-medium text-zinc-800 dark:text-zinc-200">Automatic backup</p>
+          <p className="text-xs text-zinc-400">Automatic downloads are encrypted and require the password above.</p>
+        </div>
+        <div className="flex items-center gap-3 pt-1">
         <span className="text-sm text-zinc-700 dark:text-zinc-300 shrink-0">Auto backup</span>
         <Select
           value={backupInterval}
@@ -294,6 +302,7 @@ export function BackupRestore() {
             Last: {new Date(settings.lastBackupAt).toLocaleDateString()}
           </span>
         )}
+        </div>
       </div>
 
       {/* Encrypted file password prompt */}
