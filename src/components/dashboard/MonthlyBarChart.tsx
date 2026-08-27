@@ -13,7 +13,6 @@ import { buildTransactionsDeepLink } from "@/lib/deepLinks"
 
 interface BarTooltipProps {
   active?: boolean
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   payload?: any[]
   label?: string
   fmt: (n: number) => string
