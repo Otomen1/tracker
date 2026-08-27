@@ -5,8 +5,12 @@ const PBKDF2_ITERATIONS = 250_000
 const SALT_BYTES = 16
 const IV_BYTES = 12
 
-// TypeScript's DOM lib types Uint8Array buffers as ArrayBufferLike; slice() gives a concrete ArrayBuffer.
+// Normalize typed-array values across browser and Node/Web Crypto realms.
 function toBuffer(typed: Uint8Array): ArrayBuffer {
+  if (typeof Buffer !== "undefined") {
+    const copy = Buffer.from(typed)
+    return copy.buffer.slice(copy.byteOffset, copy.byteOffset + copy.byteLength) as ArrayBuffer
+  }
   return typed.slice().buffer as ArrayBuffer
 }
 
