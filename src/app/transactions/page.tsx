@@ -190,6 +190,8 @@ function TransactionsPageContent() {
           onBulkDelete={handleBulkDelete}
           onBulkRestore={handleBulkRestore}
           onBulkRecategorize={handleBulkRecategorize}
+          hasTransactions={transactions.length > 0}
+          onAddTransaction={() => setAddOpen(true)}
         />
       </div>
 
