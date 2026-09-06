@@ -220,6 +220,7 @@ function validateRelationships(payload: ImportPayload): string | undefined {
   }
 
   const categories = payload.categories ?? getCategories()
+  if (categories.length === 0) return undefined
   const categoryIds = new Set<string>()
   for (const category of categories) {
     if (categoryIds.has(category.id)) return "Duplicate category ID"
