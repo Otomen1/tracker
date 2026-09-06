@@ -59,7 +59,7 @@ describe("getDashboardStats", () => {
 })
 
 describe("getExpenseBreakdown", () => {
-  const categories = [makeCategory()]
+  const categories = [makeCategory({})]
 
   it("groups expenses by category", () => {
     const transactions = [
@@ -114,7 +114,7 @@ describe("getBudgetStatus", () => {
   })
 
   it("returns empty array when no categories have budgets", () => {
-    const categories = [makeCategory()]
+    const categories = [makeCategory({})]
     const status = getBudgetStatus([], "2026-06", categories)
     expect(status).toHaveLength(0)
   })
