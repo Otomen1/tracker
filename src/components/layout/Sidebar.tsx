@@ -6,7 +6,7 @@ import { LayoutDashboard, ArrowLeftRight, Wallet, BarChart3, Settings } from "lu
 import { cn } from "@/lib/utils"
 
 const navItems = [
-  { href: "/", label: "Home", icon: LayoutDashboard },
+  { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/transactions", label: "Transactions", icon: ArrowLeftRight },
   { href: "/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/settings", label: "Settings", icon: Settings },
@@ -36,7 +36,7 @@ export function Sidebar() {
                 "flex items-center gap-3 px-3 py-2.5 rounded-md text-sm transition-colors",
                 isActive
                   ? "bg-white text-zinc-900 font-medium"
-                  : "text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800"
+                  : "text-zinc-300 hover:text-white hover:bg-zinc-800"
               )}
             >
               <Icon className="w-4 h-4 shrink-0" />

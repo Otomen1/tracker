@@ -26,13 +26,13 @@ export const StatsCards = memo(function StatsCards({ stats, comparisonLabel = "v
   const { fmt } = useSettingsContext()
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+    <div className="grid grid-cols-2 gap-3">
       <Card className="border-zinc-200 dark:border-zinc-800">
-        <CardContent className="pt-6">
+        <CardContent className="p-4">
           <div className="flex items-start justify-between">
             <div>
               <p className="text-xs font-medium text-zinc-500 uppercase tracking-wide">Income</p>
-              <p className="text-2xl font-bold text-emerald-600 mt-1">{fmt(stats.currentMonthIncome)}</p>
+              <p className="text-xl font-semibold text-emerald-600 mt-1">{fmt(stats.currentMonthIncome)}</p>
             </div>
             <div className="w-8 h-8 rounded-full bg-emerald-50 dark:bg-emerald-950 flex items-center justify-center">
               <TrendingUp className="w-4 h-4 text-emerald-600" />
@@ -46,11 +46,11 @@ export const StatsCards = memo(function StatsCards({ stats, comparisonLabel = "v
       </Card>
 
       <Card className="border-zinc-200 dark:border-zinc-800">
-        <CardContent className="pt-6">
+        <CardContent className="p-4">
           <div className="flex items-start justify-between">
             <div>
               <p className="text-xs font-medium text-zinc-500 uppercase tracking-wide">Expenses</p>
-              <p className="text-2xl font-bold text-rose-500 mt-1">{fmt(stats.currentMonthExpenses)}</p>
+              <p className="text-xl font-semibold text-rose-500 mt-1">{fmt(stats.currentMonthExpenses)}</p>
             </div>
             <div className="w-8 h-8 rounded-full bg-rose-50 dark:bg-rose-950 flex items-center justify-center">
               <TrendingDown className="w-4 h-4 text-rose-500" />

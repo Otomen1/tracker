@@ -6,7 +6,7 @@ import { LayoutDashboard, ArrowLeftRight, BarChart3, Settings } from "lucide-rea
 import { cn } from "@/lib/utils"
 
 const navItems = [
-  { href: "/", label: "Home", icon: LayoutDashboard },
+  { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/transactions", label: "Transactions", icon: ArrowLeftRight },
   { href: "/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/settings", label: "Settings", icon: Settings },
@@ -29,7 +29,7 @@ export function MobileNav() {
                 "flex-1 flex flex-col items-center gap-1 py-2.5 text-xs transition-colors min-h-[56px] justify-center",
                 isActive
                   ? "text-zinc-900 dark:text-zinc-100 font-medium"
-                  : "text-zinc-400 dark:text-zinc-500"
+                  : "text-zinc-500 dark:text-zinc-400"
               )}
             >
               <Icon className="w-5 h-5" />

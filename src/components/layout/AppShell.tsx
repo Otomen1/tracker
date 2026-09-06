@@ -5,7 +5,6 @@ import { Sidebar } from "./Sidebar"
 import { MobileNav } from "./MobileNav"
 import { QuickAddFAB } from "./QuickAddFAB"
 import { StorageQuotaBanner } from "./StorageQuotaBanner"
-import { OnboardingModal } from "./OnboardingModal"
 import { ErrorBoundary } from "./ErrorBoundary"
 import { useScheduledBackup } from "@/hooks/useScheduledBackup"
 import { useReminderNotification } from "@/hooks/useReminderNotification"
@@ -53,7 +52,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </main>
       <MobileNav />
       <QuickAddFAB onClick={() => setQuickAddOpen(true)} />
-      <OnboardingModal onFinish={() => setQuickAddOpen(true)} />
       <TransactionDialog
         open={quickAddOpen}
         onOpenChange={setQuickAddOpen}
