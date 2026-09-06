@@ -101,8 +101,8 @@ function TransactionsPageContent() {
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">Transactions</h1>
+      <div className="flex items-start justify-between gap-4">
+        <div><h1 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">Transactions</h1><p className="mt-0.5 text-sm text-zinc-500 dark:text-zinc-400">Search, review, and manage your financial activity</p></div>
         <Button size="sm" className="gap-1.5" onClick={() => setAddOpen(true)}>
           <Plus className="w-4 h-4" />
           Add Transaction
@@ -158,7 +158,7 @@ function TransactionsPageContent() {
         </div>
       )}
 
-      <div className="bg-white/70 dark:bg-zinc-900/50 backdrop-blur-sm rounded-lg border border-zinc-200/60 dark:border-zinc-800/60 p-4 space-y-4">
+      <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-700 p-4 space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <TransactionFiltersBar
             filters={filters}
@@ -207,7 +207,7 @@ function TransactionsPageContent() {
 
 export default function TransactionsPage() {
   return (
-    <Suspense fallback={null}>
+    <Suspense fallback={<div role="status" className="rounded-xl border border-zinc-200 p-6 text-sm text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">Loading transactions…</div>}>
       <TransactionsPageContent />
     </Suspense>
   )

@@ -178,8 +178,12 @@ export function BackupRestore() {
     }
   }
 
+  const backupReady = backupInterval === "never" ? "Disabled" : backupPassword.length < 8 ? "Password needed" : "Active"
+  const backupTone = backupReady === "Active" ? "text-emerald-700 bg-emerald-50 dark:text-emerald-300 dark:bg-emerald-950" : backupReady === "Password needed" ? "text-amber-700 bg-amber-50 dark:text-amber-300 dark:bg-amber-950" : "text-zinc-600 bg-zinc-100 dark:text-zinc-300 dark:bg-zinc-800"
+
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
+      <div className="flex items-center justify-between rounded-lg border border-zinc-200 p-3 dark:border-zinc-700"><span className="text-sm font-medium">Automatic backup status</span><span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${backupTone}`}>{backupReady}</span></div>
       <div className="space-y-2">
         <div>
           <p className="text-sm font-medium text-zinc-800 dark:text-zinc-200">Manual backup</p>

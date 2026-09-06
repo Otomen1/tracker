@@ -14,13 +14,13 @@ import { Separator } from "@/components/ui/separator"
 
 function SettingGroup({ title, description, children }: { title: string; description?: string; children: React.ReactNode }) {
   return (
-    <div className="space-y-6">
+    <section className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-700 dark:bg-zinc-900 sm:p-6 space-y-6">
       <div>
         <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">{title}</h2>
         {description && <p className="text-xs text-zinc-400 mt-0.5">{description}</p>}
       </div>
       <div className="space-y-6">{children}</div>
-    </div>
+    </section>
   )
 }
 
@@ -72,9 +72,9 @@ function StorageUsage() {
 export default function SettingsPage() {
   return (
     <div className="space-y-6">
-      <h1 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">Settings</h1>
+      <div><h1 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">Settings</h1><p className="mt-0.5 text-sm text-zinc-500 dark:text-zinc-400">Personalize the app and protect your local data</p></div>
 
-      <div className="bg-white/70 dark:bg-zinc-900/50 backdrop-blur-sm rounded-lg border border-zinc-200/60 dark:border-zinc-800/60 p-5 space-y-10">
+      <div className="space-y-4">
         <SettingGroup title="Preferences" description="Appearance and currency">
           <SettingSection title="Appearance" description="Choose your preferred color scheme">
             <ThemeToggle />
@@ -113,7 +113,7 @@ export default function SettingsPage() {
           </SettingSection>
         </SettingGroup>
 
-        <div id="data-backup" className="scroll-mt-6"><SettingGroup title="Data & Backup" description="Export, restore, and storage usage">
+        <div id="data-backup" className="scroll-mt-6 rounded-xl ring-1 ring-amber-200 dark:ring-amber-900"><SettingGroup title="Data & Backup" description="Export, restore, and storage usage">
           <SettingSection title="Data Backup" description="Export or restore your data">
             <BackupRestore />
           </SettingSection>

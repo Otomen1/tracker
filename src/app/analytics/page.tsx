@@ -57,7 +57,7 @@ function AnalyticsPageContent() {
   return (
     <div className="space-y-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">Analytics</h1>
+        <div><h1 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">Analytics</h1><p className="mt-0.5 text-sm text-zinc-500 dark:text-zinc-400">Understand where your money goes and how your balance changes</p></div>
         <PeriodSwitcher
           type={type}
           month={month}
@@ -74,7 +74,7 @@ function AnalyticsPageContent() {
       </div>
 
       <div className="space-y-3">
-        <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">Category Analysis</h2>
+        <div><h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">Category Analysis</h2><p className="text-sm text-zinc-500 dark:text-zinc-400">Compare the categories contributing most to income and spending.</p></div>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <ExpensePieChart
             data={expenseBreakdown}
@@ -96,7 +96,7 @@ function AnalyticsPageContent() {
       </div>
 
       <div className="space-y-3">
-        <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">Cash Flow</h2>
+        <div><h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">Cash Flow</h2><p className="text-sm text-zinc-500 dark:text-zinc-400">Track month-to-month movement and the running effect on your balance.</p></div>
         <MonthlyBarChart
           data={monthlyTrend}
           title={type === "month" ? "6-Month Overview" : `${year} Monthly Overview`}
@@ -108,7 +108,7 @@ function AnalyticsPageContent() {
       </div>
 
       <div className="space-y-3">
-        <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">Savings</h2>
+        <div><h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">Savings</h2><p className="text-sm text-zinc-500 dark:text-zinc-400">Measure progress against your monthly savings goal.</p></div>
         <SavingsTrendChart trend={savingsTrend} />
       </div>
     </div>
@@ -117,7 +117,7 @@ function AnalyticsPageContent() {
 
 export default function AnalyticsPage() {
   return (
-    <Suspense fallback={null}>
+    <Suspense fallback={<div role="status" className="rounded-xl border border-zinc-200 p-6 text-sm text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">Loading analytics…</div>}>
       <AnalyticsPageContent />
     </Suspense>
   )

@@ -102,14 +102,15 @@ export function TransactionFiltersBar({ filters, categories, tags, fmt, onChange
   return (
     <div className="space-y-2">
       {/* Always visible: search, type, date range, plus the advanced-filters toggle */}
-      <div className="flex flex-wrap gap-2 items-center">
-        <Input
+      <div className="grid grid-cols-1 gap-2 sm:flex sm:flex-wrap sm:items-end">
+        <div className="space-y-1"><label htmlFor="transaction-search" className="text-xs font-medium text-zinc-600 dark:text-zinc-300">Search</label><Input
+          id="transaction-search"
           className="flex-1 min-w-[140px] sm:flex-none sm:w-44 h-9 text-sm"
           placeholder="Search..."
           aria-label="Search transactions"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-        />
+        /></div>
 
         <Select
           value={filters.type ?? "all"}

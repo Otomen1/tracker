@@ -160,7 +160,24 @@ export function TransactionForm({ transaction, categories, onSubmit, onCancel }:
 
   return (
     <>
-      <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4">
+      <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-5">
+        <div className="space-y-1.5">
+          <Label htmlFor="amount">Amount</Label>
+          <Input
+            id="amount"
+            type="number"
+            step="0.01"
+            min="0.01"
+            placeholder="0.00"
+            aria-invalid={!!errors.amount}
+            aria-describedby={errors.amount ? "amount-error" : undefined}
+            className="h-14 text-2xl font-semibold tracking-tight"
+            autoFocus
+            {...register("amount")}
+          />
+          {errors.amount && <p id="amount-error" className="text-xs text-destructive">{errors.amount.message}</p>}
+        </div>
+
         <div className="space-y-1.5">
           <Label>Type</Label>
           <div className="flex rounded-md border border-input overflow-hidden">
@@ -183,21 +200,6 @@ export function TransactionForm({ transaction, categories, onSubmit, onCancel }:
               </button>
             ))}
           </div>
-        </div>
-
-        <div className="space-y-1.5">
-          <Label htmlFor="amount">Amount</Label>
-          <Input
-            id="amount"
-            type="number"
-            step="0.01"
-            min="0.01"
-            placeholder="0.00"
-            aria-invalid={!!errors.amount}
-            aria-describedby={errors.amount ? "amount-error" : undefined}
-            {...register("amount")}
-          />
-          {errors.amount && <p id="amount-error" className="text-xs text-destructive">{errors.amount.message}</p>}
         </div>
 
         <div className="space-y-1.5">
