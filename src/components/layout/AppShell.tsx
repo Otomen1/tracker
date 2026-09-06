@@ -5,6 +5,7 @@ import { Sidebar } from "./Sidebar"
 import { MobileNav } from "./MobileNav"
 import { QuickAddFAB } from "./QuickAddFAB"
 import { StorageQuotaBanner } from "./StorageQuotaBanner"
+import { StorageRecoveryBanner } from "./StorageRecoveryBanner"
 import { ErrorBoundary } from "./ErrorBoundary"
 import { useScheduledBackup } from "@/hooks/useScheduledBackup"
 import { useReminderNotification } from "@/hooks/useReminderNotification"
@@ -44,6 +45,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         Skip to main content
       </a>
       <StorageQuotaBanner />
+      <StorageRecoveryBanner />
       <Sidebar />
       <main id="main-content" className="lg:pl-56 pb-[calc(4rem+env(safe-area-inset-bottom))] lg:pb-0">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6">

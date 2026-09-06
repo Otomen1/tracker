@@ -22,6 +22,8 @@ export const STORAGE_KEYS = {
   SCHEMA_VERSION: "tracker_schema_version",
   SETTINGS: "tracker_settings",
   ONBOARDED: "tracker_onboarded",
+  RECOVERY: "tracker_recovery_snapshot",
+  CORRUPTION: "tracker_storage_corruption",
 } as const
 
 export const SCHEMA_VERSION = "1"

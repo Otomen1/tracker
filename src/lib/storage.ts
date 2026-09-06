@@ -160,6 +160,76 @@ export function exportAllData(): string {
   return json
 }
 
+type ImportPayload = {
+  transactions: Transaction[]
+  categories?: Category[]
+  settings?: Settings
+}
+
+type RecoverySnapshot = {
+  capturedAt: string
+  values: Record<string, string | null>
+}
+
+const ATOMIC_KEYS = [
+  STORAGE_KEYS.TRANSACTIONS,
+  STORAGE_KEYS.CATEGORIES,
+  STORAGE_KEYS.SETTINGS,
+  STORAGE_KEYS.SCHEMA_VERSION,
+] as const
+
+function restoreRawValues(values: Record<string, string | null>): void {
+  for (const key of ATOMIC_KEYS) {
+    const value = values[key]
+    if (value === null || value === undefined) localStorage.removeItem(key)
+    else localStorage.setItem(key, value)
+  }
+}
+
+function commitImport(payload: ImportPayload): { success: boolean; error?: string } {
+  const previous = Object.fromEntries(ATOMIC_KEYS.map((key) => [key, localStorage.getItem(key)]))
+  const recovery: RecoverySnapshot = { capturedAt: new Date().toISOString(), values: previous }
+
+  try {
+    localStorage.setItem(STORAGE_KEYS.RECOVERY, JSON.stringify(recovery))
+    localStorage.setItem(STORAGE_KEYS.TRANSACTIONS, JSON.stringify(payload.transactions))
+    if (payload.categories) localStorage.setItem(STORAGE_KEYS.CATEGORIES, JSON.stringify(payload.categories))
+    if (payload.settings) localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(payload.settings))
+    localStorage.setItem(STORAGE_KEYS.SCHEMA_VERSION, SCHEMA_VERSION)
+    localStorage.removeItem(STORAGE_KEYS.CORRUPTION)
+    return { success: true }
+  } catch (error) {
+    try {
+      restoreRawValues(previous)
+    } catch {
+      // Keep the recovery snapshot available if the browser cannot roll back immediately.
+    }
+    if (error instanceof DOMException && error.name === "QuotaExceededError") {
+      window.dispatchEvent(new CustomEvent("storage-quota-exceeded"))
+    }
+    logSecurityEvent("backup_import_failure", { reason: "atomic_write_failed" })
+    return { success: false, error: "Restore failed. Your previous data was kept." }
+  }
+}
+
+function validateRelationships(payload: ImportPayload): string | undefined {
+  const transactionIds = new Set<string>()
+  for (const transaction of payload.transactions) {
+    if (transactionIds.has(transaction.id)) return "Duplicate transaction ID"
+    transactionIds.add(transaction.id)
+  }
+
+  const categories = payload.categories ?? getCategories()
+  const categoryIds = new Set<string>()
+  for (const category of categories) {
+    if (categoryIds.has(category.id)) return "Duplicate category ID"
+    categoryIds.add(category.id)
+  }
+  const missingCategory = payload.transactions.find((transaction) => !categoryIds.has(transaction.categoryId))
+  if (missingCategory) return `Missing category for transaction "${missingCategory.description}"`
+  return undefined
+}
+
 export function importAllData(json: string): { success: boolean; error?: string } {
   let parsed: unknown
   try {
@@ -167,81 +237,103 @@ export function importAllData(json: string): { success: boolean; error?: string 
   } catch {
     return { success: false, error: "Could not parse backup file" }
   }
-
-  // Basic structure check: must have a transactions array
   if (!parsed || typeof parsed !== "object") {
     return { success: false, error: "Invalid backup file: missing transactions" }
   }
+
   const raw = parsed as Record<string, unknown>
-  if (!raw.transactions || !Array.isArray(raw.transactions)) {
-    return { success: false, error: "Invalid backup file: missing transactions" }
+  const transactionCheck = z.array(transactionSchema).max(50000).safeParse(raw.transactions)
+  if (!transactionCheck.success) {
+    const message = Array.isArray(raw.transactions)
+      ? transactionCheck.error.issues[0]?.message ?? "Invalid transactions"
+      : "missing transactions"
+    return { success: false, error: `Invalid backup file: ${message}` }
   }
 
-  // Try strict Zod validation first (enforces data integrity: amounts, dates, limits)
-  const result = backupSchema.safeParse(parsed)
-  if (result.success) {
-    const data = result.data
-    if (data.categories) saveCategories(data.categories)
-    saveTransactions(data.transactions)
-    if (data.settings) saveSettings(data.settings)
-
-    const version = localStorage.getItem(STORAGE_KEYS.SCHEMA_VERSION)
-    if (!version) {
-      if (!data.categories) saveCategories(DEFAULT_CATEGORIES)
-      safeWrite(STORAGE_KEYS.SCHEMA_VERSION, SCHEMA_VERSION)
+  let categories: Category[] | undefined
+  if (raw.categories !== undefined) {
+    if (!Array.isArray(raw.categories) || raw.categories.length > 500) {
+      return { success: false, error: "Invalid backup file: invalid categories" }
     }
-    logSecurityEvent("backup_import_success", { transactionCount: data.transactions.length })
-    return { success: true }
+    categories = raw.categories
+      .filter(isValidCategory)
+      .map((category) => {
+        const value = category as Category
+        return {
+          ...value,
+          type: value.type === ("both" as string) ? "expense" : value.type,
+          color: isValidHexColor(value.color) ? value.color : FALLBACK_COLOR,
+        }
+      })
+    const categoryCheck = z.array(categorySchema).max(500).safeParse(categories)
+    if (!categoryCheck.success) {
+      return { success: false, error: `Invalid backup file: ${categoryCheck.error.issues[0]?.message ?? "invalid categories"}` }
+    }
+    categories = categoryCheck.data as Category[]
   }
 
-  // Check if Zod failed due to transactions data integrity (not just format compat)
-  // If transactions array has data errors, propagate the Zod error
-  const txnSchema = z.array(transactionSchema).max(50000)
-  const txnCheck = txnSchema.safeParse(raw.transactions)
-  if (!txnCheck.success) {
-    const msg = txnCheck.error.issues[0]?.message ?? "Invalid backup file"
-    logSecurityEvent("backup_import_failure", { reason: "schema_validation", error: msg })
-    return { success: false, error: `Invalid backup file: ${msg}` }
+  let settings: Settings | undefined
+  if (raw.settings !== undefined) {
+    const settingsCheck = settingsSchema.safeParse(raw.settings)
+    if (!settingsCheck.success) return { success: false, error: "Invalid backup file: invalid settings" }
+    settings = settingsCheck.data
   }
 
-  // Fall back to lenient validation for category format compatibility
-  // (e.g., old "both" category type from earlier app versions)
+  const payload = { transactions: transactionCheck.data, categories, settings }
+  const relationshipError = validateRelationships(payload)
+  if (relationshipError) return { success: false, error: `Invalid backup file: ${relationshipError}` }
+
+  const committed = commitImport(payload)
+  if (committed.success) {
+    logSecurityEvent("backup_import_success", { transactionCount: payload.transactions.length })
+  }
+  return committed
+}
+
+export function getStorageHealth(): { healthy: boolean; errors: string[]; hasRecovery: boolean } {
+  if (typeof window === "undefined") return { healthy: true, errors: [], hasRecovery: false }
+  const errors: string[] = []
+  const checks = [
+    [STORAGE_KEYS.TRANSACTIONS, z.array(transactionSchema)],
+    [STORAGE_KEYS.CATEGORIES, z.array(categorySchema)],
+    [STORAGE_KEYS.SETTINGS, settingsSchema],
+  ] as const
+
+  for (const [key, schema] of checks) {
+    const raw = localStorage.getItem(key)
+    if (raw === null) continue
+    try {
+      if (!schema.safeParse(JSON.parse(raw)).success) errors.push(key)
+    } catch {
+      errors.push(key)
+    }
+  }
+  return {
+    healthy: errors.length === 0,
+    errors,
+    hasRecovery: localStorage.getItem(STORAGE_KEYS.RECOVERY) !== null,
+  }
+}
+
+export function restoreRecoverySnapshot(): boolean {
+  if (typeof window === "undefined") return false
   try {
-    if (raw.categories && Array.isArray(raw.categories)) {
-      const validCategories = raw.categories
-        .filter(isValidCategory)
-        .map((c: Category) => ({
-          ...c,
-          type: c.type === ("both" as string) ? "expense" : c.type,
-          color: isValidHexColor(c.color) ? c.color : FALLBACK_COLOR,
-        })) as Category[]
-      if (validCategories.length !== raw.categories.length) {
-        console.warn(
-          `Import: skipped ${raw.categories.length - validCategories.length} invalid category(s)`
-        )
-      }
-      saveCategories(validCategories)
-    }
-
-    saveTransactions(txnCheck.data)
-    if (raw.settings) {
-      const settingsCheck = settingsSchema.safeParse(raw.settings)
-      if (!settingsCheck.success) {
-        logSecurityEvent("backup_import_failure", { reason: "settings_validation" })
-        return { success: false, error: "Invalid backup file: invalid settings" }
-      }
-      saveSettings(settingsCheck.data)
-    }
-    logSecurityEvent("backup_import_success_lenient", { transactionCount: txnCheck.data.length })
-    return { success: true }
+    const snapshot = JSON.parse(localStorage.getItem(STORAGE_KEYS.RECOVERY) ?? "") as RecoverySnapshot
+    restoreRawValues(snapshot.values)
+    localStorage.removeItem(STORAGE_KEYS.CORRUPTION)
+    return true
   } catch {
-    logSecurityEvent("backup_import_failure", { reason: "parse_error" })
-    return { success: false, error: "Could not parse backup file" }
+    return false
   }
 }
 
 export function initializeStorage(): void {
   if (typeof window === "undefined") return
+  const health = getStorageHealth()
+  if (!health.healthy) {
+    localStorage.setItem(STORAGE_KEYS.CORRUPTION, JSON.stringify({ detectedAt: new Date().toISOString(), keys: health.errors }))
+    return
+  }
   const stored = localStorage.getItem(STORAGE_KEYS.SCHEMA_VERSION)
   if (!stored) {
     const existing = localStorage.getItem(STORAGE_KEYS.CATEGORIES)

@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from "vitest"
+import { describe, it, expect, beforeEach, vi } from "vitest"
 import { importAllData } from "@/lib/storage"
 import { isValidHexColor } from "@/lib/utils"
 
@@ -90,6 +90,21 @@ describe("importAllData", () => {
   it("succeeds when categories key is absent", () => {
     const json = JSON.stringify({ transactions: [validTransaction] })
     expect(importAllData(json).success).toBe(true)
+  })
+
+  it("rolls back every key when an import write fails", () => {
+    localStorage.setItem("tracker_transactions", JSON.stringify([{ ...validTransaction, id: "old" }]))
+    const original = Storage.prototype.setItem
+    let failed = false
+    const spy = vi.spyOn(Storage.prototype, "setItem").mockImplementation(function (key, value) {
+      if (key === "tracker_categories" && !failed) { failed = true; throw new DOMException("full", "QuotaExceededError") }
+      return original.call(this, key, value)
+    })
+    const result = importAllData(JSON.stringify({ transactions: [validTransaction], categories: [validCategory] }))
+    spy.mockRestore()
+    expect(result.success).toBe(false)
+    expect(JSON.parse(localStorage.getItem("tracker_transactions") ?? "[]")[0].id).toBe("old")
+    expect(localStorage.getItem("tracker_recovery_snapshot")).not.toBeNull()
   })
 
   it("saves transactions to localStorage on success", () => {
