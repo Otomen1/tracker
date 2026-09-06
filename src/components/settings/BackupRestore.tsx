@@ -25,7 +25,7 @@ export function BackupRestore() {
   const fileRef = useRef<HTMLInputElement>(null)
   const { settings, updateSettings } = useSettingsContext()
   const backupInterval = settings.backupInterval ?? "never"
-  const [backupPassword, setBackupPassword] = useState(settings.backupPassword ?? "")
+  const [backupPassword, setBackupPassword] = useState(() => typeof window === "undefined" ? "" : sessionStorage.getItem("tracker_backup_password") ?? "")
 
   const [status, setStatus] = useState<Status | null>(null)
   const [exporting, setExporting] = useState(false)
@@ -254,7 +254,7 @@ export function BackupRestore() {
       )}
 
       <p className="text-xs text-zinc-400">
-        Backups include a SHA-256 checksum. Use password protection for sensitive data.
+        Backups contain sensitive financial information and an integrity checksum. Use password protection before sharing or storing them.
       </p>
 
       <div className="space-y-1 pt-1">
@@ -264,10 +264,10 @@ export function BackupRestore() {
           placeholder="Required for automatic backups"
           className="h-8 w-64 text-sm"
           value={backupPassword}
-          onChange={(e) => { setBackupPassword(e.target.value); updateSettings({ backupPassword: e.target.value || undefined }) }}
+          onChange={(e) => { const value = e.target.value; setBackupPassword(value); if (value) sessionStorage.setItem("tracker_backup_password", value); else sessionStorage.removeItem("tracker_backup_password") }}
           autoComplete="new-password"
         />
-        <p className="text-xs text-zinc-400">Stored locally on this device. Automatic backups are skipped until configured.</p>
+        <p className="text-xs text-zinc-400">Kept only until this browser tab closes. Automatic backups are skipped until at least 8 characters are entered.</p>
       </div>
 
       {/* Auto backup interval */}
@@ -282,6 +282,10 @@ export function BackupRestore() {
           value={backupInterval}
           onValueChange={(v) => {
             const next = v as "never" | "daily" | "weekly" | "monthly"
+            if (next !== "never" && backupPassword.length < 8) {
+              setStatus({ type: "error", message: "Enter an automatic backup password with at least 8 characters first." })
+              return
+            }
             const patch = backupInterval === "never" && next !== "never"
               ? { backupInterval: next, lastBackupAt: undefined }
               : { backupInterval: next }

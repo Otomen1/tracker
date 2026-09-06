@@ -117,7 +117,7 @@ export function TransactionFiltersBar({ filters, categories, tags, fmt, onChange
             onChange({ ...filters, type: v === "all" ? "" : (v as TransactionType), categoryId: "" })
           }
         >
-          <SelectTrigger className="w-full sm:w-32 h-9 text-sm">
+          <SelectTrigger aria-label="Transaction type" className="w-full sm:w-32 h-9 text-sm">
             <SelectValue placeholder="All types" />
           </SelectTrigger>
           <SelectContent>
@@ -183,7 +183,7 @@ export function TransactionFiltersBar({ filters, categories, tags, fmt, onChange
             onChange({ ...filters, categoryId: v === "all" ? "" : v })
           }
         >
-          <SelectTrigger className="w-full sm:w-36 h-9 text-sm">
+          <SelectTrigger aria-label="Category" className="w-full sm:w-36 h-9 text-sm">
             <SelectValue placeholder="All categories" />
           </SelectTrigger>
           <SelectContent>
@@ -207,7 +207,7 @@ export function TransactionFiltersBar({ filters, categories, tags, fmt, onChange
             value={filters.tag ?? "all"}
             onValueChange={(v) => onChange({ ...filters, tag: v === "all" ? "" : v })}
           >
-            <SelectTrigger className="w-full sm:w-32 h-9 text-sm">
+            <SelectTrigger aria-label="Tag" className="w-full sm:w-32 h-9 text-sm">
               <SelectValue placeholder="All tags" />
             </SelectTrigger>
             <SelectContent>
@@ -226,6 +226,7 @@ export function TransactionFiltersBar({ filters, categories, tags, fmt, onChange
           value={minAmount}
           onChange={(e) => setMinAmount(e.target.value)}
           placeholder="Min amount"
+          aria-label="Minimum amount"
         />
         <Input
           type="number"
@@ -234,6 +235,7 @@ export function TransactionFiltersBar({ filters, categories, tags, fmt, onChange
           value={maxAmount}
           onChange={(e) => setMaxAmount(e.target.value)}
           placeholder="Max amount"
+          aria-label="Maximum amount"
         />
 
         <Button

@@ -113,7 +113,7 @@ export default function SettingsPage() {
           </SettingSection>
         </SettingGroup>
 
-        <SettingGroup title="Data & Backup" description="Export, restore, and storage usage">
+        <div id="data-backup" className="scroll-mt-6"><SettingGroup title="Data & Backup" description="Export, restore, and storage usage">
           <SettingSection title="Data Backup" description="Export or restore your data">
             <BackupRestore />
           </SettingSection>
@@ -124,6 +124,8 @@ export default function SettingsPage() {
             <StorageUsage />
           </SettingSection>
         </SettingGroup>
+
+        </div>
 
         <SettingGroup title="Application" description="Platform integration">
           <SettingSection title="Install App" description="Add to your home screen for a native-like experience">

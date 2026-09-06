@@ -69,13 +69,11 @@ export function OnboardingModal({ onFinish }: Props) {
           <DialogDescription className="text-center">{current.description}</DialogDescription>
         </DialogHeader>
 
-        <div role="tablist" aria-label="Onboarding steps" className="flex items-center justify-center gap-1.5 mt-2">
+        <div aria-label={`Step ${step + 1} of ${STEPS.length}`} className="flex items-center justify-center gap-1.5 mt-2">
           {STEPS.map((_, i) => (
             <span
               key={i}
-              role="tab"
-              aria-selected={i === step}
-              aria-label={`Step ${i + 1} of ${STEPS.length}`}
+              aria-hidden="true"
               className={`h-1.5 rounded-full transition-all ${i === step ? "w-6 bg-zinc-900 dark:bg-zinc-100" : "w-1.5 bg-zinc-200 dark:bg-zinc-700"}`}
             />
           ))}
@@ -83,7 +81,7 @@ export function OnboardingModal({ onFinish }: Props) {
 
         <div className="flex items-center justify-between mt-4">
           <Button variant="ghost" size="sm" onClick={handleFinish}>
-            Skip for now
+            Skip
           </Button>
           <div className="flex gap-2">
             {step > 0 && (

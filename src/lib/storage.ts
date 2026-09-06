@@ -1,23 +1,29 @@
 import { z } from "zod"
 import { Transaction, Category, Settings } from "@/types"
-import { DEFAULT_CATEGORIES, DEFAULT_SETTINGS, STORAGE_KEYS, SCHEMA_VERSION } from "./constants"
+import { CURRENCIES, DEFAULT_CATEGORIES, DEFAULT_SETTINGS, STORAGE_KEYS, SCHEMA_VERSION } from "./constants"
 import { isValidHexColor } from "./utils"
 
 const FALLBACK_COLOR = "#6b7280"
 
-const validDate = z.string().refine((v) => !isNaN(new Date(v).getTime()), "Invalid date")
+const validDate = z.string().refine((value) => !Number.isNaN(Date.parse(value)), "Invalid date")
+const calendarDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine((value) => {
+  const [year, month, day] = value.split("-").map(Number)
+  const parsed = new Date(Date.UTC(year, month - 1, day))
+  return parsed.getUTCFullYear() === year && parsed.getUTCMonth() === month - 1 && parsed.getUTCDate() === day
+}, "Invalid date")
+const currencyCodes = CURRENCIES.map((currency) => currency.code)
 
 const transactionSchema = z.object({
   id: z.string(),
   type: z.enum(["income", "expense"]),
   amount: z.number().finite().safe().positive(),
   categoryId: z.string(),
-  description: z.string().max(200),
-  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine((v) => !isNaN(new Date(v).getTime()), "Invalid date"),
+  description: z.string().trim().min(1).max(200),
+  date: calendarDate,
   notes: z.string().max(500).optional(),
   tags: z.array(z.string().max(50)).max(20).optional(),
   isRecurring: z.boolean().optional(),
-  recurringDay: z.number().optional(),
+  recurringDay: z.number().int().min(1).max(31).optional(),
   recurringId: z.string().optional(),
   createdAt: validDate,
   updatedAt: validDate,
@@ -25,26 +31,25 @@ const transactionSchema = z.object({
 
 const categorySchema = z.object({
   id: z.string(),
-  name: z.string().max(30),
+  name: z.string().trim().min(1).max(30),
   type: z.preprocess(
     (v) => (v === "both" ? "expense" : v),
     z.enum(["income", "expense"])
   ),
   color: z.string().regex(/^#[0-9A-Fa-f]{3,6}$/, "Invalid color"),
   isDefault: z.boolean(),
-  budget: z.number().optional(),
+  budget: z.number().finite().nonnegative().optional(),
   createdAt: validDate,
 })
 
 const settingsSchema = z.object({
-  currency: z.string(),
+  currency: z.string().refine((value) => currencyCodes.includes(value), "Unsupported currency"),
   theme: z.enum(["light", "dark", "system"]),
-  monthlySavingsGoal: z.number(),
+  monthlySavingsGoal: z.number().finite().nonnegative(),
   backupInterval: z.enum(["never", "daily", "weekly", "monthly"]).optional(),
-  backupPassword: z.string().min(8).optional(),
   lastBackupAt: z.string().optional(),
   reminderEnabled: z.boolean().optional(),
-  reminderTime: z.string().regex(/^\d{2}:\d{2}$/).optional(),
+  reminderTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).optional(),
 })
 
 const backupSchema = z.object({
@@ -148,7 +153,7 @@ export function exportAllData(): string {
     exportedAt: new Date().toISOString(),
     transactions: getTransactions(),
     categories: getCategories(),
-    settings: getSettings(),
+    settings: (() => { const legacy = getSettings() as Settings & { backupPassword?: string }; const { backupPassword: _secret, lastBackupAt: _deviceOnly, ...portable } = legacy; return portable })(),
   }
   const json = JSON.stringify(data, null, 2)
   logSecurityEvent("backup_export", { transactionCount: data.transactions.length })

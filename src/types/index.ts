@@ -33,7 +33,6 @@ export interface Settings {
   theme: "light" | "dark" | "system"
   monthlySavingsGoal: number
   backupInterval?: "never" | "daily" | "weekly" | "monthly"
-  backupPassword?: string
   lastBackupAt?: string
   reminderEnabled?: boolean
   reminderTime?: string // "HH:MM"

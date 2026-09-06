@@ -26,7 +26,7 @@ export function useScheduledBackup() {
     const lastAt = settings.lastBackupAt ? new Date(settings.lastBackupAt).getTime() : 0
     if (now - lastAt < intervalMs) return
 
-    const password = settings.backupPassword
+    const password = sessionStorage.getItem("tracker_backup_password") ?? undefined
     if (!password) {
       logSecurityEvent("scheduled_backup_skipped", { reason: "encryption_password_not_configured" })
       return
@@ -46,5 +46,5 @@ export function useScheduledBackup() {
   // Only re-check when the interval setting changes, not on every render
   // eslint-disable-next-line react-hooks/exhaustive-deps
     })()
-  }, [settings.backupInterval, settings.backupPassword, settings.lastBackupAt, updateSettings])
+  }, [settings.backupInterval, settings.lastBackupAt, updateSettings])
 }

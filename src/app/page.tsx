@@ -118,7 +118,7 @@ export default function DashboardPage() {
               Manage categories <Tags className="h-4 w-4" />
             </Link>
             <Link
-              href="/settings"
+              href="/settings#data-backup"
               className="flex items-center justify-between rounded-lg border border-zinc-200 px-3 py-2.5 text-sm font-medium text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
             >
               Import existing data <Upload className="h-4 w-4" />
