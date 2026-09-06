@@ -96,7 +96,7 @@ describe("importAllData", () => {
     localStorage.setItem("tracker_transactions", JSON.stringify([{ ...validTransaction, id: "old" }]))
     const original = Storage.prototype.setItem
     let failed = false
-    const spy = vi.spyOn(Storage.prototype, "setItem").mockImplementation(function (key, value) {
+    const spy = vi.spyOn(Storage.prototype, "setItem").mockImplementation(function (this: Storage, key, value) {
       if (key === "tracker_categories" && !failed) { failed = true; throw new DOMException("full", "QuotaExceededError") }
       return original.call(this, key, value)
     })
