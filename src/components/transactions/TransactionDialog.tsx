@@ -14,7 +14,7 @@ interface Props {
   onOpenChange: (open: boolean) => void
   transaction?: Transaction
   categories: Category[]
-  onSubmit: (data: TransactionFormData) => void
+  onSubmit: (data: TransactionFormData) => boolean | void
 }
 
 export function TransactionDialog({
@@ -25,8 +25,7 @@ export function TransactionDialog({
   onSubmit,
 }: Props) {
   const handleSubmit = (data: TransactionFormData) => {
-    onSubmit(data)
-    onOpenChange(false)
+    if (onSubmit(data) !== false) onOpenChange(false)
   }
 
   return (

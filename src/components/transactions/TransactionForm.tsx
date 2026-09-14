@@ -15,6 +15,7 @@ import { getTodayString } from "@/lib/formatters"
 import { shouldAutoFillDescription } from "@/lib/descriptionDefault"
 import { cn } from "@/lib/utils"
 import { X, RefreshCw, Plus, ChevronDown } from "lucide-react"
+import { useToast } from "@/context/ToastContext"
 
 const NEW_CATEGORY_VALUE = "__new_category__"
 
@@ -32,7 +33,7 @@ const schema = z.object({
 interface Props {
   transaction?: Transaction
   categories: Category[]
-  onSubmit: (data: TransactionFormData) => void
+  onSubmit: (data: TransactionFormData) => boolean | void
   onCancel: () => void
 }
 
@@ -45,6 +46,7 @@ export function TransactionForm({ transaction, categories, onSubmit, onCancel }:
   // cross-tab "storage" event useLocalStorage relies on for sync.
   const [createdCategories, setCreatedCategories] = useState<Category[]>([])
   const { addCategory } = useCategories()
+  const { showToast } = useToast()
 
   // Editing an existing transaction always has real values in the "More
   // details" fields (a saved date, possibly notes/tags/recurring) - expanding
@@ -153,6 +155,10 @@ export function TransactionForm({ transaction, categories, onSubmit, onCancel }:
 
   const handleCreateCategory = (data: CategoryFormData) => {
     const created = addCategory(data)
+    if (!created) {
+      showToast("Category could not be saved. Check browser storage and try again.", "error")
+      return
+    }
     setCreatedCategories((prev) => [...prev, created])
     setValue("categoryId", created.id)
     applyCategoryDescriptionDefault(created.name)

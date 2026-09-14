@@ -47,10 +47,14 @@ export default function DashboardPage() {
   const insightsForList = heroUsesTopInsight ? insights.slice(1) : insights
 
   const handleAddTransaction = (data: TransactionFormData) => {
-    addTransaction(data)
+    if (!addTransaction(data)) {
+      showToast("Transaction could not be saved. Check browser storage and try again.", "error")
+      return false
+    }
     setAddOpen(false)
     showToast("Transaction added", "success")
     checkBudget(data, transactions)
+    return true
   }
 
   if (!isHydrated) {

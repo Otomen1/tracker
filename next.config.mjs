@@ -19,7 +19,7 @@ const securityHeaders = [
     value: [
       "default-src 'self'",
       // unsafe-inline required for Next.js static export + React hydration
-      "script-src 'self' 'unsafe-inline'",
+      `script-src 'self' 'unsafe-inline'${process.env.NODE_ENV === "development" ? " 'unsafe-eval'" : ""}`,
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: blob:",
       "font-src 'self'",

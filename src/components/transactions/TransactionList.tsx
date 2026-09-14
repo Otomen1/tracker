@@ -26,12 +26,12 @@ interface Props {
   transactions: Transaction[]
   categories: Category[]
   filterKey?: string
-  onRestore: (transaction: Transaction) => void
-  onUpdate: (id: string, data: TransactionFormData) => void
-  onDelete: (id: string, cascade: boolean) => void
-  onBulkDelete: (ids: string[], cascade: boolean) => void
-  onBulkRestore: (transactions: Transaction[]) => void
-  onBulkRecategorize: (ids: string[], categoryId: string) => void
+  onRestore: (transaction: Transaction) => boolean
+  onUpdate: (id: string, data: TransactionFormData) => boolean
+  onDelete: (id: string, cascade: boolean) => boolean
+  onBulkDelete: (ids: string[], cascade: boolean) => boolean
+  onBulkRestore: (transactions: Transaction[]) => boolean
+  onBulkRecategorize: (ids: string[], categoryId: string) => boolean
   hasTransactions?: boolean
   onAddTransaction?: () => void
 }
@@ -104,7 +104,7 @@ export function TransactionList({
   const handleDeleteConfirm = useCallback((cascade: boolean) => {
     if (!deleteTarget) return
     const deleted = deleteTarget
-    onDelete(deleted.id, cascade)
+    if (!onDelete(deleted.id, cascade)) return
     setDeleteTarget(null)
 
     const entryId = crypto.randomUUID()
@@ -123,8 +123,7 @@ export function TransactionList({
     const timer = undoTimersRef.current.get(entry.id)
     if (timer) clearTimeout(timer)
     undoTimersRef.current.delete(entry.id)
-    setUndoQueue((q) => q.slice(1))
-    onBulkRestore(entry.transactions)
+    if (onBulkRestore(entry.transactions)) setUndoQueue((q) => q.slice(1))
   }, [undoQueue, onBulkRestore])
 
   const exitSelectMode = useCallback(() => {
@@ -186,7 +185,7 @@ export function TransactionList({
       (t) => selectedIds.has(t.id) || (cascade && !!t.recurringId && selectedIds.has(t.recurringId))
     )
 
-    onBulkDelete(ids, cascade)
+    if (!onBulkDelete(ids, cascade)) return
     setBulkDeleteOpen(false)
     exitSelectMode()
 
@@ -202,7 +201,7 @@ export function TransactionList({
 
   const handleRecategorizeConfirm = useCallback(() => {
     if (!recategorizeCategoryId || selectedIds.size === 0) return
-    onBulkRecategorize(Array.from(selectedIds), recategorizeCategoryId)
+    if (!onBulkRecategorize(Array.from(selectedIds), recategorizeCategoryId)) return
     setRecategorizeOpen(false)
     setRecategorizeCategoryId("")
     exitSelectMode()
@@ -380,7 +379,12 @@ export function TransactionList({
         onOpenChange={(open) => { if (!open) setEditTarget(null) }}
         transaction={editTarget ?? undefined}
         categories={categories}
-        onSubmit={(data) => { if (editTarget) { onUpdate(editTarget.id, data); setEditTarget(null) } }}
+        onSubmit={(data) => {
+          if (!editTarget) return false
+          const saved = onUpdate(editTarget.id, data)
+          if (saved) setEditTarget(null)
+          return saved
+        }}
       />
       <DeleteConfirmDialog
         open={deleteTarget !== null}

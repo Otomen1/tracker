@@ -2,6 +2,8 @@
 
 import { useState, useCallback, useEffect, useRef } from "react"
 
+const SAME_TAB_EVENT = "tracker-storage-change"
+
 export function useLocalStorage<T>(key: string, initialValue: T) {
   const initialValueRef = useRef(initialValue)
 
@@ -14,35 +16,50 @@ export function useLocalStorage<T>(key: string, initialValue: T) {
       return initialValue
     }
   })
+  const currentRef = useRef(storedValue)
+
+  const replaceFromStorage = useCallback((raw: string | null) => {
+    try {
+      const next = raw ? (JSON.parse(raw) as T) : initialValueRef.current
+      currentRef.current = next
+      setStoredValue(next)
+    } catch {
+      // The storage recovery banner reports malformed persisted data.
+    }
+  }, [])
 
   useEffect(() => {
+    replaceFromStorage(localStorage.getItem(key))
     const handler = (e: StorageEvent) => {
       if (e.key !== key || e.storageArea !== localStorage) return
-      try {
-        setStoredValue(e.newValue ? (JSON.parse(e.newValue) as T) : initialValueRef.current)
-      } catch {
-        // ignore malformed JSON from other tabs
-      }
+      replaceFromStorage(e.newValue)
+    }
+    const sameTabHandler = (event: Event) => {
+      const detail = (event as CustomEvent<{ key: string; value: string }>).detail
+      if (detail?.key === key) replaceFromStorage(detail.value)
     }
     window.addEventListener("storage", handler)
-    return () => window.removeEventListener("storage", handler)
-  }, [key])
+    window.addEventListener(SAME_TAB_EVENT, sameTabHandler)
+    return () => {
+      window.removeEventListener("storage", handler)
+      window.removeEventListener(SAME_TAB_EVENT, sameTabHandler)
+    }
+  }, [key, replaceFromStorage])
 
   const setValue = useCallback(
     (value: T | ((val: T) => T)) => {
-      setStoredValue((prev) => {
-        const valueToStore = value instanceof Function ? value(prev) : value
-        if (typeof window !== "undefined") {
-          try {
-            window.localStorage.setItem(key, JSON.stringify(valueToStore))
-          } catch (e) {
-            if (e instanceof DOMException && e.name === "QuotaExceededError") {
-              window.dispatchEvent(new CustomEvent("storage-quota-exceeded"))
-            }
-          }
-        }
-        return valueToStore
-      })
+      const valueToStore = value instanceof Function ? value(currentRef.current) : value
+      if (JSON.stringify(valueToStore) === JSON.stringify(currentRef.current)) return
+      try {
+        const serialized = JSON.stringify(valueToStore)
+        window.localStorage.setItem(key, serialized)
+        currentRef.current = valueToStore
+        setStoredValue(valueToStore)
+        window.dispatchEvent(new CustomEvent(SAME_TAB_EVENT, { detail: { key, value: serialized } }))
+      } catch (error) {
+        const quotaExceeded = error instanceof DOMException && error.name === "QuotaExceededError"
+        window.dispatchEvent(new CustomEvent(quotaExceeded ? "storage-quota-exceeded" : "storage-write-failed"))
+      }
     },
     [key]
   )

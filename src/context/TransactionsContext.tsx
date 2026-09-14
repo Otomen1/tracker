@@ -50,6 +50,10 @@ export function TransactionsProvider({ children }: { children: React.ReactNode }
   }, [])
 
   useEffect(() => {
+    // useState initializes during server rendering where localStorage is not
+    // available. Re-read it on the client before the later recurring-transaction
+    // effect runs, otherwise an empty hydration snapshot could overwrite saved data.
+    replaceFromStorage(localStorage.getItem(STORAGE_KEYS.TRANSACTIONS))
     const handleStorage = (event: StorageEvent) => {
       if (event.storageArea === localStorage && event.key === STORAGE_KEYS.TRANSACTIONS) {
         replaceFromStorage(event.newValue)

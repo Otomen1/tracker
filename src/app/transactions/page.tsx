@@ -17,6 +17,7 @@ import { TransactionList } from "@/components/transactions/TransactionList"
 import { ExportButton } from "@/components/transactions/ExportButton"
 import { formatDate } from "@/lib/formatters"
 import { cn } from "@/lib/utils"
+import { useToast } from "@/context/ToastContext"
 
 function TransactionsPageContent() {
   const searchParams = useSearchParams()
@@ -34,6 +35,7 @@ function TransactionsPageContent() {
   const { categories } = useCategories()
   const { fmt, settings } = useSettingsContext()
   const { checkBudget, checkBudgetForCategory } = useBudgetCheck()
+  const { showToast } = useToast()
   const [addOpen, setAddOpen] = useState(false)
   // Seeded once from any supported deep-link params on initial load only;
   // manual filtering afterward behaves exactly as before, with no ongoing
@@ -63,33 +65,49 @@ function TransactionsPageContent() {
   }, [])
 
   const handleAdd = useCallback((data: TransactionFormData) => {
-    addTransaction(data)
+    if (!addTransaction(data)) {
+      showToast("Transaction could not be saved. Check browser storage and try again.", "error")
+      return false
+    }
     setAddOpen(false)
     showSuccess("Transaction added")
     checkBudget(data, transactions)
-  }, [addTransaction, showSuccess, checkBudget, transactions])
+    return true
+  }, [addTransaction, showSuccess, showToast, checkBudget, transactions])
 
   const handleUpdate = useCallback((id: string, data: TransactionFormData) => {
-    updateTransaction(id, data)
+    if (!updateTransaction(id, data)) {
+      showToast("Changes could not be saved. Check browser storage and try again.", "error")
+      return false
+    }
     showSuccess("Changes saved")
     checkBudget(data, transactions.filter((t) => t.id !== id))
-  }, [updateTransaction, showSuccess, checkBudget, transactions])
+    return true
+  }, [updateTransaction, showSuccess, showToast, checkBudget, transactions])
 
   const handleDelete = (id: string, cascade: boolean) => {
-    if (cascade) deleteWithCascade(id)
-    else deleteTransaction(id)
+    const saved = cascade ? deleteWithCascade(id) : deleteTransaction(id)
+    if (!saved) showToast("Transaction could not be deleted. Your data was kept.", "error")
+    return saved
   }
 
   const handleBulkDelete = useCallback((ids: string[], cascade: boolean) => {
-    bulkDeleteTransactions(ids, cascade)
-  }, [bulkDeleteTransactions])
+    const saved = bulkDeleteTransactions(ids, cascade)
+    if (!saved) showToast("Transactions could not be deleted. Your data was kept.", "error")
+    return saved
+  }, [bulkDeleteTransactions, showToast])
 
   const handleBulkRestore = useCallback((items: Transaction[]) => {
-    bulkRestoreTransactions(items)
-  }, [bulkRestoreTransactions])
+    const saved = bulkRestoreTransactions(items)
+    if (!saved) showToast("Transactions could not be restored.", "error")
+    return saved
+  }, [bulkRestoreTransactions, showToast])
 
   const handleBulkRecategorize = useCallback((ids: string[], categoryId: string) => {
-    bulkRecategorize(ids, categoryId)
+    if (!bulkRecategorize(ids, categoryId)) {
+      showToast("Transactions could not be recategorized.", "error")
+      return false
+    }
     showSuccess(`${ids.length} transaction${ids.length !== 1 ? "s" : ""} recategorized`)
     // Budget check needs the resulting state, not the pre-mutation snapshot
     // still in `transactions` on this render - compute it directly rather
@@ -97,7 +115,8 @@ function TransactionsPageContent() {
     const idSet = new Set(ids)
     const resulting = transactions.map((t) => (idSet.has(t.id) ? { ...t, categoryId } : t))
     checkBudgetForCategory(categoryId, resulting)
-  }, [bulkRecategorize, showSuccess, transactions, checkBudgetForCategory])
+    return true
+  }, [bulkRecategorize, showSuccess, showToast, transactions, checkBudgetForCategory])
 
   return (
     <div className="space-y-5">

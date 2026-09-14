@@ -30,10 +30,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const { showToast } = useToast()
 
   const handleQuickAdd = (data: TransactionFormData) => {
-    addTransaction(data)
+    if (!addTransaction(data)) {
+      showToast("Transaction could not be saved. Check browser storage and try again.", "error")
+      return false
+    }
     setQuickAddOpen(false)
     showToast("Transaction added", "success")
     checkBudget(data, transactions)
+    return true
   }
 
   return (

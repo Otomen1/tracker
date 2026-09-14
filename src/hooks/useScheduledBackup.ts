@@ -43,8 +43,6 @@ export function useScheduledBackup() {
     URL.revokeObjectURL(url)
 
     updateSettings({ lastBackupAt: new Date().toISOString() })
-  // Only re-check when the interval setting changes, not on every render
-  // eslint-disable-next-line react-hooks/exhaustive-deps
     })()
   }, [settings.backupInterval, settings.lastBackupAt, updateSettings])
 }
