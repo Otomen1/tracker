@@ -5,8 +5,9 @@ import { Transaction, Category } from "@/types"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { formatDate } from "@/lib/formatters"
 import { useSettingsContext } from "@/context/SettingsContext"
-import { ArrowRight } from "lucide-react"
+import { ArrowLeftRight, ArrowRight } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { EmptyState } from "@/components/ui/empty-state"
 
 interface Props {
   transactions: Transaction[]
@@ -26,7 +27,13 @@ export function RecentTransactions({ transactions, categories }: Props) {
       </CardHeader>
       <CardContent>
         {transactions.length === 0 ? (
-          <p className="text-sm text-zinc-400 py-4 text-center">No transactions yet</p>
+          <EmptyState
+            icon={ArrowLeftRight}
+            title="No recent activity"
+            description="Your latest income and expenses will appear here."
+            action={{ label: "Add transaction", href: "/transactions" }}
+            className="py-7"
+          />
         ) : (
           <div>
             {transactions.map((t) => {

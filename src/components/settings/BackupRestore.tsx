@@ -183,8 +183,9 @@ export function BackupRestore() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between rounded-lg border border-zinc-200 p-3 dark:border-zinc-700"><span className="text-sm font-medium">Automatic backup status</span><span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${backupTone}`}>{backupReady}</span></div>
-      <div className="space-y-2">
+      <div className="flex items-center justify-between rounded-lg border border-zinc-200 bg-zinc-50/60 p-3 dark:border-zinc-700 dark:bg-zinc-800/40"><div><span className="text-sm font-medium">Automatic backup</span><p className="mt-0.5 text-xs text-zinc-500">Encrypted local download schedule</p></div><span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${backupTone}`}>{backupReady}</span></div>
+      <div className="grid gap-4 xl:grid-cols-2">
+      <div className="order-1 space-y-2 rounded-lg border border-zinc-200 p-3 dark:border-zinc-800">
         <div>
           <p className="text-sm font-medium text-zinc-800 dark:text-zinc-200">Manual backup</p>
           <p className="text-xs text-zinc-400">Download a copy of your data now. Password protection is recommended.</p>
@@ -230,7 +231,7 @@ export function BackupRestore() {
 
       {/* Status message */}
       {status && (
-        <div className={`flex items-start gap-2 text-sm ${
+        <div className={`order-5 flex items-start gap-2 text-sm xl:col-span-2 ${
           status.type === "success" ? "text-emerald-600" :
           status.type === "warning" ? "text-amber-500" : "text-rose-500"
         }`}>
@@ -251,22 +252,23 @@ export function BackupRestore() {
 
       {/* Checksum verified indicator */}
       {checksumValid === true && (
-        <div className="flex items-center gap-1.5 text-xs text-emerald-600">
+        <div className="order-5 flex items-center gap-1.5 text-xs text-emerald-600 xl:col-span-2">
           <ShieldCheck className="w-3.5 h-3.5" />
           Integrity verified
         </div>
       )}
 
-      <p className="text-xs text-zinc-400">
+      <p className="order-4 text-xs text-zinc-500 dark:text-zinc-400 xl:col-span-2">
         Backups contain sensitive financial information and an integrity checksum. Use password protection before sharing or storing them.
       </p>
 
-      <div className="space-y-1 pt-1">
+      <div className="order-2 space-y-2 rounded-lg border border-zinc-200 p-3 dark:border-zinc-800">
+        <p className="text-sm font-medium text-zinc-800 dark:text-zinc-200">Schedule encrypted backups</p>
         <label className="text-xs text-zinc-500">Automatic backup password (minimum 8 characters)</label>
         <Input
           type="password"
           placeholder="Required for automatic backups"
-          className="h-8 w-64 text-sm"
+          className="h-9 w-full text-sm"
           value={backupPassword}
           onChange={(e) => { const value = e.target.value; setBackupPassword(value); if (value) sessionStorage.setItem("tracker_backup_password", value); else sessionStorage.removeItem("tracker_backup_password") }}
           autoComplete="new-password"
@@ -275,13 +277,9 @@ export function BackupRestore() {
       </div>
 
       {/* Auto backup interval */}
-      <div className="space-y-2 border-t border-zinc-200/70 pt-4 dark:border-zinc-800/70">
-        <div>
-          <p className="text-sm font-medium text-zinc-800 dark:text-zinc-200">Automatic backup</p>
-          <p className="text-xs text-zinc-400">Automatic downloads are encrypted and require the password above.</p>
-        </div>
+      <div className="order-3 space-y-2 rounded-lg border border-zinc-200 p-3 dark:border-zinc-800 xl:col-span-2">
         <div className="flex items-center gap-3 pt-1">
-        <span className="text-sm text-zinc-700 dark:text-zinc-300 shrink-0">Auto backup</span>
+        <span className="text-sm text-zinc-700 dark:text-zinc-300 shrink-0">Frequency</span>
         <Select
           value={backupInterval}
           onValueChange={(v) => {
@@ -311,6 +309,7 @@ export function BackupRestore() {
           </span>
         )}
         </div>
+      </div>
       </div>
 
       {/* Encrypted file password prompt */}

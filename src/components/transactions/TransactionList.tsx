@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label"
 import { ArrowLeftRight, ChevronLeft, ChevronRight, ListChecks, Undo2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { EmptyState } from "@/components/ui/empty-state"
 import { PAGE_SIZE, UNDO_TIMEOUT_MS } from "@/lib/constants"
 import { useSettingsContext } from "@/context/SettingsContext"
 import { reconcileSelection, getSelectionTypeState } from "@/lib/transactionBatch"
@@ -253,20 +254,13 @@ export function TransactionList({
       )}
 
       {isEmpty ? (
-        <div className="flex flex-col items-center justify-center py-16 text-center text-zinc-400">
-          <ArrowLeftRight className="w-10 h-10 mb-3 opacity-30" />
-          <p className="text-sm font-medium">
-            {hasTransactions ? "No matching transactions" : "No transactions yet"}
-          </p>
-          <p className="mt-1 max-w-xs text-xs">
-            {hasTransactions ? "Try clearing a filter or changing your search." : "Add your first transaction to start tracking your finances."}
-          </p>
-          {!hasTransactions && onAddTransaction && (
-            <Button size="sm" className="mt-4" onClick={onAddTransaction}>
-              Add transaction
-            </Button>
-          )}
-        </div>
+        <EmptyState
+          icon={ArrowLeftRight}
+          title={hasTransactions ? "No matching transactions" : "No transactions yet"}
+          description={hasTransactions ? "Try removing a filter or changing your search." : "Add your first income or expense to start building your financial history."}
+          action={!hasTransactions && onAddTransaction ? { label: "Add transaction", onClick: onAddTransaction } : undefined}
+          className="py-9"
+        />
       ) : selectMode ? (
         <BulkActionBar
           selectedCount={selectedIds.size}
@@ -296,7 +290,7 @@ export function TransactionList({
 
       {!isEmpty && (
         <>
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto rounded-lg border border-zinc-100 dark:border-zinc-800">
             <table className="w-full">
               <thead>
                 <tr className="border-b border-zinc-200 dark:border-zinc-700">
@@ -315,12 +309,12 @@ export function TransactionList({
                       />
                     </th>
                   )}
-                  <th scope="col" className="py-3 px-4 text-xs font-medium text-zinc-500 text-left">Date</th>
-                  <th scope="col" className="py-3 px-4 text-xs font-medium text-zinc-500 text-left">Description</th>
-                  <th scope="col" className="py-3 px-4 text-xs font-medium text-zinc-500 text-left">Category</th>
-                  <th scope="col" className="py-3 px-4 text-xs font-medium text-zinc-500 text-left hidden sm:table-cell">Type</th>
-                  <th scope="col" className="py-3 px-4 text-xs font-medium text-zinc-500 text-right">Amount</th>
-                  <th scope="col" className="py-3 px-4 w-20" />
+                  <th scope="col" className="bg-zinc-50/80 py-2.5 px-4 text-xs font-medium text-zinc-500 text-left dark:bg-zinc-800/40">Date</th>
+                  <th scope="col" className="bg-zinc-50/80 py-2.5 px-4 text-xs font-medium text-zinc-500 text-left dark:bg-zinc-800/40">Description</th>
+                  <th scope="col" className="bg-zinc-50/80 py-2.5 px-4 text-xs font-medium text-zinc-500 text-left dark:bg-zinc-800/40">Category</th>
+                  <th scope="col" className="hidden bg-zinc-50/80 py-2.5 px-4 text-xs font-medium text-zinc-500 text-left dark:bg-zinc-800/40 sm:table-cell">Type</th>
+                  <th scope="col" className="bg-zinc-50/80 py-2.5 px-4 text-xs font-medium text-zinc-500 text-right dark:bg-zinc-800/40">Amount</th>
+                  <th scope="col" className="w-20 bg-zinc-50/80 py-2.5 px-4 dark:bg-zinc-800/40"><span className="sr-only">Actions</span></th>
                 </tr>
               </thead>
               <tbody>

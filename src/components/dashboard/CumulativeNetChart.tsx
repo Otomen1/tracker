@@ -46,9 +46,10 @@ function tickFmt(v: number): string {
 
 interface Props {
   data: DataPoint[]
+  summary?: string
 }
 
-export const CumulativeNetChart = memo(function CumulativeNetChart({ data }: Props) {
+export const CumulativeNetChart = memo(function CumulativeNetChart({ data, summary }: Props) {
   const { fmt } = useSettingsContext()
 
   if (data.length < 2) {
@@ -109,6 +110,7 @@ export const CumulativeNetChart = memo(function CumulativeNetChart({ data }: Pro
             </LineChart>
           </ResponsiveContainer>
         </div>
+        {summary && <p className="mt-2 border-t border-zinc-100 pt-3 text-xs text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">{summary}</p>}
         <table className="sr-only">
           <caption>Cumulative net balance by month</caption>
           <thead><tr><th>Month</th><th>Net Balance</th></tr></thead>

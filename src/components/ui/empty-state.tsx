@@ -16,26 +16,35 @@ interface EmptyStateProps {
   action?: EmptyStateAction
   actionVariant?: "primary" | "secondary"
   className?: string
+  secondaryAction?: EmptyStateAction
 }
 
-function EmptyState({ icon: Icon, title, description, action, actionVariant = "primary", className }: EmptyStateProps) {
+function EmptyState({ icon: Icon, title, description, action, secondaryAction, actionVariant = "primary", className }: EmptyStateProps) {
   return (
     <div className={cn("flex flex-col items-center justify-center text-center py-12 px-4", className)}>
       <Icon className="w-7 h-7 text-zinc-400 dark:text-zinc-500 mb-3" aria-hidden="true" />
-      <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300">{title}</p>
+      <h2 className="text-sm font-medium text-zinc-700 dark:text-zinc-300">{title}</h2>
       {description && (
         <p className="text-xs text-zinc-400 mt-1 max-w-xs">{description}</p>
       )}
-      {action && (
-        <Button
-          variant={actionVariant === "primary" ? "default" : "outline"}
-          size="sm"
-          className="mt-4"
-          asChild={!!action.href}
-          onClick={action.onClick}
-        >
-          {action.href ? <Link href={action.href}>{action.label}</Link> : action.label}
-        </Button>
+      {(action || secondaryAction) && (
+        <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+          {action && (
+            <Button
+              variant={actionVariant === "primary" ? "default" : "outline"}
+              size="sm"
+              asChild={!!action.href}
+              onClick={action.onClick}
+            >
+              {action.href ? <Link href={action.href}>{action.label}</Link> : action.label}
+            </Button>
+          )}
+          {secondaryAction && (
+            <Button variant="ghost" size="sm" asChild={!!secondaryAction.href} onClick={secondaryAction.onClick}>
+              {secondaryAction.href ? <Link href={secondaryAction.href}>{secondaryAction.label}</Link> : secondaryAction.label}
+            </Button>
+          )}
+        </div>
       )}
     </div>
   )

@@ -11,6 +11,10 @@ import { PeriodSwitcher } from "@/components/analytics/PeriodSwitcher"
 import { StatsCards } from "@/components/dashboard/StatsCards"
 import { BudgetProgressCard } from "@/components/dashboard/BudgetProgressCard"
 import { ChartSkeleton } from "@/components/ui/skeleton"
+import { PageHeader } from "@/components/layout/PageHeader"
+import { SectionHeader } from "@/components/layout/SectionHeader"
+import { EmptyState } from "@/components/ui/empty-state"
+import { BarChart3 } from "lucide-react"
 
 const ExpensePieChart = dynamic(
   () => import("@/components/dashboard/ExpensePieChart").then((m) => ({ default: m.ExpensePieChart })),
@@ -36,7 +40,7 @@ function AnalyticsPageContent() {
   const { type, month, year, setType, setMonth, setYear } = useAnalyticsPeriod()
   const { transactions } = useTransactions()
   const { categories } = useCategories()
-  const { settings } = useSettingsContext()
+  const { settings, fmt } = useSettingsContext()
 
   const periodKey = type === "month" ? month : String(year)
   const periodLabel = type === "month" ? "this month" : "this year"
@@ -54,31 +58,59 @@ function AnalyticsPageContent() {
     [transactions, periodKey, settings.monthlySavingsGoal, trendWindow]
   )
 
+  const topExpense = expenseBreakdown[0]
+  const topIncome = incomeBreakdown[0]
+  const latestMonth = monthlyTrend[monthlyTrend.length - 1]
+  const previousMonth = monthlyTrend[monthlyTrend.length - 2]
+  const cashFlowSummary = latestMonth && previousMonth
+    ? `Net cash flow ${latestMonth.netBalance >= previousMonth.netBalance ? "improved" : "declined"} by ${fmt(Math.abs(latestMonth.netBalance - previousMonth.netBalance))} compared with the previous month.`
+    : undefined
+
+  if (transactions.length === 0) {
+    return (
+      <div className="space-y-5">
+        <PageHeader
+          title="Analytics"
+          description="Understand where your money goes and how your balance changes"
+          action={<PeriodSwitcher type={type} month={month} year={year} onTypeChange={setType} onMonthChange={setMonth} onYearChange={setYear} />}
+        />
+        <div className="rounded-xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+          <EmptyState
+            icon={BarChart3}
+            title="Your analytics will appear here"
+            description="Add income and expenses to reveal category breakdowns, cash-flow trends, budget progress, and savings performance."
+            action={{ label: "Add transaction", href: "/transactions" }}
+            secondaryAction={{ label: "Set budgets", href: "/settings#finance" }}
+            className="py-14"
+          />
+        </div>
+      </div>
+    )
+  }
+
   return (
-    <div className="space-y-5">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div><h1 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">Analytics</h1><p className="mt-0.5 text-sm text-zinc-500 dark:text-zinc-400">Understand where your money goes and how your balance changes</p></div>
-        <PeriodSwitcher
+    <div className="space-y-7">
+      <PageHeader title="Analytics" description="Understand where your money goes and how your balance changes" action={<PeriodSwitcher
           type={type}
           month={month}
           year={year}
           onTypeChange={setType}
           onMonthChange={setMonth}
           onYearChange={setYear}
-        />
-      </div>
+        />} />
 
       <div className="space-y-3">
-        <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">Overview</h2>
+        <SectionHeader title="Overview" />
         <StatsCards stats={stats} comparisonLabel={type === "month" ? "vs last month" : "vs last year"} />
       </div>
 
       <div className="space-y-3">
-        <div><h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">Category Analysis</h2><p className="text-sm text-zinc-500 dark:text-zinc-400">Compare the categories contributing most to income and spending.</p></div>
+        <SectionHeader title="Category Analysis" description="Compare the categories contributing most to income and spending." />
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <ExpensePieChart
             data={expenseBreakdown}
             emptyMessage={`No expenses ${periodLabel}`}
+            summary={topExpense ? `${topExpense.categoryName} is the largest expense category at ${topExpense.percentage.toFixed(0)}% of spending.` : undefined}
           />
           <ExpensePieChart
             data={incomeBreakdown}
@@ -86,30 +118,32 @@ function AnalyticsPageContent() {
             emptyMessage={`No income ${periodLabel}`}
             ariaLabel="Pie chart showing income breakdown by category"
             tableCaption="Income breakdown by category"
+            summary={topIncome ? `${topIncome.categoryName} contributes ${topIncome.percentage.toFixed(0)}% of income for this period.` : undefined}
           />
         </div>
       </div>
 
       <div className="space-y-3">
-        <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">Budget Analysis</h2>
+        <SectionHeader title="Budget Analysis" />
         <BudgetProgressCard budgets={budgetStatus} periodDateRange={periodDateRange} />
       </div>
 
       <div className="space-y-3">
-        <div><h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">Cash Flow</h2><p className="text-sm text-zinc-500 dark:text-zinc-400">Track month-to-month movement and the running effect on your balance.</p></div>
+        <SectionHeader title="Cash Flow" description="Track month-to-month movement and the running effect on your balance." />
         <MonthlyBarChart
           data={monthlyTrend}
           title={type === "month" ? "6-Month Overview" : `${year} Monthly Overview`}
           ariaLabel={`Bar chart showing income and expenses ${type === "month" ? "over the last 6 months" : `for ${year}`}`}
           tableCaption={`Income and expenses ${type === "month" ? "over the last 6 months" : `for ${year}`}`}
           enableDeepLinks
+          summary={cashFlowSummary}
         />
-        <CumulativeNetChart data={cumulativeBalance} />
+        <CumulativeNetChart data={cumulativeBalance} summary={cumulativeBalance.length ? `Your running balance is ${fmt(cumulativeBalance[cumulativeBalance.length - 1].balance)}.` : undefined} />
       </div>
 
       <div className="space-y-3">
-        <div><h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">Savings</h2><p className="text-sm text-zinc-500 dark:text-zinc-400">Measure progress against your monthly savings goal.</p></div>
-        <SavingsTrendChart trend={savingsTrend} />
+        <SectionHeader title="Savings" description="Measure progress against your monthly savings goal." />
+        <SavingsTrendChart trend={savingsTrend} summary={savingsTrend.achievementRate !== null ? `You have reached ${savingsTrend.achievementRate.toFixed(0)}% of the savings target across this period.` : "Set a monthly savings goal to measure progress against a target."} />
       </div>
     </div>
   )

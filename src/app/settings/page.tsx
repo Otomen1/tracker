@@ -11,22 +11,24 @@ import { ReminderSettings } from "@/components/settings/ReminderSettings"
 import { InstallPrompt } from "@/components/settings/InstallPrompt"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
+import { PageHeader } from "@/components/layout/PageHeader"
+import { SettingsNav } from "@/components/settings/SettingsNav"
 
-function SettingGroup({ title, description, children }: { title: string; description?: string; children: React.ReactNode }) {
+function SettingGroup({ id, title, description, children, warning = false }: { id: string; title: string; description?: string; children: React.ReactNode; warning?: boolean }) {
   return (
-    <section className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-700 dark:bg-zinc-900 sm:p-6 space-y-6">
+    <section id={id} className={`scroll-mt-6 space-y-5 rounded-xl border bg-white p-5 shadow-sm dark:bg-zinc-900 ${warning ? "border-amber-300 dark:border-amber-900" : "border-zinc-200 dark:border-zinc-800"}`}>
       <div>
         <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">{title}</h2>
         {description && <p className="text-xs text-zinc-400 mt-0.5">{description}</p>}
       </div>
-      <div className="space-y-6">{children}</div>
+      <div className="space-y-5">{children}</div>
     </section>
   )
 }
 
 function SettingSection({ title, description, children }: { title: string; description?: string; children: React.ReactNode }) {
   return (
-    <div className="flex flex-col sm:flex-row sm:items-start gap-4">
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:gap-4">
       <div className="sm:w-56 shrink-0">
         <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">{title}</p>
         {description && <p className="text-xs text-zinc-400 mt-0.5">{description}</p>}
@@ -71,11 +73,14 @@ function StorageUsage() {
 
 export default function SettingsPage() {
   return (
-    <div className="space-y-6">
-      <div><h1 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">Settings</h1><p className="mt-0.5 text-sm text-zinc-500 dark:text-zinc-400">Personalize the app and protect your local data</p></div>
+    <div className="space-y-5">
+      <PageHeader title="Settings" description="Personalize the app and protect your local data" />
 
-      <div className="space-y-4">
-        <SettingGroup title="Preferences" description="Appearance and currency">
+      <div className="lg:hidden"><SettingsNav /></div>
+      <div className="grid items-start gap-5 lg:grid-cols-[11rem_minmax(0,1fr)]">
+        <div className="hidden self-start lg:sticky lg:top-6 lg:block"><SettingsNav /></div>
+        <div className="space-y-4">
+        <SettingGroup id="preferences" title="Preferences" description="Appearance and currency">
           <SettingSection title="Appearance" description="Choose your preferred color scheme">
             <ThemeToggle />
           </SettingSection>
@@ -87,7 +92,7 @@ export default function SettingsPage() {
           </SettingSection>
         </SettingGroup>
 
-        <SettingGroup title="Finance" description="Categories, budgets, and savings goals">
+        <SettingGroup id="finance" title="Finance" description="Categories, budgets, and savings goals">
           <SettingSection title="Monthly Savings Goal" description="Target net savings per month">
             <SavingsGoalForm />
           </SettingSection>
@@ -107,13 +112,13 @@ export default function SettingsPage() {
           </SettingSection>
         </SettingGroup>
 
-        <SettingGroup title="Notifications" description="Reminders to keep your data up to date">
+        <SettingGroup id="notifications" title="Notifications" description="Reminders to keep your data up to date">
           <SettingSection title="Daily Reminder" description="Get a notification to log your expenses each day">
             <ReminderSettings />
           </SettingSection>
         </SettingGroup>
 
-        <div id="data-backup" className="scroll-mt-6 rounded-xl ring-1 ring-amber-200 dark:ring-amber-900"><SettingGroup title="Data & Backup" description="Export, restore, and storage usage">
+        <SettingGroup id="data-backup" title="Data & Backup" description="Export, restore, and storage usage" warning>
           <SettingSection title="Data Backup" description="Export or restore your data">
             <BackupRestore />
           </SettingSection>
@@ -125,13 +130,12 @@ export default function SettingsPage() {
           </SettingSection>
         </SettingGroup>
 
-        </div>
-
-        <SettingGroup title="Application" description="Platform integration">
+        <SettingGroup id="application" title="Application" description="Platform integration">
           <SettingSection title="Install App" description="Add to your home screen for a native-like experience">
             <InstallPrompt />
           </SettingSection>
         </SettingGroup>
+        </div>
       </div>
     </div>
   )

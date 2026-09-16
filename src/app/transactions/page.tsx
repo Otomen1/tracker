@@ -1,6 +1,6 @@
 "use client"
 
-import { Suspense, useCallback, useMemo, useRef, useState } from "react"
+import { Suspense, useCallback, useMemo, useState } from "react"
 import { useSearchParams } from "next/navigation"
 import { useTransactions } from "@/hooks/useTransactions"
 import { useCategories } from "@/hooks/useCategories"
@@ -10,7 +10,7 @@ import { parseTransactionsDeepLink } from "@/lib/deepLinks"
 import { Transaction, TransactionFilters, TransactionFormData } from "@/types"
 import { useSettingsContext } from "@/context/SettingsContext"
 import { Button } from "@/components/ui/button"
-import { Plus, RefreshCw, ChevronDown, CheckCircle } from "lucide-react"
+import { Plus, RefreshCw, ChevronDown } from "lucide-react"
 import { TransactionDialog } from "@/components/transactions/TransactionDialog"
 import { TransactionFiltersBar } from "@/components/transactions/TransactionFilters"
 import { TransactionList } from "@/components/transactions/TransactionList"
@@ -18,6 +18,7 @@ import { ExportButton } from "@/components/transactions/ExportButton"
 import { formatDate } from "@/lib/formatters"
 import { cn } from "@/lib/utils"
 import { useToast } from "@/context/ToastContext"
+import { PageHeader } from "@/components/layout/PageHeader"
 
 function TransactionsPageContent() {
   const searchParams = useSearchParams()
@@ -44,8 +45,6 @@ function TransactionsPageContent() {
     () => parseTransactionsDeepLink(searchParams, categories)
   )
   const [recurringOpen, setRecurringOpen] = useState(false)
-  const [successMessage, setSuccessMessage] = useState<string | null>(null)
-  const successTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const sorted = useMemo(() => getSortedTransactions(transactions), [transactions])
   const filtered = useMemo(() => filterTransactions(sorted, filters), [sorted, filters])
@@ -58,48 +57,45 @@ function TransactionsPageContent() {
     return Array.from(set).sort()
   }, [sorted])
 
-  const showSuccess = useCallback((msg: string) => {
-    if (successTimerRef.current) clearTimeout(successTimerRef.current)
-    setSuccessMessage(msg)
-    successTimerRef.current = setTimeout(() => setSuccessMessage(null), 3000)
-  }, [])
-
   const handleAdd = useCallback((data: TransactionFormData) => {
     if (!addTransaction(data)) {
       showToast("Transaction could not be saved. Check browser storage and try again.", "error")
       return false
     }
     setAddOpen(false)
-    showSuccess("Transaction added")
+    showToast("Transaction added", "success")
     checkBudget(data, transactions)
     return true
-  }, [addTransaction, showSuccess, showToast, checkBudget, transactions])
+  }, [addTransaction, showToast, checkBudget, transactions])
 
   const handleUpdate = useCallback((id: string, data: TransactionFormData) => {
     if (!updateTransaction(id, data)) {
       showToast("Changes could not be saved. Check browser storage and try again.", "error")
       return false
     }
-    showSuccess("Changes saved")
+    showToast("Changes saved", "success")
     checkBudget(data, transactions.filter((t) => t.id !== id))
     return true
-  }, [updateTransaction, showSuccess, showToast, checkBudget, transactions])
+  }, [updateTransaction, showToast, checkBudget, transactions])
 
   const handleDelete = (id: string, cascade: boolean) => {
     const saved = cascade ? deleteWithCascade(id) : deleteTransaction(id)
     if (!saved) showToast("Transaction could not be deleted. Your data was kept.", "error")
+    else showToast("Transaction deleted", "success")
     return saved
   }
 
   const handleBulkDelete = useCallback((ids: string[], cascade: boolean) => {
     const saved = bulkDeleteTransactions(ids, cascade)
     if (!saved) showToast("Transactions could not be deleted. Your data was kept.", "error")
+    else showToast(`${ids.length} transaction${ids.length === 1 ? "" : "s"} deleted`, "success")
     return saved
   }, [bulkDeleteTransactions, showToast])
 
   const handleBulkRestore = useCallback((items: Transaction[]) => {
     const saved = bulkRestoreTransactions(items)
     if (!saved) showToast("Transactions could not be restored.", "error")
+    else showToast(`${items.length} transaction${items.length === 1 ? "" : "s"} restored`, "success")
     return saved
   }, [bulkRestoreTransactions, showToast])
 
@@ -108,7 +104,7 @@ function TransactionsPageContent() {
       showToast("Transactions could not be recategorized.", "error")
       return false
     }
-    showSuccess(`${ids.length} transaction${ids.length !== 1 ? "s" : ""} recategorized`)
+    showToast(`${ids.length} transaction${ids.length !== 1 ? "s" : ""} recategorized`, "success")
     // Budget check needs the resulting state, not the pre-mutation snapshot
     // still in `transactions` on this render - compute it directly rather
     // than waiting a render for the hook to catch up.
@@ -116,28 +112,14 @@ function TransactionsPageContent() {
     const resulting = transactions.map((t) => (idSet.has(t.id) ? { ...t, categoryId } : t))
     checkBudgetForCategory(categoryId, resulting)
     return true
-  }, [bulkRecategorize, showSuccess, showToast, transactions, checkBudgetForCategory])
+  }, [bulkRecategorize, showToast, transactions, checkBudgetForCategory])
 
   return (
     <div className="space-y-5">
-      <div className="flex items-start justify-between gap-4">
-        <div><h1 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">Transactions</h1><p className="mt-0.5 text-sm text-zinc-500 dark:text-zinc-400">Search, review, and manage your financial activity</p></div>
-        <Button size="sm" className="gap-1.5" onClick={() => setAddOpen(true)}>
+      <PageHeader title="Transactions" description="Search, review, and manage your financial activity" action={<Button size="sm" className="hidden gap-1.5 lg:inline-flex" onClick={() => setAddOpen(true)}>
           <Plus className="w-4 h-4" />
           Add Transaction
-        </Button>
-      </div>
-
-      {successMessage && (
-        <div
-          role="status"
-          aria-live="polite"
-          className="flex items-center gap-2 px-3 py-2 bg-emerald-50 dark:bg-emerald-950 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400 rounded-lg text-sm"
-        >
-          <CheckCircle className="w-4 h-4 shrink-0" />
-          {successMessage}
-        </div>
-      )}
+        </Button>} />
 
       {recurringTemplates.length > 0 && (
         <div className="bg-white/70 dark:bg-zinc-900/50 backdrop-blur-sm rounded-lg border border-zinc-200/60 dark:border-zinc-800/60">
@@ -177,14 +159,15 @@ function TransactionsPageContent() {
         </div>
       )}
 
-      <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-700 p-4 space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-2">
+      <div className="space-y-4 rounded-xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+        <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
           <TransactionFiltersBar
             filters={filters}
             categories={categories}
             tags={allTags}
             fmt={fmt}
             onChange={setFilters}
+            onClearAll={() => showToast("Filters cleared", "success")}
           />
           <ExportButton
             allTransactions={transactions}
@@ -194,9 +177,11 @@ function TransactionsPageContent() {
           />
         </div>
 
-        <div className="text-xs text-zinc-400">
+        <div className="flex items-center justify-between border-t border-zinc-100 pt-3 text-xs text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">
+          <span>
           {filtered.length} transaction{filtered.length !== 1 ? "s" : ""}
           {filtered.length !== transactions.length && ` (filtered from ${transactions.length})`}
+          </span>
         </div>
 
         <TransactionList

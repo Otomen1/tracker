@@ -41,6 +41,7 @@ interface Props {
   // Transactions filtered to that month + income/expense. Omitted by
   // default so any existing usage is unaffected.
   enableDeepLinks?: boolean
+  summary?: string
 }
 
 export const MonthlyBarChart = memo(function MonthlyBarChart({
@@ -49,6 +50,7 @@ export const MonthlyBarChart = memo(function MonthlyBarChart({
   ariaLabel = "Bar chart showing income and expenses over the last 6 months",
   tableCaption = "Income and expenses over the last 6 months",
   enableDeepLinks = false,
+  summary,
 }: Props) {
   const { fmt } = useSettingsContext()
   const router = useRouter()
@@ -102,6 +104,7 @@ export const MonthlyBarChart = memo(function MonthlyBarChart({
           <span className="flex items-center gap-1.5 text-xs text-zinc-500"><span className="w-2.5 h-2.5 rounded-sm bg-emerald-500" />Income</span>
           <span className="flex items-center gap-1.5 text-xs text-zinc-500"><span className="w-2.5 h-2.5 rounded-sm bg-rose-500" />Expenses</span>
         </div>
+        {summary && <p className="mt-3 border-t border-zinc-100 pt-3 text-xs text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">{summary}</p>}
 
         {enableDeepLinks && (
           <div className="mt-3 space-y-1">

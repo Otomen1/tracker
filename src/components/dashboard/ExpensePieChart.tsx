@@ -6,6 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from "recharts"
 import { useSettingsContext } from "@/context/SettingsContext"
 import { PIE_CHART_MAX_CATEGORIES } from "@/lib/constants"
+import { EmptyState } from "@/components/ui/empty-state"
+import { PieChart as PieChartIcon } from "lucide-react"
 
 interface TooltipProps {
   active?: boolean
@@ -30,6 +32,8 @@ interface Props {
   emptyMessage?: string
   ariaLabel?: string
   tableCaption?: string
+  summary?: string
+  emptyAction?: { label: string; href: string }
 }
 
 export const ExpensePieChart = memo(function ExpensePieChart({
@@ -38,6 +42,8 @@ export const ExpensePieChart = memo(function ExpensePieChart({
   emptyMessage = "No expenses this month",
   ariaLabel = "Pie chart showing expense breakdown by category",
   tableCaption = "Expense breakdown by category",
+  summary,
+  emptyAction,
 }: Props) {
   const { fmt } = useSettingsContext()
 
@@ -48,7 +54,7 @@ export const ExpensePieChart = memo(function ExpensePieChart({
           <CardTitle className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">{title}</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="h-48 flex items-center justify-center text-zinc-400 text-sm">{emptyMessage}</div>
+          <EmptyState icon={PieChartIcon} title={emptyMessage} action={emptyAction} className="py-8" />
         </CardContent>
       </Card>
     )
@@ -84,6 +90,7 @@ export const ExpensePieChart = memo(function ExpensePieChart({
             </div>
           ))}
         </div>
+        {summary && <p className="mt-3 border-t border-zinc-100 pt-3 text-xs text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">{summary}</p>}
         <table className="sr-only">
           <caption>{tableCaption}</caption>
           <thead><tr><th>Category</th><th>Amount</th><th>Percentage</th></tr></thead>

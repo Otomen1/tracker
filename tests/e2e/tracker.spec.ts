@@ -38,6 +38,40 @@ test("a deleted transaction stays deleted after focus, navigation, and refresh",
   await expect.poll(() => page.evaluate(() => localStorage.getItem("tracker_transactions"))).toBe("[]")
 })
 
+test("first-use dashboard presents one primary transaction action", async ({ page }) => {
+  await page.goto("/")
+  await expect(page.getByRole("heading", { name: "Your financial picture starts here" })).toBeVisible()
+  await expect(page.getByRole("button", { name: "Add first transaction" })).toHaveCount(1)
+  await expect(page.getByText("Income", { exact: true })).toHaveCount(0)
+})
+
+test("empty analytics replaces charts with one guided state", async ({ page }) => {
+  await page.goto("/analytics")
+  await expect(page.getByRole("heading", { name: "Your analytics will appear here" })).toBeVisible()
+  await expect(page.getByRole("img", { name: /chart/i })).toHaveCount(0)
+  await expect(page.getByRole("link", { name: "Add transaction" })).toBeVisible()
+})
+
+test("settings section navigation moves to the selected section", async ({ page }) => {
+  await page.goto("/settings")
+  if ((page.viewportSize()?.width ?? 0) >= 1024) {
+    await page.getByRole("navigation", { name: "Settings sections" }).getByRole("button", { name: "Data & Backup" }).click()
+  } else {
+    await page.getByRole("combobox", { name: "Settings section" }).click()
+    await page.getByRole("option", { name: "Data & Backup" }).click()
+  }
+  await expect(page.locator("#data-backup")).toBeInViewport()
+})
+
+for (const width of [320, 375, 768, 1024, 1440]) {
+  test(`dashboard remains usable at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 })
+    await page.goto("/")
+    await expect(page.locator("main")).toBeVisible()
+    await expect(page.getByRole("button", { name: "Add first transaction" })).toBeVisible()
+  })
+}
+
 for (const route of ["/", "/transactions", "/analytics", "/settings"]) {
   test(`${route} renders without a page error`, async ({ page }, testInfo) => {
     await page.goto(route)

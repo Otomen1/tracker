@@ -59,9 +59,10 @@ function barColor(point: ChartPoint): string {
 
 interface Props {
   trend: SavingsTrendResult
+  summary?: string
 }
 
-export const SavingsTrendChart = memo(function SavingsTrendChart({ trend }: Props) {
+export const SavingsTrendChart = memo(function SavingsTrendChart({ trend, summary }: Props) {
   const { fmt } = useSettingsContext()
 
   const hasGoal = trend.points.length > 0 && trend.points[0].goal > 0
@@ -120,6 +121,7 @@ export const SavingsTrendChart = memo(function SavingsTrendChart({ trend }: Prop
             Overall: {fmt(trend.totalActual)} of {fmt(trend.totalGoal)} goal ({trend.achievementRate.toFixed(0)}%)
           </p>
         )}
+        {summary && <p className="mt-3 border-t border-zinc-100 pt-3 text-xs text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">{summary}</p>}
 
         <div className="flex items-center gap-4 mt-2 justify-center text-xs text-zinc-500">
           <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: ACHIEVED_COLOR }} />Goal achieved</span>

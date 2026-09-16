@@ -14,6 +14,7 @@ interface Props {
   tags: string[]
   fmt: (n: number) => string
   onChange: (filters: TransactionFilters) => void
+  onClearAll?: () => void
 }
 
 function FilterChip({ label, onRemove }: { label: string; onRemove: () => void }) {
@@ -32,7 +33,7 @@ function FilterChip({ label, onRemove }: { label: string; onRemove: () => void }
   )
 }
 
-export function TransactionFiltersBar({ filters, categories, tags, fmt, onChange }: Props) {
+export function TransactionFiltersBar({ filters, categories, tags, fmt, onChange, onClearAll }: Props) {
   const [search, setSearch] = useState(filters.search ?? "")
   const [minAmount, setMinAmount] = useState(filters.minAmount !== undefined ? String(filters.minAmount) : "")
   const [maxAmount, setMaxAmount] = useState(filters.maxAmount !== undefined ? String(filters.maxAmount) : "")
@@ -89,6 +90,7 @@ export function TransactionFiltersBar({ filters, categories, tags, fmt, onChange
     setMinAmount("")
     setMaxAmount("")
     onChange({})
+    onClearAll?.()
     setAdvancedOpen(false)
   }
 
@@ -102,7 +104,7 @@ export function TransactionFiltersBar({ filters, categories, tags, fmt, onChange
   return (
     <div className="space-y-2">
       {/* Always visible: search, type, date range, plus the advanced-filters toggle */}
-      <div className="grid grid-cols-1 gap-2 sm:flex sm:flex-wrap sm:items-end">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:flex xl:flex-wrap xl:items-end">
         <div className="space-y-1"><label htmlFor="transaction-search" className="text-xs font-medium text-zinc-600 dark:text-zinc-300">Search</label><Input
           id="transaction-search"
           className="flex-1 min-w-[140px] sm:flex-none sm:w-44 h-9 text-sm"
@@ -112,7 +114,7 @@ export function TransactionFiltersBar({ filters, categories, tags, fmt, onChange
           onChange={(e) => setSearch(e.target.value)}
         /></div>
 
-        <Select
+        <div className="space-y-1"><label className="text-xs font-medium text-zinc-600 dark:text-zinc-300">Type</label><Select
           value={filters.type ?? "all"}
           onValueChange={(v) =>
             onChange({ ...filters, type: v === "all" ? "" : (v as TransactionType), categoryId: "" })
@@ -126,27 +128,29 @@ export function TransactionFiltersBar({ filters, categories, tags, fmt, onChange
             <SelectItem value="income">Income</SelectItem>
             <SelectItem value="expense">Expense</SelectItem>
           </SelectContent>
-        </Select>
+        </Select></div>
 
-        <Input
+        <div className="space-y-1"><label htmlFor="transaction-date-from" className="text-xs font-medium text-zinc-600 dark:text-zinc-300">From</label><Input
+          id="transaction-date-from"
           type="date"
           className="w-full sm:w-36 h-9 text-sm"
           aria-label="From date"
           value={filters.dateFrom ?? ""}
           onChange={(e) => onChange({ ...filters, dateFrom: e.target.value })}
-        />
-        <Input
+        /></div>
+        <div className="space-y-1"><label htmlFor="transaction-date-to" className="text-xs font-medium text-zinc-600 dark:text-zinc-300">To</label><Input
+          id="transaction-date-to"
           type="date"
           className="w-full sm:w-36 h-9 text-sm"
           aria-label="To date"
           value={filters.dateTo ?? ""}
           onChange={(e) => onChange({ ...filters, dateTo: e.target.value })}
-        />
+        /></div>
 
         <Button
           variant={advancedOpen ? "secondary" : "outline"}
           size="sm"
-          className="h-9 shrink-0"
+          className="h-9 shrink-0 xl:self-end"
           aria-expanded={advancedOpen}
           aria-controls="transaction-advanced-filters"
           onClick={() => setAdvancedOpen((o) => !o)}
@@ -163,7 +167,7 @@ export function TransactionFiltersBar({ filters, categories, tags, fmt, onChange
           <Button
             variant="ghost"
             size="sm"
-            className="h-9 text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100"
+            className="h-9 text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 xl:self-end"
             onClick={clearFilters}
           >
             <X className="w-3.5 h-3.5 mr-1" />
@@ -253,7 +257,8 @@ export function TransactionFiltersBar({ filters, categories, tags, fmt, onChange
 
       {/* Active filter chips */}
       {hasFilters && (
-        <div className="flex flex-wrap gap-1.5">
+        <div className="flex flex-wrap items-center gap-1.5 border-t border-zinc-100 pt-2 dark:border-zinc-800">
+          <span className="mr-1 text-xs font-medium text-zinc-500">Active:</span>
           {filters.type && (
             <FilterChip
               label={filters.type === "income" ? "Income" : "Expense"}

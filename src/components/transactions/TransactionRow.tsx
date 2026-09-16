@@ -33,7 +33,7 @@ export function TransactionRow({
 
   return (
     <tr className={cn(
-      "group border-b border-zinc-100 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors",
+      "group border-b border-zinc-100 outline-none last:border-b-0 hover:bg-zinc-50 focus-within:bg-zinc-50 dark:border-zinc-800 dark:hover:bg-zinc-800/50 dark:focus-within:bg-zinc-800/50 transition-colors",
       selected && "bg-zinc-50 dark:bg-zinc-800/50"
     )}>
       {selectMode && (
@@ -47,10 +47,10 @@ export function TransactionRow({
           />
         </td>
       )}
-      <td className="py-3 px-4 text-sm text-zinc-500 dark:text-zinc-400 whitespace-nowrap">
+      <td className="py-2.5 px-4 text-sm text-zinc-500 dark:text-zinc-400 whitespace-nowrap">
         {formatDate(transaction.date)}
       </td>
-      <td className="py-3 px-4 max-w-[200px]">
+      <td className="py-2.5 px-4 max-w-[200px]">
         <div>
           <p className="text-sm text-zinc-900 dark:text-zinc-100 truncate">{transaction.description}</p>
           {transaction.notes && (
@@ -67,7 +67,7 @@ export function TransactionRow({
           )}
         </div>
       </td>
-      <td className="py-3 px-4">
+      <td className="py-2.5 px-4">
         <div className="flex items-center gap-1.5">
           {category && (
             <span className="inline-flex items-center gap-1.5 text-xs px-2 py-1 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300">
@@ -83,7 +83,7 @@ export function TransactionRow({
           )}
         </div>
       </td>
-      <td className="py-3 px-4 text-sm hidden sm:table-cell">
+      <td className="hidden py-2.5 px-4 text-sm sm:table-cell">
         <span className={cn(
           "text-xs px-2 py-0.5 rounded-full font-medium",
           transaction.type === "income"
@@ -94,12 +94,12 @@ export function TransactionRow({
         </span>
       </td>
       <td className={cn(
-        "py-3 px-4 text-sm font-medium text-right whitespace-nowrap",
+        "py-2.5 px-4 font-mono text-sm font-semibold tabular-nums text-right whitespace-nowrap",
         transaction.type === "income" ? "text-emerald-600" : "text-rose-500"
       )}>
         {transaction.type === "income" ? "+" : "-"}{fmt(transaction.amount)}
       </td>
-      <td className="py-3 px-4 text-right">
+      <td className="py-2.5 px-4 text-right">
         <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 group-focus-within:opacity-100 transition-opacity">
           <Button
             size="icon" variant="ghost" className="h-8 w-8"
