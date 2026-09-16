@@ -47,12 +47,13 @@ export function TransactionRow({
           />
         </td>
       )}
-      <td className="py-2.5 px-4 text-sm text-zinc-500 dark:text-zinc-400 whitespace-nowrap">
+      <td className="hidden py-2.5 px-4 text-sm text-zinc-500 dark:text-zinc-400 whitespace-nowrap sm:table-cell">
         {formatDate(transaction.date)}
       </td>
       <td className="py-2.5 px-4 max-w-[200px]">
         <div>
           <p className="text-sm text-zinc-900 dark:text-zinc-100 truncate">{transaction.description}</p>
+          <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400 sm:hidden">{category?.name ?? "Uncategorized"} · {formatDate(transaction.date)}</p>
           {transaction.notes && (
             <p className="text-xs text-zinc-400 truncate mt-0.5">{transaction.notes}</p>
           )}
@@ -67,7 +68,7 @@ export function TransactionRow({
           )}
         </div>
       </td>
-      <td className="py-2.5 px-4">
+      <td className="hidden py-2.5 px-4 sm:table-cell">
         <div className="flex items-center gap-1.5">
           {category && (
             <span className="inline-flex items-center gap-1.5 text-xs px-2 py-1 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300">
@@ -94,12 +95,12 @@ export function TransactionRow({
         </span>
       </td>
       <td className={cn(
-        "py-2.5 px-4 font-mono text-sm font-semibold tabular-nums text-right whitespace-nowrap",
+        "py-2.5 px-2 font-mono text-sm font-semibold tabular-nums text-right whitespace-nowrap sm:px-4",
         transaction.type === "income" ? "text-emerald-600" : "text-rose-500"
       )}>
         {transaction.type === "income" ? "+" : "-"}{fmt(transaction.amount)}
       </td>
-      <td className="py-2.5 px-4 text-right">
+      <td className="py-2.5 pl-1 pr-2 text-right sm:px-4">
         <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 group-focus-within:opacity-100 transition-opacity">
           <Button
             size="icon" variant="ghost" className="h-8 w-8"

@@ -16,7 +16,7 @@ import { SettingsNav } from "@/components/settings/SettingsNav"
 
 function SettingGroup({ id, title, description, children, warning = false }: { id: string; title: string; description?: string; children: React.ReactNode; warning?: boolean }) {
   return (
-    <section id={id} className={`scroll-mt-6 space-y-5 rounded-xl border bg-white p-5 shadow-sm dark:bg-zinc-900 ${warning ? "border-amber-300 dark:border-amber-900" : "border-zinc-200 dark:border-zinc-800"}`}>
+    <section id={id} className={`scroll-mt-20 space-y-4 rounded-xl border bg-white p-4 shadow-sm dark:bg-zinc-900 sm:scroll-mt-6 sm:space-y-5 sm:p-5 ${warning ? "border-amber-300 dark:border-amber-900" : "border-zinc-200 dark:border-zinc-800"}`}>
       <div>
         <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">{title}</h2>
         {description && <p className="text-xs text-zinc-400 mt-0.5">{description}</p>}

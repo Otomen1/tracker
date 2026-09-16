@@ -88,16 +88,16 @@ export default function DashboardPage() {
           aria-labelledby="getting-started-title"
           className="overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900"
         >
-          <div className="grid gap-6 p-5 sm:p-6 md:grid-cols-[1fr_auto] md:items-center">
-            <div className="flex items-start gap-4">
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-zinc-100 dark:bg-zinc-800">
+          <div className="grid gap-5 p-4 sm:p-6 md:grid-cols-[1fr_auto] md:items-center">
+            <div className="flex items-start gap-3 sm:gap-4">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-zinc-100 dark:bg-zinc-800 sm:h-11 sm:w-11">
                 <BarChart3 className="h-5 w-5 text-zinc-700 dark:text-zinc-300" />
               </div>
               <div>
                 <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">{formatMonth(selectedMonth)} · Net</p>
-                <p className="mt-1 text-4xl font-bold tracking-tight text-zinc-950 dark:text-zinc-50">{fmt(0)}</p>
-                <h2 id="getting-started-title" className="mt-4 font-semibold text-zinc-900 dark:text-zinc-100">Your financial picture starts here</h2>
-                <p className="mt-1 max-w-lg text-sm text-zinc-500 dark:text-zinc-400">Add your first transaction to unlock budgets, trends, and useful spending insights. Your data stays on this device.</p>
+                <p className="mt-1 text-3xl font-bold tracking-tight text-zinc-950 dark:text-zinc-50 sm:text-4xl">{fmt(0)}</p>
+                <h2 id="getting-started-title" className="mt-3 font-semibold text-zinc-900 dark:text-zinc-100 sm:mt-4">Your financial picture starts here</h2>
+                <p className="mt-1 max-w-lg text-sm leading-relaxed text-zinc-500 dark:text-zinc-400">Add your first transaction to unlock budgets, trends, and spending insights. Your data stays on this device.</p>
               </div>
             </div>
             <div className="flex flex-col items-stretch gap-2 sm:min-w-52">

@@ -3,6 +3,8 @@
   "short_name": "Tracker",
   "description": "Track your income and expenses locally",
   "start_url": "/",
+  "scope": "/",
+  "id": "/",
   "display": "standalone",
   "background_color": "#fafafa",
   "theme_color": "#18181b",

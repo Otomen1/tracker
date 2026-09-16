@@ -81,7 +81,7 @@ function AnalyticsPageContent() {
             description="Add income and expenses to reveal category breakdowns, cash-flow trends, budget progress, and savings performance."
             action={{ label: "Add transaction", href: "/transactions" }}
             secondaryAction={{ label: "Set budgets", href: "/settings#finance" }}
-            className="py-14"
+            className="py-10 sm:py-14"
           />
         </div>
       </div>

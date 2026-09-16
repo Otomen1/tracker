@@ -55,6 +55,17 @@
   }
   body {
     @apply bg-background text-foreground;
+    min-height: 100dvh;
+    overscroll-behavior-y: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+@media (max-width: 639px) {
+  input,
+  textarea,
+  select {
+    font-size: 16px !important;
   }
 }
 

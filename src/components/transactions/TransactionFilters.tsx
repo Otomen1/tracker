@@ -114,7 +114,7 @@ export function TransactionFiltersBar({ filters, categories, tags, fmt, onChange
           onChange={(e) => setSearch(e.target.value)}
         /></div>
 
-        <div className="space-y-1"><label className="text-xs font-medium text-zinc-600 dark:text-zinc-300">Type</label><Select
+        <div className={cn("space-y-1", advancedOpen ? "block" : "hidden sm:block")}><label className="text-xs font-medium text-zinc-600 dark:text-zinc-300">Type</label><Select
           value={filters.type ?? "all"}
           onValueChange={(v) =>
             onChange({ ...filters, type: v === "all" ? "" : (v as TransactionType), categoryId: "" })
@@ -130,7 +130,7 @@ export function TransactionFiltersBar({ filters, categories, tags, fmt, onChange
           </SelectContent>
         </Select></div>
 
-        <div className="space-y-1"><label htmlFor="transaction-date-from" className="text-xs font-medium text-zinc-600 dark:text-zinc-300">From</label><Input
+        <div className={cn("space-y-1", advancedOpen ? "block" : "hidden sm:block")}><label htmlFor="transaction-date-from" className="text-xs font-medium text-zinc-600 dark:text-zinc-300">From</label><Input
           id="transaction-date-from"
           type="date"
           className="w-full sm:w-36 h-9 text-sm"
@@ -138,7 +138,7 @@ export function TransactionFiltersBar({ filters, categories, tags, fmt, onChange
           value={filters.dateFrom ?? ""}
           onChange={(e) => onChange({ ...filters, dateFrom: e.target.value })}
         /></div>
-        <div className="space-y-1"><label htmlFor="transaction-date-to" className="text-xs font-medium text-zinc-600 dark:text-zinc-300">To</label><Input
+        <div className={cn("space-y-1", advancedOpen ? "block" : "hidden sm:block")}><label htmlFor="transaction-date-to" className="text-xs font-medium text-zinc-600 dark:text-zinc-300">To</label><Input
           id="transaction-date-to"
           type="date"
           className="w-full sm:w-36 h-9 text-sm"
@@ -156,7 +156,7 @@ export function TransactionFiltersBar({ filters, categories, tags, fmt, onChange
           onClick={() => setAdvancedOpen((o) => !o)}
         >
           <SlidersHorizontal className="w-3.5 h-3.5 mr-1.5" />
-          More Filters
+          <span className="sm:hidden">Filters</span><span className="hidden sm:inline">More Filters</span>
           {advancedFilterCount > 0 && (
             <span className="ml-1.5 text-xs font-semibold text-primary">({advancedFilterCount})</span>
           )}
@@ -180,7 +180,7 @@ export function TransactionFiltersBar({ filters, categories, tags, fmt, onChange
           resolves to a real element and the collapse is a pure visibility change. */}
       <div
         id="transaction-advanced-filters"
-        className={cn("flex-wrap gap-2 items-center", advancedOpen ? "flex" : "hidden")}
+        className={cn("flex-wrap gap-2 items-center border-t border-zinc-100 pt-3 dark:border-zinc-800 sm:border-0 sm:pt-0", advancedOpen ? "flex" : "hidden")}
       >
         <Select
           value={filters.categoryId ?? "all"}

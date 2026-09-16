@@ -15,6 +15,7 @@ import { useBudgetCheck } from "@/hooks/useBudgetCheck"
 import { useToast } from "@/context/ToastContext"
 import { TransactionFormData } from "@/types"
 import { TransactionDialog } from "@/components/transactions/TransactionDialog"
+import { usePathname } from "next/navigation"
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   useScheduledBackup()
@@ -28,6 +29,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const { categories } = useCategories()
   const { checkBudget } = useBudgetCheck()
   const { showToast } = useToast()
+  const pathname = usePathname()
+  const showQuickAdd = pathname === "/transactions" || (transactions.length > 0 && (pathname === "/" || pathname === "/analytics"))
 
   const handleQuickAdd = (data: TransactionFormData) => {
     if (!addTransaction(data)) {
@@ -51,13 +54,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <StorageQuotaBanner />
       <StorageRecoveryBanner />
       <Sidebar />
-      <main id="main-content" className="lg:pl-56 pb-[calc(4rem+env(safe-area-inset-bottom))] lg:pb-0">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6">
+      <main id="main-content" className="pb-[calc(4.25rem+env(safe-area-inset-bottom))] lg:pl-56 lg:pb-0">
+        <div className="mx-auto max-w-5xl px-3 py-4 sm:px-6 sm:py-6">
           <ErrorBoundary>{children}</ErrorBoundary>
         </div>
       </main>
       <MobileNav />
-      <QuickAddFAB onClick={() => setQuickAddOpen(true)} />
+      {showQuickAdd && <QuickAddFAB onClick={() => setQuickAddOpen(true)} />}
       <TransactionDialog
         open={quickAddOpen}
         onOpenChange={setQuickAddOpen}

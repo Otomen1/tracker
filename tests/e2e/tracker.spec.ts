@@ -63,6 +63,33 @@ test("settings section navigation moves to the selected section", async ({ page 
   await expect(page.locator("#data-backup")).toBeInViewport()
 })
 
+test("mobile PWA keeps primary controls clear of navigation", async ({ page }) => {
+  test.skip((page.viewportSize()?.width ?? 0) >= 640, "Mobile layout only")
+  await page.goto("/settings")
+  await expect(page.getByRole("button", { name: "Add Transaction" })).toHaveCount(0)
+
+  await page.goto("/transactions")
+  await expect(page.getByLabel("Transaction type")).toBeHidden()
+  await expect(page.getByLabel("From date")).toBeHidden()
+  await page.getByRole("button", { name: "Filters" }).click()
+  await expect(page.getByLabel("Transaction type")).toBeVisible()
+  await expect(page.getByLabel("From date")).toBeVisible()
+})
+
+test("transaction form uses a mobile bottom sheet", async ({ page }) => {
+  test.skip((page.viewportSize()?.width ?? 0) >= 640, "Mobile layout only")
+  await page.goto("/transactions")
+  await page.getByRole("button", { name: "Add Transaction", exact: true }).click()
+  const dialog = page.getByRole("dialog")
+  await expect(dialog).toBeVisible()
+  const positioning = await dialog.evaluate((element) => {
+    const style = getComputedStyle(element)
+    return { position: style.position, bottom: style.bottom }
+  })
+  expect(positioning).toEqual({ position: "fixed", bottom: "0px" })
+  await expect(page.getByRole("button", { name: "Add Transaction", exact: true }).last()).toBeVisible()
+})
+
 for (const width of [320, 375, 768, 1024, 1440]) {
   test(`dashboard remains usable at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 900 })

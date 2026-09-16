@@ -166,7 +166,7 @@ export function TransactionForm({ transaction, categories, onSubmit, onCancel }:
 
   return (
     <>
-      <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-5">
+      <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4 sm:space-y-5">
         <div className="space-y-1.5">
           <Label htmlFor="amount">Amount</Label>
           <Input
@@ -177,7 +177,7 @@ export function TransactionForm({ transaction, categories, onSubmit, onCancel }:
             placeholder="0.00"
             aria-invalid={!!errors.amount}
             aria-describedby={errors.amount ? "amount-error" : undefined}
-            className="h-14 text-2xl font-semibold tracking-tight"
+            className="h-12 text-xl font-semibold tracking-tight sm:h-14 sm:text-2xl"
             autoFocus
             {...register("amount")}
           />
@@ -194,7 +194,7 @@ export function TransactionForm({ transaction, categories, onSubmit, onCancel }:
                 aria-pressed={selectedType === t}
                 onClick={() => setValue("type", t)}
                 className={cn(
-                  "flex-1 py-2 text-sm font-medium capitalize transition-colors",
+                  "min-h-11 flex-1 py-2 text-sm font-medium capitalize transition-colors",
                   selectedType === t
                     ? t === "income"
                       ? "bg-emerald-600 text-white"
@@ -358,7 +358,7 @@ export function TransactionForm({ transaction, categories, onSubmit, onCancel }:
           </div>
         </div>
 
-        <div className="flex gap-2 pt-2">
+        <div className="sticky bottom-[-1rem] z-10 -mx-4 flex gap-2 border-t border-zinc-200 bg-background px-4 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-3 dark:border-zinc-800 sm:static sm:mx-0 sm:border-0 sm:p-0 sm:pt-2">
           <Button type="button" variant="outline" className="flex-1" onClick={onCancel}>Cancel</Button>
           <Button type="submit" className="flex-1">{transaction ? "Save Changes" : "Add Transaction"}</Button>
         </div>

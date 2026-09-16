@@ -309,9 +309,9 @@ export function TransactionList({
                       />
                     </th>
                   )}
-                  <th scope="col" className="bg-zinc-50/80 py-2.5 px-4 text-xs font-medium text-zinc-500 text-left dark:bg-zinc-800/40">Date</th>
+                  <th scope="col" className="hidden bg-zinc-50/80 py-2.5 px-4 text-xs font-medium text-zinc-500 text-left dark:bg-zinc-800/40 sm:table-cell">Date</th>
                   <th scope="col" className="bg-zinc-50/80 py-2.5 px-4 text-xs font-medium text-zinc-500 text-left dark:bg-zinc-800/40">Description</th>
-                  <th scope="col" className="bg-zinc-50/80 py-2.5 px-4 text-xs font-medium text-zinc-500 text-left dark:bg-zinc-800/40">Category</th>
+                  <th scope="col" className="hidden bg-zinc-50/80 py-2.5 px-4 text-xs font-medium text-zinc-500 text-left dark:bg-zinc-800/40 sm:table-cell">Category</th>
                   <th scope="col" className="hidden bg-zinc-50/80 py-2.5 px-4 text-xs font-medium text-zinc-500 text-left dark:bg-zinc-800/40 sm:table-cell">Type</th>
                   <th scope="col" className="bg-zinc-50/80 py-2.5 px-4 text-xs font-medium text-zinc-500 text-right dark:bg-zinc-800/40">Amount</th>
                   <th scope="col" className="w-20 bg-zinc-50/80 py-2.5 px-4 dark:bg-zinc-800/40"><span className="sr-only">Actions</span></th>

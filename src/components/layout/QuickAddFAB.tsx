@@ -11,9 +11,9 @@ export function QuickAddFAB({ onClick }: Props) {
     <button
       onClick={onClick}
       aria-label="Add Transaction"
-      className="lg:hidden fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] right-4 z-30 w-14 h-14 rounded-full bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 shadow-lg flex items-center justify-center hover:scale-105 active:scale-95 transition-transform"
+      className="fixed bottom-[calc(4.75rem+env(safe-area-inset-bottom))] right-4 z-30 flex h-12 w-12 items-center justify-center rounded-full bg-zinc-900 text-white shadow-lg shadow-zinc-900/20 transition-transform active:scale-95 dark:bg-zinc-100 dark:text-zinc-900 lg:hidden"
     >
-      <Plus className="w-6 h-6" />
+      <Plus className="h-5 w-5" />
     </button>
   )
 }

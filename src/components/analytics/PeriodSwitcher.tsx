@@ -20,7 +20,7 @@ export function PeriodSwitcher({ type, month, year, onTypeChange, onMonthChange,
   const currentYear = getYearKey()
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className="flex w-full flex-wrap items-center justify-between gap-2 sm:w-auto sm:justify-start">
       <div className="flex rounded-md border border-input overflow-hidden">
         {(["month", "year"] as const).map((t) => (
           <button
@@ -29,7 +29,7 @@ export function PeriodSwitcher({ type, month, year, onTypeChange, onMonthChange,
             aria-pressed={type === t}
             onClick={() => onTypeChange(t)}
             className={cn(
-              "px-3 py-1.5 text-sm font-medium capitalize transition-colors",
+              "min-h-10 px-3 py-1.5 text-sm font-medium capitalize transition-colors sm:min-h-0",
               type === t
                 ? "bg-primary text-primary-foreground"
                 : "bg-background text-muted-foreground hover:bg-muted"

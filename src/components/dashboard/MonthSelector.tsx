@@ -13,23 +13,23 @@ export function MonthSelector({ month, onChange }: Props) {
   const isCurrentMonth = month === getMonthKey()
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex max-w-full items-center gap-1 sm:gap-2">
       <Button
         variant="ghost"
         size="icon"
-        className="h-8 w-8"
+        className="h-10 w-10 sm:h-8 sm:w-8"
         aria-label="Previous month"
         onClick={() => onChange(addMonths(month, -1))}
       >
         <ChevronLeft className="w-4 h-4" />
       </Button>
-      <span aria-live="polite" aria-atomic="true" className="text-sm font-medium w-32 text-center">
+      <span aria-live="polite" aria-atomic="true" className="w-32 text-center text-sm font-medium">
         {formatMonth(month)}
       </span>
       <Button
         variant="ghost"
         size="icon"
-        className="h-8 w-8"
+        className="h-10 w-10 sm:h-8 sm:w-8"
         aria-label="Next month"
         onClick={() => onChange(addMonths(month, 1))}
         disabled={isCurrentMonth}

@@ -169,12 +169,12 @@ function TransactionsPageContent() {
             onChange={setFilters}
             onClearAll={() => showToast("Filters cleared", "success")}
           />
-          <ExportButton
+          <div className={transactions.length === 0 ? "hidden sm:block" : "block"}><ExportButton
             allTransactions={transactions}
             transactions={filtered}
             categories={categories}
             currency={settings.currency}
-          />
+          /></div>
         </div>
 
         <div className="flex items-center justify-between border-t border-zinc-100 pt-3 text-xs text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">

@@ -16,8 +16,8 @@ export function MobileNav() {
   const pathname = usePathname()
 
   return (
-    <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white dark:bg-zinc-900 border-t border-zinc-200 dark:border-zinc-800 pb-[env(safe-area-inset-bottom)]">
-      <div className="flex">
+    <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-zinc-200 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-lg dark:border-zinc-800 dark:bg-zinc-900/95 lg:hidden">
+      <div className="mx-auto flex max-w-lg px-1">
         {navItems.map(({ href, label, icon: Icon }) => {
           const isActive = pathname === href
           return (
@@ -26,13 +26,15 @@ export function MobileNav() {
               href={href}
               aria-current={isActive ? "page" : undefined}
               className={cn(
-                "flex-1 flex flex-col items-center gap-1 py-2.5 text-xs transition-colors min-h-[56px] justify-center",
+                "relative flex min-h-[58px] flex-1 flex-col items-center justify-center gap-0.5 rounded-lg py-2 text-xs transition-colors",
                 isActive
                   ? "text-zinc-900 dark:text-zinc-100 font-medium"
                   : "text-zinc-500 dark:text-zinc-400"
               )}
             >
-              <Icon className="w-5 h-5" />
+              <span className={cn("flex h-7 min-w-10 items-center justify-center rounded-full transition-colors", isActive && "bg-zinc-100 dark:bg-zinc-800")}>
+                <Icon className="h-5 w-5" />
+              </span>
               <span className="text-[10px]">{label}</span>
             </Link>
           )
