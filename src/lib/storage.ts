@@ -1,5 +1,5 @@
 import { z } from "zod"
-import { Transaction, Category, Settings } from "@/types"
+import { Account, Transaction, Category, Settings } from "@/types"
 import { CURRENCIES, DEFAULT_CATEGORIES, DEFAULT_SETTINGS, STORAGE_KEYS, SCHEMA_VERSION } from "./constants"
 import { isValidHexColor } from "./utils"
 
@@ -15,7 +15,7 @@ const currencyCodes = CURRENCIES.map((currency) => currency.code)
 
 const transactionSchema = z.object({
   id: z.string(),
-  type: z.enum(["income", "expense"]),
+  type: z.enum(["income", "expense", "transfer"]),
   amount: z.number().finite().safe().positive(),
   categoryId: z.string(),
   description: z.string().trim().min(1).max(200),
@@ -25,6 +25,28 @@ const transactionSchema = z.object({
   isRecurring: z.boolean().optional(),
   recurringDay: z.number().int().min(1).max(31).optional(),
   recurringId: z.string().optional(),
+  createdAt: validDate,
+  updatedAt: validDate,
+  accountId: z.string().optional(),
+  fromAccountId: z.string().optional(),
+  toAccountId: z.string().optional(),
+  notificationSource: z.object({
+    provider: z.enum(["ryt", "mae", "google_wallet"]),
+    fingerprint: z.string().min(16).max(128),
+    capturedAt: validDate,
+  }).optional(),
+}).superRefine((transaction, context) => {
+  if (transaction.type === "transfer" && (!transaction.fromAccountId || !transaction.toAccountId || transaction.fromAccountId === transaction.toAccountId)) {
+    context.addIssue({ code: z.ZodIssueCode.custom, message: "Invalid transfer accounts" })
+  }
+})
+
+const accountSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().trim().min(1).max(60),
+  currency: z.string().refine((value) => currencyCodes.includes(value), "Unsupported currency"),
+  openingBalance: z.number().finite().safe(),
+  isActive: z.boolean(),
   createdAt: validDate,
   updatedAt: validDate,
 })
@@ -56,6 +78,7 @@ const backupSchema = z.object({
   transactions: z.array(transactionSchema).max(50000),
   categories: z.array(categorySchema).max(500).optional(),
   settings: settingsSchema.optional(),
+  accounts: z.array(accountSchema).max(50).optional(),
 })
 
 function safeRead<T>(key: string, fallback: T): T {
@@ -100,8 +123,7 @@ function isValidCategory(c: unknown): boolean {
 type Migration = { from: string; to: string; run: () => void }
 
 const MIGRATIONS: Migration[] = [
-  // Future migrations go here, e.g.:
-  // { from: "1", to: "2", run: () => { /* transform stored data */ } },
+  { from: "1", to: "2", run: () => { /* Accounts are optional until Android setup. */ } },
 ]
 
 function runMigrations(storedVersion: string | null): void {
@@ -141,6 +163,10 @@ export function saveSettings(settings: Settings): void {
   safeWrite(STORAGE_KEYS.SETTINGS, settings)
 }
 
+export function getAccounts(): Account[] {
+  return safeRead<Account[]>(STORAGE_KEYS.ACCOUNTS, [])
+}
+
 // A09: structured security event log (console only — no financial data included)
 export function logSecurityEvent(event: string, meta?: Record<string, unknown>): void {
   console.info(`[Security] ${new Date().toISOString()} ${event}`, meta ?? "")
@@ -154,6 +180,7 @@ export function exportAllData(): string {
     transactions: getTransactions(),
     categories: getCategories(),
     settings: (() => { const legacy = getSettings() as Settings & { backupPassword?: string }; const { backupPassword: _secret, lastBackupAt: _deviceOnly, ...portable } = legacy; return portable })(),
+    accounts: getAccounts(),
   }
   const json = JSON.stringify(data, null, 2)
   logSecurityEvent("backup_export", { transactionCount: data.transactions.length })
@@ -164,6 +191,7 @@ type ImportPayload = {
   transactions: Transaction[]
   categories?: Category[]
   settings?: Settings
+  accounts?: Account[]
 }
 
 type RecoverySnapshot = {
@@ -176,6 +204,7 @@ const ATOMIC_KEYS = [
   STORAGE_KEYS.CATEGORIES,
   STORAGE_KEYS.SETTINGS,
   STORAGE_KEYS.SCHEMA_VERSION,
+  STORAGE_KEYS.ACCOUNTS,
 ] as const
 
 function restoreRawValues(values: Record<string, string | null>): void {
@@ -195,6 +224,7 @@ function commitImport(payload: ImportPayload): { success: boolean; error?: strin
     localStorage.setItem(STORAGE_KEYS.TRANSACTIONS, JSON.stringify(payload.transactions))
     if (payload.categories) localStorage.setItem(STORAGE_KEYS.CATEGORIES, JSON.stringify(payload.categories))
     if (payload.settings) localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(payload.settings))
+    if (payload.accounts) localStorage.setItem(STORAGE_KEYS.ACCOUNTS, JSON.stringify(payload.accounts))
     localStorage.setItem(STORAGE_KEYS.SCHEMA_VERSION, SCHEMA_VERSION)
     localStorage.removeItem(STORAGE_KEYS.CORRUPTION)
     return { success: true }
@@ -226,8 +256,16 @@ function validateRelationships(payload: ImportPayload): string | undefined {
     if (categoryIds.has(category.id)) return "Duplicate category ID"
     categoryIds.add(category.id)
   }
-  const missingCategory = payload.transactions.find((transaction) => !categoryIds.has(transaction.categoryId))
+  const missingCategory = payload.transactions.find((transaction) => transaction.type !== "transfer" && !categoryIds.has(transaction.categoryId))
   if (missingCategory) return `Missing category for transaction "${missingCategory.description}"`
+  const accounts = payload.accounts ?? getAccounts()
+  const accountIds = new Set(accounts.map((account) => account.id))
+  if (accountIds.size !== accounts.length) return "Duplicate account ID"
+  const invalidAccount = payload.transactions.find((transaction) =>
+    (transaction.accountId && !accountIds.has(transaction.accountId)) ||
+    (transaction.fromAccountId && !accountIds.has(transaction.fromAccountId)) ||
+    (transaction.toAccountId && !accountIds.has(transaction.toAccountId)))
+  if (invalidAccount) return `Missing account for transaction "${invalidAccount.description}"`
   return undefined
 }
 
@@ -280,7 +318,14 @@ export function importAllData(json: string): { success: boolean; error?: string 
     settings = settingsCheck.data
   }
 
-  const payload = { transactions: transactionCheck.data, categories, settings }
+  let accounts: Account[] | undefined
+  if (raw.accounts !== undefined) {
+    const accountCheck = z.array(accountSchema).max(50).safeParse(raw.accounts)
+    if (!accountCheck.success) return { success: false, error: "Invalid backup file: invalid accounts" }
+    accounts = accountCheck.data
+  }
+
+  const payload = { transactions: transactionCheck.data, categories, settings, accounts }
   const relationshipError = validateRelationships(payload)
   if (relationshipError) return { success: false, error: `Invalid backup file: ${relationshipError}` }
 
@@ -298,6 +343,7 @@ export function getStorageHealth(): { healthy: boolean; errors: string[]; hasRec
     [STORAGE_KEYS.TRANSACTIONS, z.array(transactionSchema)],
     [STORAGE_KEYS.CATEGORIES, z.array(categorySchema)],
     [STORAGE_KEYS.SETTINGS, settingsSchema],
+    [STORAGE_KEYS.ACCOUNTS, z.array(accountSchema)],
   ] as const
 
   for (const [key, schema] of checks) {

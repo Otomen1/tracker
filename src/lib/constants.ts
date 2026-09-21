@@ -1,4 +1,4 @@
-import { Category, Settings } from "@/types"
+import { Account, Category, Settings } from "@/types"
 
 const EPOCH = "2024-01-01T00:00:00.000Z"
 
@@ -24,9 +24,17 @@ export const STORAGE_KEYS = {
   ONBOARDED: "tracker_onboarded",
   RECOVERY: "tracker_recovery_snapshot",
   CORRUPTION: "tracker_storage_corruption",
+  ACCOUNTS: "tracker_accounts",
+  WALLET_MAPPINGS: "tracker_wallet_mappings",
+  ANDROID_SETUP: "tracker_android_setup",
 } as const
 
-export const SCHEMA_VERSION = "1"
+export const SCHEMA_VERSION = "2"
+
+export const DEFAULT_ANDROID_ACCOUNTS: Account[] = [
+  { id: "account_ryt", name: "Ryt Bank", currency: "MYR", openingBalance: 0, isActive: true, createdAt: EPOCH, updatedAt: EPOCH },
+  { id: "account_maybank", name: "Maybank Debit", currency: "MYR", openingBalance: 0, isActive: true, createdAt: EPOCH, updatedAt: EPOCH },
+]
 
 export const COLOR_PRESETS = [
   "#ef4444", "#f97316", "#eab308", "#22c55e", "#14b8a6",

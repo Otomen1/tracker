@@ -2,14 +2,14 @@
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react"
 import { DEFAULT_CATEGORIES, STORAGE_KEYS } from "@/lib/constants"
-import { Category, CategoryFormData, TransactionType } from "@/types"
+import { Category, CategoryFormData, EntryType } from "@/types"
 
 interface CategoriesContextValue {
   categories: Category[]
   addCategory: (data: CategoryFormData) => Category | null
   updateCategory: (id: string, data: Partial<CategoryFormData>) => boolean
   deleteCategory: (id: string, transactions: { categoryId: string }[]) => { success: boolean; error?: string }
-  getCategoriesForType: (type: TransactionType) => Category[]
+  getCategoriesForType: (type: EntryType) => Category[]
 }
 
 const CategoriesContext = createContext<CategoriesContextValue | null>(null)
@@ -109,7 +109,7 @@ export function CategoriesProvider({ children }: { children: React.ReactNode }) 
       : { success: false, error: "Category could not be saved" }
   }, [mutate])
 
-  const getCategoriesForType = useCallback((type: TransactionType) =>
+  const getCategoriesForType = useCallback((type: EntryType) =>
     currentRef.current.filter((category) => category.type === type), [])
 
   return (

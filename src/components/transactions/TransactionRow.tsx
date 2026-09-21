@@ -53,7 +53,7 @@ export function TransactionRow({
       <td className="py-2.5 px-4 max-w-[200px]">
         <div>
           <p className="text-sm text-zinc-900 dark:text-zinc-100 truncate">{transaction.description}</p>
-          <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400 sm:hidden">{category?.name ?? "Uncategorized"} · {formatDate(transaction.date)}</p>
+          <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400 sm:hidden">{transaction.type === "transfer" ? "Internal transfer" : category?.name ?? "Uncategorized"} · {formatDate(transaction.date)}</p>
           {transaction.notes && (
             <p className="text-xs text-zinc-400 truncate mt-0.5">{transaction.notes}</p>
           )}
@@ -89,26 +89,26 @@ export function TransactionRow({
           "text-xs px-2 py-0.5 rounded-full font-medium",
           transaction.type === "income"
             ? "bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400"
-            : "bg-rose-50 dark:bg-rose-950 text-rose-600 dark:text-rose-400"
+            : transaction.type === "expense" ? "bg-rose-50 dark:bg-rose-950 text-rose-600 dark:text-rose-400" : "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
         )}>
-          {transaction.type === "income" ? "Income" : "Expense"}
+          {transaction.type === "income" ? "Income" : transaction.type === "expense" ? "Expense" : "Transfer"}
         </span>
       </td>
       <td className={cn(
         "py-2.5 px-2 font-mono text-sm font-semibold tabular-nums text-right whitespace-nowrap sm:px-4",
-        transaction.type === "income" ? "text-emerald-600" : "text-rose-500"
+        transaction.type === "income" ? "text-emerald-600" : transaction.type === "expense" ? "text-rose-500" : "text-zinc-600 dark:text-zinc-300"
       )}>
-        {transaction.type === "income" ? "+" : "-"}{fmt(transaction.amount)}
+        {transaction.type === "income" ? "+" : transaction.type === "expense" ? "-" : ""}{fmt(transaction.amount)}
       </td>
       <td className="py-2.5 pl-1 pr-2 text-right sm:px-4">
         <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 group-focus-within:opacity-100 transition-opacity">
-          <Button
+          {transaction.type !== "transfer" && <Button
             size="icon" variant="ghost" className="h-8 w-8"
             aria-label={`Edit ${transaction.description}`}
             onClick={() => onEditRequest(transaction)}
           >
             <Pencil className="w-3.5 h-3.5" />
-          </Button>
+          </Button>}
           <Button
             size="icon" variant="ghost"
             className="h-8 w-8 text-rose-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950"

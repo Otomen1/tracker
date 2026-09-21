@@ -13,6 +13,8 @@ import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { PageHeader } from "@/components/layout/PageHeader"
 import { SettingsNav } from "@/components/settings/SettingsNav"
+import { AccountSettings } from "@/components/settings/AccountSettings"
+import { AndroidCaptureSettings } from "@/components/settings/AndroidCaptureSettings"
 
 function SettingGroup({ id, title, description, children, warning = false }: { id: string; title: string; description?: string; children: React.ReactNode; warning?: boolean }) {
   return (
@@ -93,6 +95,12 @@ export default function SettingsPage() {
         </SettingGroup>
 
         <SettingGroup id="finance" title="Finance" description="Categories, budgets, and savings goals">
+          <SettingSection title="Accounts" description="Opening balances used to calculate current balances">
+            <AccountSettings />
+          </SettingSection>
+
+          <Separator />
+
           <SettingSection title="Monthly Savings Goal" description="Target net savings per month">
             <SavingsGoalForm />
           </SettingSection>
@@ -113,6 +121,12 @@ export default function SettingsPage() {
         </SettingGroup>
 
         <SettingGroup id="notifications" title="Notifications" description="Reminders to keep your data up to date">
+          <SettingSection title="Bank transaction capture" description="Private Android notification processing">
+            <AndroidCaptureSettings />
+          </SettingSection>
+
+          <Separator />
+
           <SettingSection title="Daily Reminder" description="Get a notification to log your expenses each day">
             <ReminderSettings />
           </SettingSection>

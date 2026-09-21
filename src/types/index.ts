@@ -1,4 +1,21 @@
-export type TransactionType = "income" | "expense"
+export type EntryType = "income" | "expense"
+export type TransactionType = EntryType | "transfer"
+
+export interface Account {
+  id: string
+  name: string
+  currency: string
+  openingBalance: number
+  isActive: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+export interface NotificationSource {
+  provider: "ryt" | "mae" | "google_wallet"
+  fingerprint: string
+  capturedAt: string
+}
 
 export interface Transaction {
   id: string
@@ -14,6 +31,10 @@ export interface Transaction {
   recurringId?: string  // id of the template transaction this was auto-generated from
   createdAt: string
   updatedAt: string
+  accountId?: string
+  fromAccountId?: string
+  toAccountId?: string
+  notificationSource?: NotificationSource
 }
 
 export type CategoryType = "income" | "expense"
@@ -99,7 +120,7 @@ export interface AnnualSummary {
 }
 
 export interface TransactionFormData {
-  type: TransactionType
+  type: EntryType
   amount: string
   categoryId: string
   description: string
@@ -108,6 +129,7 @@ export interface TransactionFormData {
   tags?: string[]
   isRecurring?: boolean
   recurringDay?: number
+  accountId?: string
 }
 
 export interface CategoryFormData {
@@ -134,4 +156,23 @@ export interface TransactionFilters {
   minAmount?: number
   maxAmount?: number
   recurring?: boolean
+}
+
+export interface PendingTransaction {
+  id: string
+  provider: "ryt" | "mae"
+  fingerprint: string
+  direction: EntryType
+  amount: number
+  description: string
+  occurredAt: string
+  capturedAt: string
+  accountId: string
+}
+
+export interface WalletCardMapping {
+  id: string
+  cardLastFour: string
+  accountId: string
+  enabled: boolean
 }

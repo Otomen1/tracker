@@ -24,6 +24,8 @@ import { TransactionDialog } from "@/components/transactions/TransactionDialog"
 import { Skeleton } from "@/components/ui/skeleton"
 import { PageHeader } from "@/components/layout/PageHeader"
 import { NeedsAttention } from "@/components/dashboard/NeedsAttention"
+import { ReviewInboxCard } from "@/components/android/ReviewInboxCard"
+import { AccountSummary } from "@/components/accounts/AccountSummary"
 
 export default function DashboardPage() {
   const [selectedMonth, setSelectedMonth] = useState(getMonthKey())
@@ -82,6 +84,8 @@ export default function DashboardPage() {
         description={`Your financial overview for ${formatMonth(selectedMonth)}`}
         action={<MonthSelector month={selectedMonth} onChange={setSelectedMonth} />}
       />
+      <ReviewInboxCard />
+      <AccountSummary />
 
       {transactions.length === 0 && (
         <section

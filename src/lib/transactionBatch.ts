@@ -82,6 +82,7 @@ export function getSelectionTypeState(
   let sawExpense = false
   for (const t of transactions) {
     if (!selected.has(t.id)) continue
+    if (t.type === "transfer") return { isMixed: true, commonType: null }
     if (t.type === "income") sawIncome = true
     else sawExpense = true
     if (sawIncome && sawExpense) return { isMixed: true, commonType: null }

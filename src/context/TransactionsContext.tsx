@@ -4,7 +4,9 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState } f
 import { STORAGE_KEYS } from "@/lib/constants"
 import { getMonthKey } from "@/lib/formatters"
 import { applyBulkDelete, applyBulkRecategorize, applyBulkRestore } from "@/lib/transactionBatch"
-import { Transaction, TransactionFormData } from "@/types"
+import { EntryType, PendingTransaction, Transaction, TransactionFormData } from "@/types"
+
+export type CapturedTransactionResult = "added" | "duplicate" | "failed"
 
 type Mutation = (current: Transaction[]) => Transaction[]
 
@@ -18,6 +20,8 @@ interface TransactionsContextValue {
   bulkDeleteTransactions: (ids: string[], cascade: boolean) => boolean
   bulkRestoreTransactions: (items: Transaction[]) => boolean
   bulkRecategorize: (ids: string[], categoryId: string) => boolean
+  confirmCaptured: (pending: PendingTransaction, data: { type: EntryType; amount: number; categoryId: string; description: string; date: string; accountId: string }) => CapturedTransactionResult
+  confirmTransfer: (pending: PendingTransaction, fromAccountId: string, toAccountId: string, description: string, date: string) => CapturedTransactionResult
 }
 
 const TransactionsContext = createContext<TransactionsContextValue | null>(null)
@@ -142,6 +146,7 @@ export function TransactionsProvider({ children }: { children: React.ReactNode }
       recurringDay: data.isRecurring ? (data.recurringDay ?? new Date().getDate()) : undefined,
       createdAt: now,
       updatedAt: now,
+      accountId: data.accountId,
     }
     return [transaction, ...current]
   }), [mutate])
@@ -159,6 +164,45 @@ export function TransactionsProvider({ children }: { children: React.ReactNode }
     } : item)
   ), [mutate])
 
+  const confirmCaptured = useCallback((pending: PendingTransaction, data: { type: EntryType; amount: number; categoryId: string; description: string; date: string; accountId: string }): CapturedTransactionResult => {
+    if (currentRef.current.some((item) => item.notificationSource?.fingerprint === pending.fingerprint)) return "duplicate"
+    const now = new Date().toISOString()
+    const saved = mutate((current) => [{
+      id: crypto.randomUUID(),
+      type: data.type,
+      amount: data.amount,
+      categoryId: data.categoryId,
+      description: data.description,
+      date: data.date,
+      accountId: data.accountId,
+      notificationSource: { provider: pending.provider, fingerprint: pending.fingerprint, capturedAt: pending.capturedAt },
+      createdAt: now,
+      updatedAt: now,
+    }, ...current])
+    return saved ? "added" : "failed"
+  }, [mutate])
+
+  const confirmTransfer = useCallback((pending: PendingTransaction, fromAccountId: string, toAccountId: string, description: string, date: string): CapturedTransactionResult => {
+    if (currentRef.current.some((item) => item.notificationSource?.fingerprint === pending.fingerprint)) return "duplicate"
+    if (fromAccountId === toAccountId) return "failed"
+    const now = new Date().toISOString()
+    const saved = mutate((current) => [{
+      id: crypto.randomUUID(),
+      type: "transfer" as const,
+      amount: pending.amount,
+      categoryId: "",
+      description,
+      date,
+      accountId: fromAccountId,
+      fromAccountId,
+      toAccountId,
+      notificationSource: { provider: pending.provider, fingerprint: pending.fingerprint, capturedAt: pending.capturedAt },
+      createdAt: now,
+      updatedAt: now,
+    }, ...current])
+    return saved ? "added" : "failed"
+  }, [mutate])
+
   const value: TransactionsContextValue = {
     transactions,
     addTransaction,
@@ -171,6 +215,8 @@ export function TransactionsProvider({ children }: { children: React.ReactNode }
     bulkRecategorize: (ids, categoryId) => mutate((current) =>
       applyBulkRecategorize(current, ids, categoryId, new Date().toISOString())
     ),
+    confirmCaptured,
+    confirmTransfer,
   }
 
   return <TransactionsContext.Provider value={value}>{children}</TransactionsContext.Provider>

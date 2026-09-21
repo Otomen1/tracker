@@ -49,11 +49,11 @@ export function RecentTransactions({ transactions, categories }: Props) {
                     </div>
                     <div>
                       <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100 leading-none">{t.description}</p>
-                      <p className="text-xs text-zinc-400 mt-0.5">{cat?.name} · {formatDate(t.date)}</p>
+                      <p className="text-xs text-zinc-400 mt-0.5">{t.type === "transfer" ? "Internal transfer" : cat?.name} · {formatDate(t.date)}</p>
                     </div>
                   </div>
-                  <span className={cn("text-sm font-semibold whitespace-nowrap", t.type === "income" ? "text-emerald-600" : "text-rose-500")}>
-                    {t.type === "income" ? "+" : "-"}{fmt(t.amount)}
+                  <span className={cn("text-sm font-semibold whitespace-nowrap", t.type === "income" ? "text-emerald-600" : t.type === "expense" ? "text-rose-500" : "text-zinc-600 dark:text-zinc-300")}>
+                    {t.type === "income" ? "+" : t.type === "expense" ? "-" : ""}{fmt(t.amount)}
                   </span>
                 </div>
               )

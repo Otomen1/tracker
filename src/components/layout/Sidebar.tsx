@@ -2,8 +2,9 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { LayoutDashboard, ArrowLeftRight, Wallet, BarChart3, Settings } from "lucide-react"
+import { LayoutDashboard, ArrowLeftRight, Wallet, BarChart3, Settings, BellRing } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { nativeCapture } from "@/lib/nativeCapture"
 
 const navItems = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -14,6 +15,7 @@ const navItems = [
 
 export function Sidebar() {
   const pathname = usePathname()
+  const visibleItems = nativeCapture.isNative() ? [navItems[0], { href: "/inbox", label: "Review inbox", icon: BellRing }, ...navItems.slice(1)] : navItems
 
   return (
     <aside className="hidden lg:flex flex-col w-56 min-h-screen bg-zinc-900 text-zinc-100 fixed left-0 top-0 bottom-0 z-40">
@@ -25,7 +27,7 @@ export function Sidebar() {
       </div>
 
       <nav className="flex-1 px-3 py-4 space-y-1">
-        {navItems.map(({ href, label, icon: Icon }) => {
+        {visibleItems.map(({ href, label, icon: Icon }) => {
           const isActive = pathname === href
           return (
             <Link

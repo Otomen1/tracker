@@ -16,6 +16,8 @@ import { useToast } from "@/context/ToastContext"
 import { TransactionFormData } from "@/types"
 import { TransactionDialog } from "@/components/transactions/TransactionDialog"
 import { usePathname } from "next/navigation"
+import { AndroidSetup } from "@/components/android/AndroidSetup"
+import { AppLock } from "@/components/android/AppLock"
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   useScheduledBackup()
@@ -67,6 +69,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         categories={categories}
         onSubmit={handleQuickAdd}
       />
+      <AndroidSetup />
+      <AppLock />
     </div>
   )
 }

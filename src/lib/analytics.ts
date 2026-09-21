@@ -237,11 +237,12 @@ export function getAnnualSummary(
     if (!t.date.startsWith(yearStr)) continue
     const monthKey = t.date.slice(0, 7)
     const bucket = monthly[monthKey] ?? (monthly[monthKey] = { inc: 0, exp: 0, count: 0 })
-    bucket.count += 1
     if (t.type === "income") {
+      bucket.count += 1
       totalIncome += t.amount
       bucket.inc += t.amount
-    } else {
+    } else if (t.type === "expense") {
+      bucket.count += 1
       totalExpenses += t.amount
       bucket.exp += t.amount
       const entry = catMap[t.categoryId] ?? (catMap[t.categoryId] = { sum: 0, count: 0 })
@@ -324,6 +325,7 @@ export function getCumulativeBalance(
 
   const monthlyNet: Record<string, number> = {}
   for (const t of sorted) {
+    if (t.type === "transfer") continue
     const m = t.date.slice(0, 7)
     monthlyNet[m] = (monthlyNet[m] ?? 0) + (t.type === "income" ? t.amount : -t.amount)
   }
@@ -372,12 +374,12 @@ export function getSpendingInsights(
   let curIncome = 0, curExpenses = 0
   for (const t of curTxns) {
     if (t.type === "income") curIncome += t.amount
-    else curExpenses += t.amount
+    else if (t.type === "expense") curExpenses += t.amount
   }
   let prevExpenses = 0, prevIncome = 0
   for (const t of prevTxns) {
     if (t.type === "expense") prevExpenses += t.amount
-    else prevIncome += t.amount
+    else if (t.type === "income") prevIncome += t.amount
   }
 
   const curBreakdown = getExpenseBreakdown(transactions, monthKey, categories)

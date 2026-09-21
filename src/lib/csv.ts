@@ -19,10 +19,10 @@ export function transactionsToCSV(
     .sort((a, b) => b.date.localeCompare(a.date))
     .map((t) => [
       escapeCsvCell(formatDate(t.date)),
-      escapeCsvCell(t.type === "income" ? "Income" : "Expense"),
-      escapeCsvCell(getCategoryName(t.categoryId)),
+      escapeCsvCell(t.type === "income" ? "Income" : t.type === "expense" ? "Expense" : "Transfer"),
+      escapeCsvCell(t.type === "transfer" ? "Internal transfer" : getCategoryName(t.categoryId)),
       escapeCsvCell(t.description),
-      t.type === "income" ? t.amount.toFixed(2) : `-${t.amount.toFixed(2)}`,
+      t.type === "income" ? t.amount.toFixed(2) : t.type === "expense" ? `-${t.amount.toFixed(2)}` : t.amount.toFixed(2),
     ])
 
   return [headers.join(","), ...rows.map((r) => r.join(","))].join("\n")

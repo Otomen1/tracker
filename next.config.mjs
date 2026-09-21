@@ -1,6 +1,8 @@
 import withPWA from "@ducanh2912/next-pwa";
 import withBundleAnalyzer from "@next/bundle-analyzer";
 
+const isCapacitorBuild = process.env.CAPACITOR_BUILD === "1";
+
 const securityHeaders = [
   // A05: prevent clickjacking (belt-and-suspenders with CSP frame-ancestors)
   { key: "X-Frame-Options", value: "DENY" },
@@ -45,14 +47,13 @@ const nextConfig = withPWA({
   cacheOnFrontEndNav: true,
   aggressiveFrontEndNavCaching: true,
   reloadOnOnline: true,
-  disable: process.env.NODE_ENV === "development",
+  disable: process.env.NODE_ENV === "development" || isCapacitorBuild,
   fallbacks: {
     document: "/offline.html",
   },
 })({
-  async headers() {
-    return [{ source: "/(.*)", headers: securityHeaders }];
-  },
+  ...(isCapacitorBuild ? { output: "export", images: { unoptimized: true } } : {}),
+  ...(!isCapacitorBuild ? { async headers() { return [{ source: "/(.*)", headers: securityHeaders }]; } } : {}),
 });
 
 export default withBundleAnalyzer({ enabled: process.env.ANALYZE === "true" })(nextConfig);

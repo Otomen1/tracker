@@ -127,6 +127,7 @@ export function TransactionFiltersBar({ filters, categories, tags, fmt, onChange
             <SelectItem value="all">All types</SelectItem>
             <SelectItem value="income">Income</SelectItem>
             <SelectItem value="expense">Expense</SelectItem>
+            <SelectItem value="transfer">Transfer</SelectItem>
           </SelectContent>
         </Select></div>
 
@@ -261,7 +262,7 @@ export function TransactionFiltersBar({ filters, categories, tags, fmt, onChange
           <span className="mr-1 text-xs font-medium text-zinc-500">Active:</span>
           {filters.type && (
             <FilterChip
-              label={filters.type === "income" ? "Income" : "Expense"}
+              label={filters.type === "income" ? "Income" : filters.type === "expense" ? "Expense" : "Transfer"}
               onRemove={() => onChange({ ...filters, type: "" as TransactionType, categoryId: "" })}
             />
           )}

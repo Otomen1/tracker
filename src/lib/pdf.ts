@@ -6,7 +6,7 @@ function computeTotals(transactions: Transaction[]) {
   let expenses = 0
   for (const t of transactions) {
     if (t.type === "income") income += t.amount
-    else expenses += t.amount
+    else if (t.type === "expense") expenses += t.amount
   }
   return { income, expenses, net: income - expenses }
 }
@@ -69,9 +69,9 @@ export async function transactionsToPDF(
   const tableData = sorted.map((t) => [
     formatDate(t.date),
     t.description,
-    getCategoryName(t.categoryId),
-    t.type === "income" ? "Income" : "Expense",
-    (t.type === "income" ? "+" : "-") + fmt(t.amount),
+    t.type === "transfer" ? "Internal transfer" : getCategoryName(t.categoryId),
+    t.type === "income" ? "Income" : t.type === "expense" ? "Expense" : "Transfer",
+    (t.type === "income" ? "+" : t.type === "expense" ? "-" : "") + fmt(t.amount),
   ])
 
   autoTable(doc, {

@@ -16,6 +16,7 @@ import { shouldAutoFillDescription } from "@/lib/descriptionDefault"
 import { cn } from "@/lib/utils"
 import { X, RefreshCw, Plus, ChevronDown } from "lucide-react"
 import { useToast } from "@/context/ToastContext"
+import { useAccounts } from "@/context/AccountsContext"
 
 const NEW_CATEGORY_VALUE = "__new_category__"
 
@@ -28,6 +29,7 @@ const schema = z.object({
   notes: z.string().max(500).optional(),
   isRecurring: z.boolean().optional(),
   recurringDay: z.number().min(1).max(31).optional(),
+  accountId: z.string().optional(),
 })
 
 interface Props {
@@ -47,6 +49,8 @@ export function TransactionForm({ transaction, categories, onSubmit, onCancel }:
   const [createdCategories, setCreatedCategories] = useState<Category[]>([])
   const { addCategory } = useCategories()
   const { showToast } = useToast()
+  const { accounts } = useAccounts()
+  const activeAccounts = accounts.filter((account) => account.isActive)
 
   // Editing an existing transaction always has real values in the "More
   // details" fields (a saved date, possibly notes/tags/recurring) - expanding
@@ -69,7 +73,7 @@ export function TransactionForm({ transaction, categories, onSubmit, onCancel }:
   } = useForm<TransactionFormData>({
     resolver: zodResolver(schema),
     defaultValues: {
-      type: transaction?.type ?? "expense",
+      type: transaction?.type === "income" ? "income" : "expense",
       amount: transaction?.amount?.toString() ?? "",
       categoryId: transaction?.categoryId ?? "",
       description: transaction?.description ?? "",
@@ -77,6 +81,7 @@ export function TransactionForm({ transaction, categories, onSubmit, onCancel }:
       notes: transaction?.notes ?? "",
       isRecurring: transaction?.isRecurring ?? false,
       recurringDay: transaction?.recurringDay ?? new Date().getDate(),
+      accountId: transaction?.accountId ?? activeAccounts[0]?.id,
     },
   })
 
@@ -207,6 +212,14 @@ export function TransactionForm({ transaction, categories, onSubmit, onCancel }:
             ))}
           </div>
         </div>
+
+        {activeAccounts.length > 0 && <div className="space-y-1.5">
+          <Label>Account</Label>
+          <Select value={watch("accountId") ?? activeAccounts[0].id} onValueChange={(value) => setValue("accountId", value)}>
+            <SelectTrigger aria-label="Account"><SelectValue placeholder="Choose an account" /></SelectTrigger>
+            <SelectContent>{activeAccounts.map((account) => <SelectItem key={account.id} value={account.id}>{account.name}</SelectItem>)}</SelectContent>
+          </Select>
+        </div>}
 
         <div className="space-y-1.5">
           <Label htmlFor="category-trigger">Category</Label>

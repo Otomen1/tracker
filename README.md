@@ -26,4 +26,16 @@ The app stores data in browser local storage. Export backups regularly from **Se
 
 ## Technology
 
-Next.js 15 App Router, React 18, TypeScript, Tailwind CSS, Radix UI, Recharts, Zod, Vitest, and PWA support.
+Next.js 16 App Router, React 19, TypeScript, Tailwind CSS, Radix UI, Recharts, Zod, Vitest, and PWA support.
+
+## Private Android build
+
+The Capacitor Android target adds local-only notification capture for Ryt Bank and MAE. It stores normalized pending items in an Android Keystore-encrypted queue, requires review before saving, and never uploads notification or financial data.
+
+```bash
+npm run android:sync
+cd android
+./gradlew testDebugUnitTest assembleRelease
+```
+
+Release signing reads `android/keystore.properties`; signing files and private APK outputs are excluded from Git. Notification access is granted explicitly during first-run setup. Google Wallet capture remains disabled until a real notification format is tested.
