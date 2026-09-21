@@ -7,6 +7,7 @@ import { PendingTransaction } from "@/types"
 interface ReviewInboxContextValue {
   items: PendingTransaction[]
   loading: boolean
+  error: string | null
   refresh: () => Promise<void>
   discard: (id: string) => Promise<void>
   resolve: (id: string) => Promise<void>
@@ -17,9 +18,11 @@ const ReviewInboxContext = createContext<ReviewInboxContextValue | null>(null)
 export function ReviewInboxProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<PendingTransaction[]>([])
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   const refresh = useCallback(async () => {
-    try { setItems(await nativeCapture.listPending()) } finally { setLoading(false) }
+    setLoading(true)
+    try { const result = await nativeCapture.listPending(); setItems(result.items); setError(result.error ?? null) } finally { setLoading(false) }
   }, [])
 
   useEffect(() => {
@@ -39,7 +42,7 @@ export function ReviewInboxProvider({ children }: { children: React.ReactNode })
     setItems((current) => current.filter((item) => item.id !== id))
   }, [])
 
-  const value = useMemo(() => ({ items, loading, refresh, discard, resolve: discard }), [items, loading, refresh, discard])
+  const value = useMemo(() => ({ items, loading, error, refresh, discard, resolve: discard }), [items, loading, error, refresh, discard])
   return <ReviewInboxContext.Provider value={value}>{children}</ReviewInboxContext.Provider>
 }
 

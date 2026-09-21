@@ -38,8 +38,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   // dashboard already presents an explicit primary add action.
   const showQuickAdd = hydrated && pathname === "/transactions"
 
-  const handleQuickAdd = (data: TransactionFormData) => {
-    if (!addTransaction(data)) {
+  const handleQuickAdd = async (data: TransactionFormData) => {
+    if (!await addTransaction(data)) {
       showToast("Transaction could not be saved. Check browser storage and try again.", "error")
       return false
     }

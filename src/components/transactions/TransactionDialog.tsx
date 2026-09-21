@@ -14,7 +14,7 @@ interface Props {
   onOpenChange: (open: boolean) => void
   transaction?: Transaction
   categories: Category[]
-  onSubmit: (data: TransactionFormData) => boolean | void
+  onSubmit: (data: TransactionFormData) => boolean | void | Promise<boolean | void>
 }
 
 export function TransactionDialog({
@@ -24,8 +24,8 @@ export function TransactionDialog({
   categories,
   onSubmit,
 }: Props) {
-  const handleSubmit = (data: TransactionFormData) => {
-    if (onSubmit(data) !== false) onOpenChange(false)
+  const handleSubmit = async (data: TransactionFormData) => {
+    if (await onSubmit(data) !== false) onOpenChange(false)
   }
 
   return (

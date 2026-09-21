@@ -2,11 +2,13 @@ package com.otomen.tracker;
 
 import android.os.Bundle;
 import android.content.Intent;
+import android.view.WindowManager;
 import com.getcapacitor.BridgeActivity;
 
 public class MainActivity extends BridgeActivity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
+        getWindow().setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE);
         registerPlugin(TrackerNativePlugin.class);
         super.onCreate(savedInstanceState);
         openInboxIfRequested(getIntent());

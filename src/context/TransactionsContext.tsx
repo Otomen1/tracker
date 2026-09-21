@@ -12,16 +12,16 @@ type Mutation = (current: Transaction[]) => Transaction[]
 
 interface TransactionsContextValue {
   transactions: Transaction[]
-  addTransaction: (data: TransactionFormData) => boolean
-  updateTransaction: (id: string, data: TransactionFormData) => boolean
-  deleteTransaction: (id: string) => boolean
-  deleteWithCascade: (id: string) => boolean
-  restoreTransaction: (transaction: Transaction) => boolean
-  bulkDeleteTransactions: (ids: string[], cascade: boolean) => boolean
-  bulkRestoreTransactions: (items: Transaction[]) => boolean
-  bulkRecategorize: (ids: string[], categoryId: string) => boolean
-  confirmCaptured: (pending: PendingTransaction, data: { type: EntryType; amount: number; categoryId: string; description: string; date: string; accountId: string }) => CapturedTransactionResult
-  confirmTransfer: (pending: PendingTransaction, fromAccountId: string, toAccountId: string, description: string, date: string) => CapturedTransactionResult
+  addTransaction: (data: TransactionFormData) => Promise<boolean>
+  updateTransaction: (id: string, data: TransactionFormData) => Promise<boolean>
+  deleteTransaction: (id: string) => Promise<boolean>
+  deleteWithCascade: (id: string) => Promise<boolean>
+  restoreTransaction: (transaction: Transaction) => Promise<boolean>
+  bulkDeleteTransactions: (ids: string[], cascade: boolean) => Promise<boolean>
+  bulkRestoreTransactions: (items: Transaction[]) => Promise<boolean>
+  bulkRecategorize: (ids: string[], categoryId: string) => Promise<boolean>
+  confirmCaptured: (pending: PendingTransaction, data: { type: EntryType; amount: number; categoryId: string; description: string; date: string; accountId: string }) => Promise<CapturedTransactionResult>
+  confirmTransfer: (pending: PendingTransaction, fromAccountId: string, toAccountId: string, description: string, date: string) => Promise<CapturedTransactionResult>
 }
 
 const TransactionsContext = createContext<TransactionsContextValue | null>(null)
@@ -65,9 +65,10 @@ export function TransactionsProvider({ children }: { children: React.ReactNode }
     }
   }, [replaceFromStorage])
 
-  const mutate = useCallback((mutation: Mutation): boolean => {
-    const current = currentRef.current
-    const next = mutation(current)
+  const mutate = useCallback(async (mutation: Mutation): Promise<boolean> => {
+    const commit = () => {
+      const current = (() => { try { const raw = localStorage.getItem(STORAGE_KEYS.TRANSACTIONS); const parsed = JSON.parse(raw ?? "[]"); return Array.isArray(parsed) ? parsed : currentRef.current } catch { return currentRef.current } })()
+      const next = mutation(current)
     if (next === current || JSON.stringify(next) === JSON.stringify(current)) return true
 
     try {
@@ -84,9 +85,19 @@ export function TransactionsProvider({ children }: { children: React.ReactNode }
       window.dispatchEvent(new CustomEvent(quotaExceeded ? "storage-quota-exceeded" : WRITE_FAILED_EVENT))
       return false
     }
+    }
+    try {
+      if (typeof navigator !== "undefined" && "locks" in navigator) {
+        return await navigator.locks.request("tracker-transactions", { mode: "exclusive" }, commit)
+      }
+      return commit()
+    } catch {
+      window.dispatchEvent(new CustomEvent(WRITE_FAILED_EVENT))
+      return false
+    }
   }, [])
 
-  const generateRecurring = useCallback(() => mutate((current) => {
+  const generateRecurring = useCallback(() => void mutate((current) => {
     const currentMonth = getMonthKey()
     const additions: Transaction[] = []
     for (const template of current.filter((item) => item.isRecurring && !item.recurringId)) {
@@ -154,10 +165,12 @@ export function TransactionsProvider({ children }: { children: React.ReactNode }
     } : item)
   ), [mutate])
 
-  const confirmCaptured = useCallback((pending: PendingTransaction, data: { type: EntryType; amount: number; categoryId: string; description: string; date: string; accountId: string }): CapturedTransactionResult => {
-    if (currentRef.current.some((item) => item.notificationSource?.fingerprint === pending.fingerprint)) return "duplicate"
+  const confirmCaptured = useCallback(async (pending: PendingTransaction, data: { type: EntryType; amount: number; categoryId: string; description: string; date: string; accountId: string }): Promise<CapturedTransactionResult> => {
     const now = new Date().toISOString()
-    const saved = mutate((current) => [{
+    let duplicate = false
+    const saved = await mutate((current) => {
+      if (current.some((item) => item.notificationSource?.fingerprint === pending.fingerprint)) { duplicate = true; return current }
+      return [{
       id: crypto.randomUUID(),
       type: data.type,
       amount: data.amount,
@@ -168,15 +181,18 @@ export function TransactionsProvider({ children }: { children: React.ReactNode }
       notificationSource: { provider: pending.provider, fingerprint: pending.fingerprint, capturedAt: pending.capturedAt },
       createdAt: now,
       updatedAt: now,
-    }, ...current])
-    return saved ? "added" : "failed"
+    }, ...current]
+    })
+    return !saved ? "failed" : duplicate ? "duplicate" : "added"
   }, [mutate])
 
-  const confirmTransfer = useCallback((pending: PendingTransaction, fromAccountId: string, toAccountId: string, description: string, date: string): CapturedTransactionResult => {
-    if (currentRef.current.some((item) => item.notificationSource?.fingerprint === pending.fingerprint)) return "duplicate"
+  const confirmTransfer = useCallback(async (pending: PendingTransaction, fromAccountId: string, toAccountId: string, description: string, date: string): Promise<CapturedTransactionResult> => {
     if (fromAccountId === toAccountId) return "failed"
     const now = new Date().toISOString()
-    const saved = mutate((current) => [{
+    let duplicate = false
+    const saved = await mutate((current) => {
+      if (current.some((item) => item.notificationSource?.fingerprint === pending.fingerprint)) { duplicate = true; return current }
+      return [{
       id: crypto.randomUUID(),
       type: "transfer" as const,
       amount: pending.amount,
@@ -189,8 +205,9 @@ export function TransactionsProvider({ children }: { children: React.ReactNode }
       notificationSource: { provider: pending.provider, fingerprint: pending.fingerprint, capturedAt: pending.capturedAt },
       createdAt: now,
       updatedAt: now,
-    }, ...current])
-    return saved ? "added" : "failed"
+    }, ...current]
+    })
+    return !saved ? "failed" : duplicate ? "duplicate" : "added"
   }, [mutate])
 
   const value: TransactionsContextValue = {

@@ -35,7 +35,7 @@ const schema = z.object({
 interface Props {
   transaction?: Transaction
   categories: Category[]
-  onSubmit: (data: TransactionFormData) => boolean | void
+  onSubmit: (data: TransactionFormData) => boolean | void | Promise<boolean | void>
   onCancel: () => void
 }
 

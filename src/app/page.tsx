@@ -47,8 +47,8 @@ export default function DashboardPage() {
   const heroUsesTopInsight = overBudgetCategories.length === 0 && insights.length > 0
   const insightsForList = heroUsesTopInsight ? insights.slice(1) : insights
 
-  const handleAddTransaction = (data: TransactionFormData) => {
-    if (!addTransaction(data)) {
+  const handleAddTransaction = async (data: TransactionFormData) => {
+    if (!await addTransaction(data)) {
       showToast("Transaction could not be saved. Check browser storage and try again.", "error")
       return false
     }

@@ -39,8 +39,8 @@ function ReviewItem({ item }: { item: PendingTransaction }) {
     if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) return showToast("Enter a valid amount.", "error")
     if (!transfer && !categoryId) return showToast("Choose a category before confirming.", "error")
     const result = transfer
-      ? confirmTransfer(item, accountId, toAccountId, description, date)
-      : confirmCaptured(item, { type, amount: parsedAmount, categoryId, description, date, accountId })
+      ? await confirmTransfer(item, accountId, toAccountId, description, date)
+      : await confirmCaptured(item, { type, amount: parsedAmount, categoryId, description, date, accountId })
     if (result === "failed") return showToast("Transaction could not be saved.", "error")
     await resolve(item.id)
     showToast(result === "duplicate" ? "Already saved; duplicate removed from review." : transfer ? "Transfer confirmed" : "Transaction confirmed", result === "duplicate" ? "warning" : "success")
@@ -61,6 +61,6 @@ function ReviewItem({ item }: { item: PendingTransaction }) {
 }
 
 export default function InboxPage() {
-  const { items, loading, refresh } = useReviewInbox()
-  return <div className="space-y-5"><PageHeader title="Review inbox" description="Confirm transactions detected from Ryt Bank and MAE" action={<Button variant="outline" size="sm" onClick={() => void refresh()}><RefreshCw />Refresh</Button>} />{loading ? <p className="text-sm text-zinc-500">Checking secure inbox…</p> : items.length ? <div className="space-y-4">{items.map((item) => <ReviewItem key={item.id} item={item} />)}</div> : <div className="rounded-xl border border-dashed border-zinc-300 px-5 py-12 text-center dark:border-zinc-700"><BellRing className="mx-auto h-9 w-9 text-zinc-400" /><h2 className="mt-3 font-semibold">Nothing waiting for review</h2><p className="mt-1 text-sm text-zinc-500">New supported bank notifications will appear here.</p></div>}</div>
+  const { items, loading, error, refresh } = useReviewInbox()
+  return <div className="space-y-5"><PageHeader title="Review inbox" description="Confirm transactions detected from Ryt Bank and MAE" action={<Button variant="outline" size="sm" onClick={() => void refresh()}><RefreshCw />Refresh</Button>} />{error && <p role="alert" className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100">{error}</p>}{loading ? <p className="text-sm text-zinc-500">Checking secure inbox…</p> : items.length ? <div className="space-y-4">{items.map((item) => <ReviewItem key={item.id} item={item} />)}</div> : <div className="rounded-xl border border-dashed border-zinc-300 px-5 py-12 text-center dark:border-zinc-700"><BellRing className="mx-auto h-9 w-9 text-zinc-400" /><h2 className="mt-3 font-semibold">Nothing waiting for review</h2><p className="mt-1 text-sm text-zinc-500">New supported bank notifications will appear here.</p></div>}</div>
 }

@@ -27,12 +27,12 @@ interface Props {
   transactions: Transaction[]
   categories: Category[]
   filterKey?: string
-  onRestore: (transaction: Transaction) => boolean
-  onUpdate: (id: string, data: TransactionFormData) => boolean
-  onDelete: (id: string, cascade: boolean) => boolean
-  onBulkDelete: (ids: string[], cascade: boolean) => boolean
-  onBulkRestore: (transactions: Transaction[]) => boolean
-  onBulkRecategorize: (ids: string[], categoryId: string) => boolean
+  onRestore: (transaction: Transaction) => Promise<boolean>
+  onUpdate: (id: string, data: TransactionFormData) => Promise<boolean>
+  onDelete: (id: string, cascade: boolean) => Promise<boolean>
+  onBulkDelete: (ids: string[], cascade: boolean) => Promise<boolean>
+  onBulkRestore: (transactions: Transaction[]) => Promise<boolean>
+  onBulkRecategorize: (ids: string[], categoryId: string) => Promise<boolean>
   hasTransactions?: boolean
   onAddTransaction?: () => void
 }
@@ -102,10 +102,10 @@ export function TransactionList({
     prevSelectModeRef.current = selectMode
   }, [selectMode])
 
-  const handleDeleteConfirm = useCallback((cascade: boolean) => {
+  const handleDeleteConfirm = useCallback(async (cascade: boolean) => {
     if (!deleteTarget) return
     const deleted = deleteTarget
-    if (!onDelete(deleted.id, cascade)) return
+    if (!await onDelete(deleted.id, cascade)) return
     setDeleteTarget(null)
 
     const entryId = crypto.randomUUID()
@@ -118,13 +118,13 @@ export function TransactionList({
     setUndoQueue((prev) => [{ id: entryId, transactions: [deleted] }, ...prev])
   }, [deleteTarget, onDelete])
 
-  const handleUndo = useCallback(() => {
+  const handleUndo = useCallback(async () => {
     if (undoQueue.length === 0) return
     const entry = undoQueue[0]
     const timer = undoTimersRef.current.get(entry.id)
     if (timer) clearTimeout(timer)
     undoTimersRef.current.delete(entry.id)
-    if (onBulkRestore(entry.transactions)) setUndoQueue((q) => q.slice(1))
+    if (await onBulkRestore(entry.transactions)) setUndoQueue((q) => q.slice(1))
   }, [undoQueue, onBulkRestore])
 
   const exitSelectMode = useCallback(() => {
@@ -175,7 +175,7 @@ export function TransactionList({
     [categories, selectionTypeState.commonType]
   )
 
-  const handleBulkDeleteConfirm = useCallback((cascade: boolean) => {
+  const handleBulkDeleteConfirm = useCallback(async (cascade: boolean) => {
     const ids = Array.from(selectedIds)
     if (ids.length === 0) return
     // Capture everything this action will actually remove, including any
@@ -186,7 +186,7 @@ export function TransactionList({
       (t) => selectedIds.has(t.id) || (cascade && !!t.recurringId && selectedIds.has(t.recurringId))
     )
 
-    if (!onBulkDelete(ids, cascade)) return
+    if (!await onBulkDelete(ids, cascade)) return
     setBulkDeleteOpen(false)
     exitSelectMode()
 
@@ -200,9 +200,9 @@ export function TransactionList({
     setUndoQueue((prev) => [{ id: entryId, transactions: captured }, ...prev])
   }, [selectedIds, transactions, onBulkDelete, exitSelectMode])
 
-  const handleRecategorizeConfirm = useCallback(() => {
+  const handleRecategorizeConfirm = useCallback(async () => {
     if (!recategorizeCategoryId || selectedIds.size === 0) return
-    if (!onBulkRecategorize(Array.from(selectedIds), recategorizeCategoryId)) return
+    if (!await onBulkRecategorize(Array.from(selectedIds), recategorizeCategoryId)) return
     setRecategorizeOpen(false)
     setRecategorizeCategoryId("")
     exitSelectMode()
@@ -373,9 +373,9 @@ export function TransactionList({
         onOpenChange={(open) => { if (!open) setEditTarget(null) }}
         transaction={editTarget ?? undefined}
         categories={categories}
-        onSubmit={(data) => {
+        onSubmit={async (data) => {
           if (!editTarget) return false
-          const saved = onUpdate(editTarget.id, data)
+          const saved = await onUpdate(editTarget.id, data)
           if (saved) setEditTarget(null)
           return saved
         }}

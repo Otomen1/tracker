@@ -57,8 +57,8 @@ function TransactionsPageContent() {
     return Array.from(set).sort()
   }, [sorted])
 
-  const handleAdd = useCallback((data: TransactionFormData) => {
-    if (!addTransaction(data)) {
+  const handleAdd = useCallback(async (data: TransactionFormData) => {
+    if (!await addTransaction(data)) {
       showToast("Transaction could not be saved. Check browser storage and try again.", "error")
       return false
     }
@@ -68,8 +68,8 @@ function TransactionsPageContent() {
     return true
   }, [addTransaction, showToast, checkBudget, transactions])
 
-  const handleUpdate = useCallback((id: string, data: TransactionFormData) => {
-    if (!updateTransaction(id, data)) {
+  const handleUpdate = useCallback(async (id: string, data: TransactionFormData) => {
+    if (!await updateTransaction(id, data)) {
       showToast("Changes could not be saved. Check browser storage and try again.", "error")
       return false
     }
@@ -78,29 +78,29 @@ function TransactionsPageContent() {
     return true
   }, [updateTransaction, showToast, checkBudget, transactions])
 
-  const handleDelete = (id: string, cascade: boolean) => {
-    const saved = cascade ? deleteWithCascade(id) : deleteTransaction(id)
+  const handleDelete = async (id: string, cascade: boolean) => {
+    const saved = cascade ? await deleteWithCascade(id) : await deleteTransaction(id)
     if (!saved) showToast("Transaction could not be deleted. Your data was kept.", "error")
     else showToast("Transaction deleted", "success")
     return saved
   }
 
-  const handleBulkDelete = useCallback((ids: string[], cascade: boolean) => {
-    const saved = bulkDeleteTransactions(ids, cascade)
+  const handleBulkDelete = useCallback(async (ids: string[], cascade: boolean) => {
+    const saved = await bulkDeleteTransactions(ids, cascade)
     if (!saved) showToast("Transactions could not be deleted. Your data was kept.", "error")
     else showToast(`${ids.length} transaction${ids.length === 1 ? "" : "s"} deleted`, "success")
     return saved
   }, [bulkDeleteTransactions, showToast])
 
-  const handleBulkRestore = useCallback((items: Transaction[]) => {
-    const saved = bulkRestoreTransactions(items)
+  const handleBulkRestore = useCallback(async (items: Transaction[]) => {
+    const saved = await bulkRestoreTransactions(items)
     if (!saved) showToast("Transactions could not be restored.", "error")
     else showToast(`${items.length} transaction${items.length === 1 ? "" : "s"} restored`, "success")
     return saved
   }, [bulkRestoreTransactions, showToast])
 
-  const handleBulkRecategorize = useCallback((ids: string[], categoryId: string) => {
-    if (!bulkRecategorize(ids, categoryId)) {
+  const handleBulkRecategorize = useCallback(async (ids: string[], categoryId: string) => {
+    if (!await bulkRecategorize(ids, categoryId)) {
       showToast("Transactions could not be recategorized.", "error")
       return false
     }

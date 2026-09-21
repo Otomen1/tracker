@@ -61,16 +61,19 @@ class TrackerNativePlugin : Plugin() {
     @com.getcapacitor.PluginMethod
     fun listPending(call: PluginCall) {
         val result = JSArray()
-        SecurePendingStore(context).list().forEach { result.put(it) }
-        call.resolve(JSObject().put("items", result))
+        val pending = SecurePendingStore(context).list()
+        pending.items.forEach { result.put(it) }
+        call.resolve(JSObject().put("items", result).put("error", pending.error))
     }
 
     @com.getcapacitor.PluginMethod
     fun discardPending(call: PluginCall) {
         val id = call.getString("id") ?: return call.reject("Missing pending transaction id")
-        SecurePendingStore(context).remove(id)
-        call.resolve()
+        if (SecurePendingStore(context).remove(id)) call.resolve() else call.reject("Could not update the secure review inbox")
     }
+
+    @com.getcapacitor.PluginMethod
+    fun dismissPendingError(call: PluginCall) { SecurePendingStore(context).dismissError(); call.resolve() }
 
     @com.getcapacitor.PluginMethod
     fun authenticate(call: PluginCall) {
