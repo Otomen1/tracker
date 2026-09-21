@@ -58,7 +58,7 @@ export const CURRENCIES = [
 ]
 
 export const DEFAULT_SETTINGS: Settings = {
-  currency: "USD",
+  currency: "MYR",
   theme: "system",
   monthlySavingsGoal: 0,
   backupInterval: "never",

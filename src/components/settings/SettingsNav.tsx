@@ -32,7 +32,7 @@ export function SettingsNav() {
 
   const navigate = (id: string) => {
     setActive(id as typeof active)
-    document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" })
+    document.getElementById(id)?.scrollIntoView({ behavior: "auto", block: "start" })
     history.replaceState(null, "", `#${id}`)
   }
 
@@ -69,4 +69,3 @@ export function SettingsNav() {
     </nav>
   )
 }
-

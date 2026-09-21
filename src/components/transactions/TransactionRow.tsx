@@ -50,7 +50,7 @@ export function TransactionRow({
       <td className="hidden py-2.5 px-4 text-sm text-zinc-500 dark:text-zinc-400 whitespace-nowrap sm:table-cell">
         {formatDate(transaction.date)}
       </td>
-      <td className="py-2.5 px-4 max-w-[200px]">
+      <td className="py-3 px-4 max-w-[200px] sm:py-2.5">
         <div>
           <p className="text-sm text-zinc-900 dark:text-zinc-100 truncate">{transaction.description}</p>
           <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400 sm:hidden">{transaction.type === "transfer" ? "Internal transfer" : category?.name ?? "Uncategorized"} · {formatDate(transaction.date)}</p>
@@ -95,7 +95,7 @@ export function TransactionRow({
         </span>
       </td>
       <td className={cn(
-        "py-2.5 px-2 font-mono text-sm font-semibold tabular-nums text-right whitespace-nowrap sm:px-4",
+        "py-3 px-2 font-mono text-sm font-semibold tabular-nums text-right whitespace-nowrap sm:px-4 sm:py-2.5",
         transaction.type === "income" ? "text-emerald-600" : transaction.type === "expense" ? "text-rose-500" : "text-zinc-600 dark:text-zinc-300"
       )}>
         {transaction.type === "income" ? "+" : transaction.type === "expense" ? "-" : ""}{fmt(transaction.amount)}
@@ -103,7 +103,7 @@ export function TransactionRow({
       <td className="py-2.5 pl-1 pr-2 text-right sm:px-4">
         <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 group-focus-within:opacity-100 transition-opacity">
           {transaction.type !== "transfer" && <Button
-            size="icon" variant="ghost" className="h-8 w-8"
+            size="icon" variant="ghost" className="h-10 w-10 sm:h-8 sm:w-8"
             aria-label={`Edit ${transaction.description}`}
             onClick={() => onEditRequest(transaction)}
           >
@@ -111,7 +111,7 @@ export function TransactionRow({
           </Button>}
           <Button
             size="icon" variant="ghost"
-            className="h-8 w-8 text-rose-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950"
+            className="h-10 w-10 text-rose-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950 sm:h-8 sm:w-8"
             aria-label={`Delete ${transaction.description}`}
             onClick={() => onDeleteRequest(transaction)}
           >

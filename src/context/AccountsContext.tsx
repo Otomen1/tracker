@@ -22,16 +22,6 @@ interface AccountsContextValue {
 const AccountsContext = createContext<AccountsContextValue | null>(null)
 const SAME_TAB_EVENT = "tracker-storage-change"
 
-function readAccounts(): Account[] {
-  if (typeof window === "undefined") return []
-  try {
-    const value = JSON.parse(localStorage.getItem(STORAGE_KEYS.ACCOUNTS) ?? "[]")
-    return Array.isArray(value) ? value : []
-  } catch {
-    return []
-  }
-}
-
 export function calculateAccountBalance(account: Account, transactions: Transaction[]): number {
   const movement = transactions.reduce((sum, item) => {
     if (item.type === "income" && item.accountId === account.id) return sum + item.amount
@@ -44,7 +34,7 @@ export function calculateAccountBalance(account: Account, transactions: Transact
 }
 
 export function AccountsProvider({ children }: { children: React.ReactNode }) {
-  const [accounts, setAccounts] = useState<Account[]>(readAccounts)
+  const [accounts, setAccounts] = useState<Account[]>([])
   const [androidSetupComplete, setAndroidSetupComplete] = useState(false)
   const currentRef = useRef(accounts)
 

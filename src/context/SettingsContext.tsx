@@ -15,7 +15,7 @@ interface SettingsContextValue {
 const SettingsContext = createContext<SettingsContextValue>({
   settings: DEFAULT_SETTINGS,
   updateSettings: () => {},
-  fmt: (amount) => _formatCurrency(amount, "USD"),
+  fmt: (amount) => _formatCurrency(amount, "MYR"),
 })
 
 export function SettingsProvider({ children }: { children: React.ReactNode }) {

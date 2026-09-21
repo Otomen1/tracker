@@ -18,6 +18,7 @@ import { TransactionDialog } from "@/components/transactions/TransactionDialog"
 import { usePathname } from "next/navigation"
 import { AndroidSetup } from "@/components/android/AndroidSetup"
 import { AppLock } from "@/components/android/AppLock"
+import { useHydrated } from "@/hooks/useHydrated"
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   useScheduledBackup()
@@ -32,7 +33,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const { checkBudget } = useBudgetCheck()
   const { showToast } = useToast()
   const pathname = usePathname()
-  const showQuickAdd = pathname === "/transactions" || (transactions.length > 0 && (pathname === "/" || pathname === "/analytics"))
+  const hydrated = useHydrated()
+  // Keep the one-handed floating action on the transaction list only. The
+  // dashboard already presents an explicit primary add action.
+  const showQuickAdd = hydrated && pathname === "/transactions"
 
   const handleQuickAdd = (data: TransactionFormData) => {
     if (!addTransaction(data)) {
@@ -57,7 +61,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <StorageRecoveryBanner />
       <Sidebar />
       <main id="main-content" className="pb-[calc(4.25rem+env(safe-area-inset-bottom))] lg:pl-56 lg:pb-0">
-        <div className="mx-auto max-w-5xl px-3 py-4 sm:px-6 sm:py-6">
+        <div className="mx-auto max-w-5xl px-3 py-4 sm:px-6 sm:py-6 lg:py-7">
           <ErrorBoundary>{children}</ErrorBoundary>
         </div>
       </main>

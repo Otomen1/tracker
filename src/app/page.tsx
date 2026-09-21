@@ -5,7 +5,6 @@ import Link from "next/link"
 import { ArrowRight, BarChart3 } from "lucide-react"
 import { useTransactions } from "@/hooks/useTransactions"
 import { useCategories } from "@/hooks/useCategories"
-import { useHydrated } from "@/hooks/useHydrated"
 import { useBudgetCheck } from "@/hooks/useBudgetCheck"
 import { useToast } from "@/context/ToastContext"
 import { getDashboardStats, getRecentTransactions, getBudgetStatus, getSpendingInsights } from "@/lib/analytics"
@@ -21,7 +20,6 @@ import { RecentTransactions } from "@/components/dashboard/RecentTransactions"
 import { SavingsGoalCard } from "@/components/dashboard/SavingsGoalCard"
 import { SpendingInsightsCard } from "@/components/dashboard/SpendingInsightsCard"
 import { TransactionDialog } from "@/components/transactions/TransactionDialog"
-import { Skeleton } from "@/components/ui/skeleton"
 import { PageHeader } from "@/components/layout/PageHeader"
 import { NeedsAttention } from "@/components/dashboard/NeedsAttention"
 import { ReviewInboxCard } from "@/components/android/ReviewInboxCard"
@@ -30,7 +28,6 @@ import { AccountSummary } from "@/components/accounts/AccountSummary"
 export default function DashboardPage() {
   const [selectedMonth, setSelectedMonth] = useState(getMonthKey())
   const [addOpen, setAddOpen] = useState(false)
-  const isHydrated = useHydrated()
   const { transactions, addTransaction } = useTransactions()
   const { categories } = useCategories()
   const { fmt, settings } = useSettingsContext()
@@ -61,22 +58,6 @@ export default function DashboardPage() {
     return true
   }
 
-  if (!isHydrated) {
-    return (
-      <div className="space-y-5">
-        <div className="flex items-center justify-between">
-          <Skeleton className="h-7 w-28" />
-          <Skeleton className="h-8 w-32" />
-        </div>
-        <Skeleton className="h-32 rounded-xl" />
-        <div className="grid grid-cols-2 gap-4">
-          <Skeleton className="h-24 rounded-xl" />
-          <Skeleton className="h-24 rounded-xl" />
-        </div>
-      </div>
-    )
-  }
-
   return (
     <div className="space-y-5">
       <PageHeader
@@ -84,8 +65,7 @@ export default function DashboardPage() {
         description={`Your financial overview for ${formatMonth(selectedMonth)}`}
         action={<MonthSelector month={selectedMonth} onChange={setSelectedMonth} />}
       />
-      <ReviewInboxCard />
-      <AccountSummary />
+      {transactions.length === 0 && <><ReviewInboxCard /><AccountSummary /></>}
 
       {transactions.length === 0 && (
         <section
@@ -120,14 +100,18 @@ export default function DashboardPage() {
       {transactions.length > 0 && (
         <>
           <HeroCard stats={stats} monthLabel={formatMonth(selectedMonth)} overBudgetCategories={overBudgetCategories} topInsight={insights[0]} fmt={fmt} />
+          <AccountSummary />
+          <ReviewInboxCard />
           <div className="flex items-center justify-between gap-3"><QuickActions onAddClick={() => setAddOpen(true)} /></div>
-          <StatsCards stats={stats} />
           <div className="grid gap-4 lg:grid-cols-2">
             <NeedsAttention budgets={budgetStatus} insights={insights} currentNet={stats.currentMonthNet} savingsGoal={settings.monthlySavingsGoal} fmt={fmt} />
-            <SavingsGoalCard currentNet={stats.currentMonthNet} />
           </div>
-          <SpendingInsightsCard insights={insightsForList} selectedMonth={selectedMonth} />
           <RecentTransactions transactions={recentTransactions} categories={categories} />
+          <StatsCards stats={stats} />
+          <div className="grid gap-4 lg:grid-cols-2">
+            <SavingsGoalCard currentNet={stats.currentMonthNet} />
+            <SpendingInsightsCard insights={insightsForList} selectedMonth={selectedMonth} />
+          </div>
         </>
       )}
 

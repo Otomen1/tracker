@@ -15,18 +15,8 @@ interface CategoriesContextValue {
 const CategoriesContext = createContext<CategoriesContextValue | null>(null)
 const SAME_TAB_EVENT = "tracker-storage-change"
 
-function readCategories(): Category[] {
-  if (typeof window === "undefined") return DEFAULT_CATEGORIES
-  try {
-    const parsed = JSON.parse(localStorage.getItem(STORAGE_KEYS.CATEGORIES) ?? "null")
-    return Array.isArray(parsed) ? parsed : DEFAULT_CATEGORIES
-  } catch {
-    return DEFAULT_CATEGORIES
-  }
-}
-
 export function CategoriesProvider({ children }: { children: React.ReactNode }) {
-  const [categories, setCategories] = useState<Category[]>(readCategories)
+  const [categories, setCategories] = useState<Category[]>(DEFAULT_CATEGORIES)
   const currentRef = useRef(categories)
 
   const replaceFromStorage = useCallback((raw: string | null) => {
@@ -41,8 +31,7 @@ export function CategoriesProvider({ children }: { children: React.ReactNode }) 
   }, [])
 
   useEffect(() => {
-    // Hydration starts with defaults because localStorage is unavailable on the
-    // server. Refresh from the browser before accepting user mutations.
+    // Refresh persisted categories only after hydration has completed.
     replaceFromStorage(localStorage.getItem(STORAGE_KEYS.CATEGORIES))
     const handleStorage = (event: StorageEvent) => {
       if (event.storageArea === localStorage && event.key === STORAGE_KEYS.CATEGORIES) {

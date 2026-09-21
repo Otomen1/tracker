@@ -19,5 +19,8 @@ export default defineConfig([
     "next-env.d.ts",
     "public/sw.js",
     "public/workbox-*.js",
+    "android/app/build/**",
+    "android/app/src/main/assets/**",
+    ".android-toolchain/**",
   ]),
 ])

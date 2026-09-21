@@ -16,7 +16,7 @@ const ReviewInboxContext = createContext<ReviewInboxContextValue | null>(null)
 
 export function ReviewInboxProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<PendingTransaction[]>([])
-  const [loading, setLoading] = useState(nativeCapture.isNative())
+  const [loading, setLoading] = useState(false)
 
   const refresh = useCallback(async () => {
     try { setItems(await nativeCapture.listPending()) } finally { setLoading(false) }

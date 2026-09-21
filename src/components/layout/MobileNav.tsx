@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation"
 import { LayoutDashboard, ArrowLeftRight, BarChart3, Settings, BellRing } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { nativeCapture } from "@/lib/nativeCapture"
+import { useHydrated } from "@/hooks/useHydrated"
 
 const navItems = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -15,7 +16,8 @@ const navItems = [
 
 export function MobileNav() {
   const pathname = usePathname()
-  const visibleItems = nativeCapture.isNative() ? [navItems[0], { href: "/inbox", label: "Review", icon: BellRing }, ...navItems.slice(1)] : navItems
+  const hydrated = useHydrated()
+  const visibleItems = hydrated && nativeCapture.isNative() ? [navItems[0], { href: "/inbox", label: "Review", icon: BellRing }, ...navItems.slice(1)] : navItems
 
   return (
     <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-zinc-200 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-lg dark:border-zinc-800 dark:bg-zinc-900/95 lg:hidden">

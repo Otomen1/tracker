@@ -9,6 +9,7 @@ import { nativeCapture } from "@/lib/nativeCapture"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { useHydrated } from "@/hooks/useHydrated"
 
 export function AndroidSetup() {
   const { androidSetupComplete, initializeAndroidAccounts } = useAccounts()
@@ -17,8 +18,9 @@ export function AndroidSetup() {
   const [ryt, setRyt] = useState("0.00")
   const [maybank, setMaybank] = useState("0.00")
   const [saving, setSaving] = useState(false)
+  const hydrated = useHydrated()
 
-  if (!nativeCapture.isNative() || androidSetupComplete) return null
+  if (!hydrated || !nativeCapture.isNative() || androidSetupComplete) return null
 
   const submit = async (event: FormEvent) => {
     event.preventDefault()

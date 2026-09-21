@@ -7,15 +7,9 @@ const SAME_TAB_EVENT = "tracker-storage-change"
 export function useLocalStorage<T>(key: string, initialValue: T) {
   const initialValueRef = useRef(initialValue)
 
-  const [storedValue, setStoredValue] = useState<T>(() => {
-    if (typeof window === "undefined") return initialValue
-    try {
-      const item = window.localStorage.getItem(key)
-      return item ? (JSON.parse(item) as T) : initialValue
-    } catch {
-      return initialValue
-    }
-  })
+  // Match the server snapshot during hydration. Persisted values are loaded in
+  // the effect below, after React has attached to the server-rendered tree.
+  const [storedValue, setStoredValue] = useState<T>(initialValue)
   const currentRef = useRef(storedValue)
 
   const replaceFromStorage = useCallback((raw: string | null) => {

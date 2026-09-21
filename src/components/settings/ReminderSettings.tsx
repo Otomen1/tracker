@@ -9,11 +9,13 @@ import { Button } from "@/components/ui/button"
 export function ReminderSettings() {
   const { settings, updateSettings } = useSettingsContext()
   const [permission, setPermission] = useState<NotificationPermission>("default")
-  const isSupported = typeof window !== "undefined" && "Notification" in window
+  const [isSupported, setIsSupported] = useState(false)
 
   useEffect(() => {
-    if (isSupported) setPermission(Notification.permission)
-  }, [isSupported])
+    const supported = "Notification" in window
+    setIsSupported(supported)
+    if (supported) setPermission(Notification.permission)
+  }, [])
 
   if (!isSupported) {
     return <p className="text-xs text-zinc-400">Notifications are not supported in this browser.</p>

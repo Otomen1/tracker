@@ -18,19 +18,19 @@ import { AndroidCaptureSettings } from "@/components/settings/AndroidCaptureSett
 
 function SettingGroup({ id, title, description, children, warning = false }: { id: string; title: string; description?: string; children: React.ReactNode; warning?: boolean }) {
   return (
-    <section id={id} className={`scroll-mt-20 space-y-4 rounded-xl border bg-white p-4 shadow-sm dark:bg-zinc-900 sm:scroll-mt-6 sm:space-y-5 sm:p-5 ${warning ? "border-amber-300 dark:border-amber-900" : "border-zinc-200 dark:border-zinc-800"}`}>
+    <section id={id} className={`scroll-mt-20 space-y-3 rounded-xl border bg-white p-4 shadow-sm dark:bg-zinc-900 sm:scroll-mt-6 sm:space-y-4 sm:p-5 ${warning ? "border-amber-300 dark:border-amber-900" : "border-zinc-200 dark:border-zinc-800"}`}>
       <div>
         <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">{title}</h2>
         {description && <p className="text-xs text-zinc-400 mt-0.5">{description}</p>}
       </div>
-      <div className="space-y-5">{children}</div>
+      <div className="space-y-4">{children}</div>
     </section>
   )
 }
 
 function SettingSection({ title, description, children }: { title: string; description?: string; children: React.ReactNode }) {
   return (
-    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:gap-4">
+    <div className="flex flex-col gap-2.5 sm:flex-row sm:items-start sm:gap-4">
       <div className="sm:w-56 shrink-0">
         <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">{title}</p>
         {description && <p className="text-xs text-zinc-400 mt-0.5">{description}</p>}
@@ -81,7 +81,7 @@ export default function SettingsPage() {
       <div className="lg:hidden"><SettingsNav /></div>
       <div className="grid items-start gap-5 lg:grid-cols-[11rem_minmax(0,1fr)]">
         <div className="hidden self-start lg:sticky lg:top-6 lg:block"><SettingsNav /></div>
-        <div className="space-y-4">
+        <div className="space-y-3.5">
         <SettingGroup id="preferences" title="Preferences" description="Appearance and currency">
           <SettingSection title="Appearance" description="Choose your preferred color scheme">
             <ThemeToggle />

@@ -28,18 +28,10 @@ const TransactionsContext = createContext<TransactionsContextValue | null>(null)
 const SAME_TAB_EVENT = "tracker-storage-change"
 const WRITE_FAILED_EVENT = "storage-write-failed"
 
-function readStoredTransactions(): Transaction[] {
-  if (typeof window === "undefined") return []
-  try {
-    const value = JSON.parse(localStorage.getItem(STORAGE_KEYS.TRANSACTIONS) ?? "[]")
-    return Array.isArray(value) ? value : []
-  } catch {
-    return []
-  }
-}
-
 export function TransactionsProvider({ children }: { children: React.ReactNode }) {
-  const [transactions, setTransactions] = useState<Transaction[]>(readStoredTransactions)
+  // Never read localStorage during the initial render: server and browser must
+  // first agree on an empty snapshot, then load persisted data after hydration.
+  const [transactions, setTransactions] = useState<Transaction[]>([])
   const currentRef = useRef(transactions)
 
   const replaceFromStorage = useCallback((raw: string | null) => {
@@ -54,9 +46,7 @@ export function TransactionsProvider({ children }: { children: React.ReactNode }
   }, [])
 
   useEffect(() => {
-    // useState initializes during server rendering where localStorage is not
-    // available. Re-read it on the client before the later recurring-transaction
-    // effect runs, otherwise an empty hydration snapshot could overwrite saved data.
+    // Load browser data after hydration before recurring-transaction generation.
     replaceFromStorage(localStorage.getItem(STORAGE_KEYS.TRANSACTIONS))
     const handleStorage = (event: StorageEvent) => {
       if (event.storageArea === localStorage && event.key === STORAGE_KEYS.TRANSACTIONS) {

@@ -8,6 +8,7 @@ test.beforeEach(async ({ page }) => {
     localStorage.clear()
     localStorage.setItem("tracker_onboarded", "1")
   })
+  await page.reload()
 })
 
 test("a deleted transaction stays deleted after focus, navigation, and refresh", async ({ page }) => {
@@ -18,6 +19,7 @@ test("a deleted transaction stays deleted after focus, navigation, and refresh",
   await page.goto("/transactions")
   await page.waitForLoadState("networkidle")
   await page.getByRole("button", { name: "Add Transaction", exact: true }).click()
+  await expect(page.getByRole("dialog")).toBeVisible()
   await page.getByLabel("Amount", { exact: true }).fill("12.50")
   await page.getByRole("combobox", { name: "Category", exact: true }).click()
   await page.getByRole("option", { name: "Food" }).click()
@@ -60,7 +62,7 @@ test("settings section navigation moves to the selected section", async ({ page 
     await page.getByRole("combobox", { name: "Settings section" }).click()
     await page.getByRole("option", { name: "Data & Backup" }).click()
   }
-  await expect(page.locator("#data-backup")).toBeInViewport()
+  await expect(page.locator("#data-backup")).toBeInViewport({ timeout: 10_000 })
 })
 
 test("mobile PWA keeps primary controls clear of navigation", async ({ page }) => {
