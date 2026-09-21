@@ -39,14 +39,9 @@ object NotificationParser {
     private val maePaid = Regex("successful payment of\\s+RM", RegexOption.IGNORE_CASE)
     private val recipientPattern = Regex("(?:from|to)\\s+(.+?)(?:\\s+on\\s+\\d|\\.\\s*REF:|$)", setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL))
 
-    fun parse(appLabel: String, packageName: String, title: String, text: String, postedAt: Long): ParsedTransaction? {
+    fun parse(source: TrustedNotificationSource, title: String, text: String, postedAt: Long): ParsedTransaction? {
         val normalized = text.replace("\n", " ").replace(Regex("\\s+"), " ").trim()
-        val provider = when {
-            appLabel.contains("Ryt", true) || packageName.contains("ryt", true) -> "ryt"
-            appLabel.equals("MAE", true) || packageName.contains("maybank", true) -> "mae"
-            else -> return null
-        }
-        val direction = when (provider) {
+        val direction = when (source.provider) {
             "ryt" -> when {
                 rytReceived.containsMatchIn(normalized) -> "income"
                 rytSent.containsMatchIn(normalized) -> "expense"
@@ -63,18 +58,18 @@ object NotificationParser {
         if (amount <= 0.0 || !amount.isFinite()) return null
         val counterparty = recipientPattern.find(normalized)?.groupValues?.get(1)?.trim()?.take(120)
         val description = counterparty?.let { if (direction == "income") "Transfer from $it" else if (title.contains("Scan & Pay", true)) "Scan & Pay to $it" else "Transfer to $it" }
-            ?: title.take(120).ifBlank { if (provider == "ryt") "Ryt transaction" else "MAE transaction" }
+            ?: title.take(120).ifBlank { if (source.provider == "ryt") "Ryt transaction" else "MAE transaction" }
         val capturedAt = iso(postedAt)
-        val fingerprintInput = listOf(provider, direction, "%.2f".format(Locale.US, amount), normalized.lowercase(Locale.ROOT), (postedAt / 60000).toString()).joinToString("|")
+        val fingerprintInput = listOf(source.provider, direction, "%.2f".format(Locale.US, amount), normalized.lowercase(Locale.ROOT), (postedAt / 60000).toString()).joinToString("|")
         return ParsedTransaction(
-            provider = provider,
+            provider = source.provider,
             fingerprint = sha256(fingerprintInput),
             direction = direction,
             amount = amount,
             description = description,
             occurredAt = parseRytDate(normalized) ?: capturedAt,
             capturedAt = capturedAt,
-            accountId = if (provider == "ryt") "account_ryt" else "account_maybank",
+            accountId = source.accountId,
         )
     }
 
