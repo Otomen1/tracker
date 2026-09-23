@@ -59,7 +59,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4 sm:space-y-5">
       <PageHeader
         title="Dashboard"
         description={`Your financial overview for ${formatMonth(selectedMonth)}`}

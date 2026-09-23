@@ -9,7 +9,7 @@ export function CurrencySelector() {
 
   return (
     <Select value={settings.currency} onValueChange={(v) => updateSettings({ currency: v })}>
-      <SelectTrigger className="w-56">
+      <SelectTrigger className="min-h-11 w-full sm:w-56">
         <SelectValue />
       </SelectTrigger>
       <SelectContent>

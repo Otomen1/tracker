@@ -60,7 +60,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <StorageQuotaBanner />
       <StorageRecoveryBanner />
       <Sidebar />
-      <main id="main-content" className="pb-[calc(4.25rem+env(safe-area-inset-bottom))] lg:pl-56 lg:pb-0">
+      <main id="main-content" className={`${showQuickAdd ? "pb-[calc(9.5rem+env(safe-area-inset-bottom))]" : "pb-[calc(4.25rem+env(safe-area-inset-bottom))]"} lg:pl-56 lg:pb-0`}>
         <div className="mx-auto max-w-5xl px-3 py-4 sm:px-6 sm:py-6 lg:py-7">
           <ErrorBoundary>{children}</ErrorBoundary>
         </div>

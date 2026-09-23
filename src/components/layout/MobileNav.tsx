@@ -32,11 +32,11 @@ export function MobileNav() {
               className={cn(
                 "relative flex min-h-[58px] flex-1 flex-col items-center justify-center gap-0.5 rounded-lg py-2 text-xs transition-colors",
                 isActive
-                  ? "text-zinc-900 dark:text-zinc-100 font-medium"
+                  ? "font-semibold text-zinc-950 dark:text-white"
                   : "text-zinc-500 dark:text-zinc-400"
               )}
             >
-              <span className={cn("flex h-7 min-w-10 items-center justify-center rounded-full transition-colors", isActive && "bg-zinc-100 dark:bg-zinc-800")}>
+              <span className={cn("flex h-8 min-w-11 items-center justify-center rounded-full transition-colors", isActive && "bg-zinc-200 dark:bg-zinc-700")}>
                 <Icon className="h-5 w-5" />
               </span>
               <span className="text-[10px]">{label}</span>

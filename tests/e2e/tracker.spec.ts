@@ -57,12 +57,22 @@ test("empty analytics replaces charts with one guided state", async ({ page }) =
 test("settings section navigation moves to the selected section", async ({ page }) => {
   await page.goto("/settings")
   if ((page.viewportSize()?.width ?? 0) >= 1024) {
-    await page.getByRole("navigation", { name: "Settings sections" }).getByRole("button", { name: "Data & Backup" }).click()
+    await page.getByRole("navigation", { name: "Settings sections" }).getByRole("button", { name: "Data & backup" }).click()
   } else {
-    await page.getByRole("combobox", { name: "Settings section" }).click()
-    await page.getByRole("option", { name: "Data & Backup" }).click()
+    await page.getByRole("navigation", { name: "Settings sections" }).getByRole("button", { name: "Data & backup" }).click()
   }
   await expect(page.locator("#data-backup")).toBeInViewport({ timeout: 10_000 })
+})
+
+test("settings shortcuts stay visible and show the current section on mobile", async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 })
+  await page.goto("/settings")
+  const shortcuts = page.getByRole("navigation", { name: "Settings sections" })
+  const finance = shortcuts.getByRole("button", { name: "Budgets & goals" })
+  await finance.click()
+  await expect(page.locator("#finance")).toBeInViewport({ timeout: 10_000 })
+  await expect(finance).toHaveAttribute("aria-current", "location")
+  await expect(shortcuts).toBeInViewport()
 })
 
 test("mobile PWA keeps primary controls clear of navigation", async ({ page }) => {

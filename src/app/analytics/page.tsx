@@ -68,7 +68,7 @@ function AnalyticsPageContent() {
 
   if (transactions.length === 0) {
     return (
-      <div className="space-y-5">
+      <div className="space-y-4 sm:space-y-5">
         <PageHeader
           title="Analytics"
           description="Understand where your money goes and how your balance changes"
@@ -89,7 +89,7 @@ function AnalyticsPageContent() {
   }
 
   return (
-    <div className="space-y-7">
+    <div className="space-y-5 sm:space-y-6">
       <PageHeader title="Analytics" description="Understand where your money goes and how your balance changes" action={<PeriodSwitcher
           type={type}
           month={month}

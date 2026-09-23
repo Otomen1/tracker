@@ -18,7 +18,7 @@ export function ReminderSettings() {
   }, [])
 
   if (!isSupported) {
-    return <p className="text-xs text-zinc-400">Notifications are not supported in this browser.</p>
+    return <p className="text-sm text-zinc-600 dark:text-zinc-400">Notifications are not supported in this browser.</p>
   }
 
   const handleToggle = async () => {
@@ -42,13 +42,14 @@ export function ReminderSettings() {
           role="switch"
           aria-checked={settings.reminderEnabled}
           onClick={handleToggle}
-          className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+          aria-label="Daily reminder"
+          className={`relative inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
             settings.reminderEnabled ? "bg-emerald-500" : "bg-zinc-300 dark:bg-zinc-600"
           }`}
         >
           <span
             className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${
-              settings.reminderEnabled ? "translate-x-4" : "translate-x-0.5"
+              settings.reminderEnabled ? "translate-x-1.5" : "-translate-x-1.5"
             }`}
           />
         </button>
@@ -64,7 +65,7 @@ export function ReminderSettings() {
       )}
 
       {!settings.reminderEnabled && permission === "default" && (
-        <Button variant="outline" size="sm" onClick={handleToggle}>
+          <Button className="min-h-11" variant="outline" size="sm" onClick={handleToggle}>
           Enable notifications
         </Button>
       )}
@@ -75,7 +76,7 @@ export function ReminderSettings() {
           <Input
             id="reminder-time"
             type="time"
-            className="w-32"
+            className="min-h-11 w-32"
             value={settings.reminderTime ?? "20:00"}
             onChange={(e) => updateSettings({ reminderTime: e.target.value })}
           />

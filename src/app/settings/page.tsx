@@ -18,10 +18,10 @@ import { AndroidCaptureSettings } from "@/components/settings/AndroidCaptureSett
 
 function SettingGroup({ id, title, description, children, warning = false }: { id: string; title: string; description?: string; children: React.ReactNode; warning?: boolean }) {
   return (
-    <section id={id} className={`scroll-mt-20 space-y-3 rounded-xl border bg-white p-4 shadow-sm dark:bg-zinc-900 sm:scroll-mt-6 sm:space-y-4 sm:p-5 ${warning ? "border-amber-300 dark:border-amber-900" : "border-zinc-200 dark:border-zinc-800"}`}>
+    <section id={id} className={`scroll-mt-24 space-y-4 rounded-2xl border bg-white p-4 shadow-sm dark:bg-zinc-900 sm:scroll-mt-6 sm:p-5 ${warning ? "border-amber-300 dark:border-amber-900" : "border-zinc-200 dark:border-zinc-800"}`}>
       <div>
         <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">{title}</h2>
-        {description && <p className="text-xs text-zinc-400 mt-0.5">{description}</p>}
+        {description && <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">{description}</p>}
       </div>
       <div className="space-y-4">{children}</div>
     </section>
@@ -31,9 +31,9 @@ function SettingGroup({ id, title, description, children, warning = false }: { i
 function SettingSection({ title, description, children }: { title: string; description?: string; children: React.ReactNode }) {
   return (
     <div className="flex flex-col gap-2.5 sm:flex-row sm:items-start sm:gap-4">
-      <div className="sm:w-56 shrink-0">
+      <div className="shrink-0 sm:w-52">
         <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">{title}</p>
-        {description && <p className="text-xs text-zinc-400 mt-0.5">{description}</p>}
+        {description && <p className="mt-1 text-xs leading-5 text-zinc-600 dark:text-zinc-400">{description}</p>}
       </div>
       <div className="flex-1">{children}</div>
     </div>
@@ -75,13 +75,27 @@ function StorageUsage() {
 
 export default function SettingsPage() {
   return (
-    <div className="space-y-5">
-      <PageHeader title="Settings" description="Personalize the app and protect your local data" />
+    <div className="space-y-4 sm:space-y-5">
+      <PageHeader title="Settings" description="Accounts, bank capture, and preferences for this device" />
 
-      <div className="lg:hidden"><SettingsNav /></div>
-      <div className="grid items-start gap-5 lg:grid-cols-[11rem_minmax(0,1fr)]">
+      <div className="sticky top-0 z-30 -mx-3 border-y border-zinc-200 bg-zinc-50/95 px-3 backdrop-blur-md dark:border-zinc-800 dark:bg-zinc-950/95 lg:hidden">
+        <SettingsNav />
+      </div>
+      <div className="grid items-start gap-4 lg:grid-cols-[12rem_minmax(0,1fr)] lg:gap-5">
         <div className="hidden self-start lg:sticky lg:top-6 lg:block"><SettingsNav /></div>
-        <div className="space-y-3.5">
+        <div className="space-y-4">
+        <SettingGroup id="accounts-capture" title="Accounts & bank capture" description="Manage account balances and the bank notifications Tracker may review">
+          <SettingSection title="Accounts" description="Opening balance plus confirmed activity makes your current balance.">
+            <AccountSettings />
+          </SettingSection>
+
+          <Separator />
+
+          <SettingSection title="Bank capture" description="Only approved Ryt Bank and MAE notifications are processed on this device.">
+            <AndroidCaptureSettings />
+          </SettingSection>
+        </SettingGroup>
+
         <SettingGroup id="preferences" title="Preferences" description="Appearance and currency">
           <SettingSection title="Appearance" description="Choose your preferred color scheme">
             <ThemeToggle />
@@ -94,13 +108,7 @@ export default function SettingsPage() {
           </SettingSection>
         </SettingGroup>
 
-        <SettingGroup id="finance" title="Finance" description="Categories, budgets, and savings goals">
-          <SettingSection title="Accounts" description="Opening balances used to calculate current balances">
-            <AccountSettings />
-          </SettingSection>
-
-          <Separator />
-
+        <SettingGroup id="finance" title="Budgets & savings" description="Plan spending and savings goals">
           <SettingSection title="Monthly Savings Goal" description="Target net savings per month">
             <SavingsGoalForm />
           </SettingSection>
@@ -114,25 +122,19 @@ export default function SettingsPage() {
           <Separator />
 
           <SettingSection title="Categories" description="Add, edit, or remove income and expense categories">
-            <Button variant="outline" size="sm" asChild>
+            <Button className="min-h-11" variant="outline" size="sm" asChild>
               <Link href="/categories">Manage Categories →</Link>
             </Button>
           </SettingSection>
         </SettingGroup>
 
-        <SettingGroup id="notifications" title="Notifications" description="Reminders to keep your data up to date">
-          <SettingSection title="Bank transaction capture" description="Private Android notification processing">
-            <AndroidCaptureSettings />
-          </SettingSection>
-
-          <Separator />
-
+        <SettingGroup id="notifications" title="Reminders" description="Optional reminders to keep your records up to date">
           <SettingSection title="Daily Reminder" description="Get a notification to log your expenses each day">
             <ReminderSettings />
           </SettingSection>
         </SettingGroup>
 
-        <SettingGroup id="data-backup" title="Data & Backup" description="Export, restore, and storage usage" warning>
+        <SettingGroup id="data-backup" title="Data & backup" description="Export or restore private financial records" warning>
           <SettingSection title="Data Backup" description="Export or restore your data">
             <BackupRestore />
           </SettingSection>
