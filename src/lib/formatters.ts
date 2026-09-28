@@ -49,7 +49,7 @@ export function getMonthKey(date?: Date): string {
 }
 
 export function getYearKey(date?: Date): number {
-  return (date ?? new Date()).getFullYear()
+  return date ? date.getUTCFullYear() : new Date().getFullYear()
 }
 
 export function addMonths(monthKey: string, delta: number): string {

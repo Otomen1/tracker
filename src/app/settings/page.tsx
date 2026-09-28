@@ -15,6 +15,7 @@ import { PageHeader } from "@/components/layout/PageHeader"
 import { SettingsNav } from "@/components/settings/SettingsNav"
 import { AccountSettings } from "@/components/settings/AccountSettings"
 import { AndroidCaptureSettings } from "@/components/settings/AndroidCaptureSettings"
+import { DatabaseSyncSettings } from "@/components/settings/DatabaseSyncSettings"
 
 function SettingGroup({ id, title, description, children, warning = false }: { id: string; title: string; description?: string; children: React.ReactNode; warning?: boolean }) {
   return (
@@ -135,6 +136,12 @@ export default function SettingsPage() {
         </SettingGroup>
 
         <SettingGroup id="data-backup" title="Data & backup" description="Export or restore private financial records" warning>
+          <SettingSection title="PostgreSQL sync" description="Optional local database synchronization. Tracker continues working while the database is offline.">
+            <DatabaseSyncSettings />
+          </SettingSection>
+
+          <Separator />
+
           <SettingSection title="Data Backup" description="Export or restore your data">
             <BackupRestore />
           </SettingSection>

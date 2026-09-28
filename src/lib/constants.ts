@@ -27,6 +27,7 @@ export const STORAGE_KEYS = {
   ACCOUNTS: "tracker_accounts",
   WALLET_MAPPINGS: "tracker_wallet_mappings",
   ANDROID_SETUP: "tracker_android_setup",
+  SYNC_STATE: "tracker_sync_state",
 } as const
 
 export const SCHEMA_VERSION = "2"
