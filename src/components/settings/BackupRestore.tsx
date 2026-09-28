@@ -10,6 +10,7 @@ import { Download, Upload, CheckCircle, AlertCircle, Lock, ShieldCheck, ShieldAl
 import { DeleteConfirmDialog } from "@/components/transactions/DeleteConfirmDialog"
 import { BACKUP_MAX_FILE_SIZE_MB } from "@/lib/constants"
 import { useSettingsContext } from "@/context/SettingsContext"
+import { saveOrShareFile } from "@/lib/fileExport"
 
 const BACKUP_INTERVAL_LABELS: Record<string, string> = {
   never: "Never",
@@ -80,13 +81,11 @@ export function BackupRestore() {
         filename = `expense-tracker-backup-${date}.json`
       }
 
-      const blob = new Blob([finalContent], { type: "application/json" })
-      const url = URL.createObjectURL(blob)
-      const link = document.createElement("a")
-      link.href = url
-      link.download = filename
-      link.click()
-      URL.revokeObjectURL(url)
+      const result = await saveOrShareFile(finalContent, filename, "application/json")
+      setStatus({
+        type: "success",
+        message: result === "shared" ? "Backup is ready. Choose where to save or share it." : "Backup downloaded successfully.",
+      })
     } catch (e) {
       setStatus({ type: "error", message: "Export failed. Please try again." })
       console.error(e)
