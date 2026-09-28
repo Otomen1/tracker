@@ -3,7 +3,7 @@
 import { DEFAULT_CATEGORIES, DEFAULT_SETTINGS, STORAGE_KEYS } from "@/lib/constants"
 import { syncResponseSchema, type SyncChange, type SyncEntity, type SyncOperation } from "./contracts"
 
-export type SyncStatus = "disabled" | "synced" | "syncing" | "pending" | "offline" | "error"
+export type SyncStatus = "disabled" | "signed_out" | "synced" | "syncing" | "pending" | "offline" | "error"
 
 type RecordMeta = { hash: string; modifiedAt: string; deleted: boolean }
 export type StoredSyncState = {
@@ -159,7 +159,10 @@ export async function performSync(input: StoredSyncState): Promise<StoredSyncSta
     cache: "no-store",
     body: JSON.stringify({ deviceId: state.deviceId, cursor: state.cursor, operations: state.queue }),
   })
-  if (!response.ok) throw new Error(response.status === 503 ? "PostgreSQL is unavailable" : `Sync request failed (${response.status})`)
+  if (!response.ok) {
+    if (response.status === 401) throw new Error("Sign in to synchronize")
+    throw new Error(response.status === 503 ? "PostgreSQL is unavailable" : `Sync request failed (${response.status})`)
+  }
   const parsed = syncResponseSchema.safeParse(await response.json())
   if (!parsed.success) throw new Error("The sync server returned an invalid response")
   const acknowledged = new Set(parsed.data.acknowledged)

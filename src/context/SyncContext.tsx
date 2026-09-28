@@ -2,6 +2,9 @@
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react"
 import { isSyncSupported, performSync, readSyncState, scanLocalChanges, writeSyncState, type StoredSyncState, type SyncStatus } from "@/lib/sync/client"
+import { STORAGE_KEYS } from "@/lib/constants"
+
+const SYNC_ACCOUNT_KEY = "tracker_sync_account"
 
 type SyncContextValue = {
   status: SyncStatus
@@ -46,7 +49,8 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
         next.lastError = error instanceof Error ? error.message : "Synchronization failed"
         writeSyncState(next)
         stateRef.current = next
-        publish(next, next.lastError.includes("unavailable") || !navigator.onLine ? "offline" : "error")
+        const status = next.lastError.includes("Sign in") ? "signed_out" : next.lastError.includes("unavailable") || !navigator.onLine ? "offline" : "error"
+        publish(next, status)
       }
       }
       if ("locks" in navigator) await navigator.locks.request("tracker-postgres-sync", { mode: "exclusive" }, execute)
@@ -77,6 +81,19 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
     window.addEventListener(SAME_TAB_EVENT, schedule)
     window.addEventListener("storage", schedule)
     window.addEventListener("online", syncNow)
+    const onAuthChange = (event: Event) => {
+      const userId = (event as CustomEvent<{ userId: string | null }>).detail?.userId ?? null
+      const previous = localStorage.getItem(SYNC_ACCOUNT_KEY)
+      if (userId && previous !== userId) {
+        localStorage.removeItem(STORAGE_KEYS.SYNC_STATE)
+        localStorage.setItem(SYNC_ACCOUNT_KEY, userId)
+        stateRef.current = scanLocalChanges(readSyncState())
+      } else if (!userId) {
+        localStorage.removeItem(SYNC_ACCOUNT_KEY)
+      }
+      void syncNow()
+    }
+    window.addEventListener("tracker-auth-change", onAuthChange)
     window.addEventListener("focus", syncNow)
     document.addEventListener("visibilitychange", onVisible)
     const interval = window.setInterval(() => void syncNow(), 60_000)
@@ -86,6 +103,7 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
       window.removeEventListener(SAME_TAB_EVENT, schedule)
       window.removeEventListener("storage", schedule)
       window.removeEventListener("online", syncNow)
+      window.removeEventListener("tracker-auth-change", onAuthChange)
       window.removeEventListener("focus", syncNow)
       document.removeEventListener("visibilitychange", onVisible)
     }

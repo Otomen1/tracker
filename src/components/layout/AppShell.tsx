@@ -20,6 +20,7 @@ import { AndroidSetup } from "@/components/android/AndroidSetup"
 import { AppLock } from "@/components/android/AppLock"
 import { useHydrated } from "@/hooks/useHydrated"
 import { SyncStatus } from "./SyncStatus"
+import { AccountStatus } from "./AccountStatus"
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   useScheduledBackup()
@@ -61,6 +62,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <StorageQuotaBanner />
       <StorageRecoveryBanner />
       <SyncStatus />
+      <AccountStatus />
       <Sidebar />
       <main id="main-content" className={`${showQuickAdd ? "pb-[calc(9.5rem+env(safe-area-inset-bottom))]" : "pb-[calc(4.25rem+env(safe-area-inset-bottom))]"} lg:pl-56 lg:pb-0`}>
         <div className="mx-auto max-w-5xl px-3 py-4 sm:px-6 sm:py-6 lg:py-7">

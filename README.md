@@ -31,6 +31,18 @@ curl http://localhost:3000/api/sync
 
 The Capacitor build stays local-only because a static Android bundle has no Next.js server. It does not attempt to connect to PostgreSQL.
 
+## Phone and account synchronization
+
+The Vercel deployment supports Clerk accounts and a Neon PostgreSQL database. Connect both integrations to the same Vercel project:
+
+1. In **Vercel → Project → Storage**, create or connect a Neon PostgreSQL database.
+2. In **Vercel Marketplace**, add Clerk to the project.
+3. Confirm Vercel provides `DATABASE_URL`, `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, and `CLERK_SECRET_KEY`.
+4. Redeploy the project.
+5. Open the existing PWA URL on the phone and sign in.
+
+The PWA URL and browser storage remain unchanged during deployment. Existing transactions are placed in the authenticated sync queue and uploaded after sign-in. Keep the phone PWA open until the status changes to **Synced**. Each Clerk user has isolated sync records and operation history.
+
 ## Quality checks
 
 ```bash

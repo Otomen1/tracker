@@ -3,12 +3,12 @@
 import { Cloud, CloudOff, LoaderCircle, RefreshCw } from "lucide-react"
 import { useSync } from "@/context/SyncContext"
 
-const LABELS = { disabled: "Local only", synced: "Synced", syncing: "Syncing", pending: "Sync pending", offline: "Database offline", error: "Sync error" } as const
+const LABELS = { disabled: "Local only", signed_out: "Sign in to sync", synced: "Synced", syncing: "Syncing", pending: "Sync pending", offline: "Database offline", error: "Sync error" } as const
 
 export function SyncStatus() {
   const { status, pendingCount, syncNow } = useSync()
   if (status === "disabled") return null
-  const Icon = status === "syncing" ? LoaderCircle : status === "offline" || status === "error" ? CloudOff : status === "pending" ? RefreshCw : Cloud
+  const Icon = status === "syncing" ? LoaderCircle : status === "offline" || status === "error" || status === "signed_out" ? CloudOff : status === "pending" ? RefreshCw : Cloud
   return (
     <button
       type="button"

@@ -1,5 +1,6 @@
 import withPWA from "@ducanh2912/next-pwa";
 import withBundleAnalyzer from "@next/bundle-analyzer";
+import path from "node:path";
 
 const isCapacitorBuild = process.env.CAPACITOR_BUILD === "1";
 
@@ -52,8 +53,15 @@ const nextConfig = withPWA({
     document: "/offline.html",
   },
 })({
-  ...(isCapacitorBuild ? { output: "export", images: { unoptimized: true } } : {}),
+  ...(isCapacitorBuild ? { output: "export", images: { unoptimized: true }, env: { NEXT_PUBLIC_TRACKER_AUTH_DISABLED: "1" } } : {}),
   ...(!isCapacitorBuild ? { async headers() { return [{ source: "/(.*)", headers: securityHeaders }]; } } : {}),
+  webpack(config) {
+    if (isCapacitorBuild) {
+      config.resolve.alias["@clerk/nextjs/server"] = path.resolve("src/lib/auth/clerk-server-stub.ts");
+      config.resolve.alias["@clerk/nextjs"] = path.resolve("src/lib/auth/clerk-client-stub.tsx");
+    }
+    return config;
+  },
 });
 
 export default withBundleAnalyzer({ enabled: process.env.ANALYZE === "true" })(nextConfig);

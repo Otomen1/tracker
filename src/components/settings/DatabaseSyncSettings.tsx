@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 
 const TEXT = {
   disabled: "Synchronization is unavailable in this static or Android build.",
+  signed_out: "Sign in to synchronize this device with your account.",
   synced: "Local data and PostgreSQL are synchronized.",
   syncing: "Synchronizing local changes…",
   pending: "Local changes are waiting to synchronize.",

@@ -1,5 +1,6 @@
 import { databaseHealth, synchronize } from "@/lib/db/syncRepository"
 import { syncRequestSchema } from "@/lib/sync/contracts"
+import { auth } from "@clerk/nextjs/server"
 
 export const runtime = "nodejs"
 // Static generation keeps the Capacitor export buildable. POST remains a
@@ -35,6 +36,9 @@ export async function POST(request: Request) {
   if (!hasValidOrigin(request)) return Response.json({ error: "Cross-origin synchronization is not allowed" }, { status: 403 })
   const contentLength = Number(request.headers.get("content-length") ?? 0)
   if (contentLength > 2 * 1024 * 1024) return Response.json({ error: "Sync request is too large" }, { status: 413 })
+  if (!process.env.CLERK_SECRET_KEY) return Response.json({ error: "Account synchronization is not configured" }, { status: 503 })
+  const { userId } = await auth()
+  if (!userId) return Response.json({ error: "Sign in to synchronize" }, { status: 401 })
   let json: unknown
   try {
     json = await request.json()
@@ -47,7 +51,7 @@ export async function POST(request: Request) {
   }
   try {
     return Response.json(
-      await synchronize(parsed.data.deviceId, parsed.data.cursor, parsed.data.operations),
+      await synchronize(userId, parsed.data.deviceId, parsed.data.cursor, parsed.data.operations),
       { headers: { "Cache-Control": "no-store" } },
     )
   } catch (error) {
