@@ -109,7 +109,7 @@ class TrackerNativePlugin : Plugin() {
     @com.getcapacitor.PluginMethod
     fun writeVault(call: PluginCall) = vaultAction(call) {
         val candidate = call.getObject("vault") ?: throw IllegalArgumentException("Vault data is required")
-        val expectedRevision = call.getLong("expectedRevision") ?: throw IllegalArgumentException("Vault revision is required")
+        val expectedRevision = VaultRevision.parse(call.data.opt("expectedRevision"))
         val stored = EncryptedVaultStore(context).write(candidate, expectedRevision)
         JSObject().put("vault", JSObject.fromJSONObject(stored))
     }
