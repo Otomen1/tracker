@@ -4,6 +4,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.content.Intent;
+import android.content.pm.ApplicationInfo;
 import android.view.WindowManager;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
@@ -18,7 +19,8 @@ public class MainActivity extends BridgeActivity {
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE);
         registerPlugin(TrackerNativePlugin.class);
         super.onCreate(savedInstanceState);
-        WebView.setWebContentsDebuggingEnabled(BuildConfig.DEBUG);
+        boolean isDebuggable = (getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0;
+        WebView.setWebContentsDebuggingEnabled(isDebuggable);
         WebSettings settings = bridge.getWebView().getSettings();
         settings.setAllowFileAccess(false);
         settings.setAllowContentAccess(false);
@@ -27,20 +29,20 @@ public class MainActivity extends BridgeActivity {
     }
 
     @Override
-    protected void onStart() {
+    public void onStart() {
         super.onStart();
         lockHandler.removeCallbacks(lockVault);
     }
 
     @Override
-    protected void onStop() {
+    public void onStop() {
         super.onStop();
         lockHandler.removeCallbacks(lockVault);
         lockHandler.postDelayed(lockVault, 30_000L);
     }
 
     @Override
-    protected void onDestroy() {
+    public void onDestroy() {
         lockHandler.removeCallbacks(lockVault);
         if (isFinishing()) VaultSession.INSTANCE.lock();
         super.onDestroy();
