@@ -32,8 +32,8 @@ export function AndroidSetup() {
     }
     setSaving(true)
     try {
-      if (!initializeAndroidAccounts({ ryt: rytBalance, maybank: maybankBalance })) throw new Error("Could not save accounts")
-      updateSettings({ currency: "MYR" })
+      if (!await initializeAndroidAccounts({ ryt: rytBalance, maybank: maybankBalance })) throw new Error("Could not save accounts")
+      if (!await updateSettings({ currency: "MYR" })) throw new Error("Could not save currency")
       await nativeCapture.setSources(true, true)
       await nativeCapture.requestPrivateAlerts()
       await nativeCapture.openNotificationAccess()

@@ -1,8 +1,9 @@
 "use client"
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react"
-import { DEFAULT_ANDROID_ACCOUNTS, STORAGE_KEYS } from "@/lib/constants"
-import { Account, Transaction } from "@/types"
+import { createContext, useCallback, useContext, useMemo } from "react"
+import { useVault } from "@/context/VaultContext"
+import { DEFAULT_ANDROID_ACCOUNTS } from "@/lib/constants"
+import type { Account, Transaction } from "@/types"
 
 interface AccountInput {
   name: string
@@ -14,13 +15,12 @@ interface AccountInput {
 interface AccountsContextValue {
   accounts: Account[]
   androidSetupComplete: boolean
-  initializeAndroidAccounts: (balances: { ryt: number; maybank: number }) => boolean
-  updateAccount: (id: string, patch: Partial<AccountInput>) => boolean
+  initializeAndroidAccounts: (balances: { ryt: number; maybank: number }) => Promise<boolean>
+  updateAccount: (id: string, patch: Partial<AccountInput>) => Promise<boolean>
   getBalance: (id: string, transactions: Transaction[]) => number
 }
 
 const AccountsContext = createContext<AccountsContextValue | null>(null)
-const SAME_TAB_EVENT = "tracker-storage-change"
 
 export function calculateAccountBalance(account: Account, transactions: Transaction[]): number {
   const movement = transactions.reduce((sum, item) => {
@@ -34,50 +34,8 @@ export function calculateAccountBalance(account: Account, transactions: Transact
 }
 
 export function AccountsProvider({ children }: { children: React.ReactNode }) {
-  const [accounts, setAccounts] = useState<Account[]>([])
-  const [androidSetupComplete, setAndroidSetupComplete] = useState(false)
-  const currentRef = useRef(accounts)
-
-  const replace = useCallback((raw: string | null) => {
-    try {
-      const next = JSON.parse(raw ?? "[]")
-      if (!Array.isArray(next)) return
-      currentRef.current = next
-      setAccounts(next)
-    } catch { /* storage recovery handles malformed data */ }
-  }, [])
-
-  useEffect(() => {
-    replace(localStorage.getItem(STORAGE_KEYS.ACCOUNTS))
-    setAndroidSetupComplete(localStorage.getItem(STORAGE_KEYS.ANDROID_SETUP) === "1")
-    const onStorage = (event: StorageEvent) => {
-      if (event.storageArea === localStorage && event.key === STORAGE_KEYS.ACCOUNTS) replace(event.newValue)
-    }
-    const onSameTab = (event: Event) => {
-      const detail = (event as CustomEvent<{ key: string; value: string }>).detail
-      if (detail?.key === STORAGE_KEYS.ACCOUNTS) replace(detail.value)
-    }
-    window.addEventListener("storage", onStorage)
-    window.addEventListener(SAME_TAB_EVENT, onSameTab)
-    return () => {
-      window.removeEventListener("storage", onStorage)
-      window.removeEventListener(SAME_TAB_EVENT, onSameTab)
-    }
-  }, [replace])
-
-  const persist = useCallback((next: Account[]): boolean => {
-    try {
-      const serialized = JSON.stringify(next)
-      localStorage.setItem(STORAGE_KEYS.ACCOUNTS, serialized)
-      currentRef.current = next
-      setAccounts(next)
-      window.dispatchEvent(new CustomEvent(SAME_TAB_EVENT, { detail: { key: STORAGE_KEYS.ACCOUNTS, value: serialized } }))
-      return true
-    } catch {
-      window.dispatchEvent(new CustomEvent("storage-write-failed"))
-      return false
-    }
-  }, [])
+  const { data, mutate } = useVault()
+  const accounts = data.accounts
 
   const initializeAndroidAccounts = useCallback((balances: { ryt: number; maybank: number }) => {
     const now = new Date().toISOString()
@@ -87,28 +45,26 @@ export function AccountsProvider({ children }: { children: React.ReactNode }) {
       createdAt: now,
       updatedAt: now,
     }))
-    if (!persist(next)) return false
-    localStorage.setItem(STORAGE_KEYS.ANDROID_SETUP, "1")
-    setAndroidSetupComplete(true)
-    return true
-  }, [persist])
+    return mutate((current) => ({ ...current, accounts: next, androidSetupComplete: true }))
+  }, [mutate])
 
-  const updateAccount = useCallback((id: string, patch: Partial<AccountInput>) => persist(
-    currentRef.current.map((account) => account.id === id
+  const updateAccount = useCallback((id: string, patch: Partial<AccountInput>) => mutate((current) => ({
+    ...current,
+    accounts: current.accounts.map((account) => account.id === id
       ? { ...account, ...patch, updatedAt: new Date().toISOString() }
-      : account)
-  ), [persist])
+      : account),
+  })), [mutate])
 
   const value = useMemo<AccountsContextValue>(() => ({
     accounts,
-    androidSetupComplete,
+    androidSetupComplete: data.androidSetupComplete,
     initializeAndroidAccounts,
     updateAccount,
     getBalance: (id, transactions) => {
       const account = accounts.find((item) => item.id === id)
       return account ? calculateAccountBalance(account, transactions) : 0
     },
-  }), [accounts, androidSetupComplete, initializeAndroidAccounts, updateAccount])
+  }), [accounts, data.androidSetupComplete, initializeAndroidAccounts, updateAccount])
 
   return <AccountsContext.Provider value={value}>{children}</AccountsContext.Provider>
 }

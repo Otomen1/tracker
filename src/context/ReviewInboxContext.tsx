@@ -3,6 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react"
 import { nativeCapture } from "@/lib/nativeCapture"
 import { PendingTransaction } from "@/types"
+import { useVault } from "@/context/VaultContext"
 
 interface ReviewInboxContextValue {
   items: PendingTransaction[]
@@ -16,6 +17,7 @@ interface ReviewInboxContextValue {
 const ReviewInboxContext = createContext<ReviewInboxContextValue | null>(null)
 
 export function ReviewInboxProvider({ children }: { children: React.ReactNode }) {
+  const { unlocked } = useVault()
   const [items, setItems] = useState<PendingTransaction[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -26,6 +28,10 @@ export function ReviewInboxProvider({ children }: { children: React.ReactNode })
   }, [])
 
   useEffect(() => {
+    if (!unlocked) {
+      setItems([])
+      return
+    }
     void refresh()
     const onFocus = () => void refresh()
     const onVisibility = () => { if (document.visibilityState === "visible") void refresh() }
@@ -35,7 +41,7 @@ export function ReviewInboxProvider({ children }: { children: React.ReactNode })
       window.removeEventListener("focus", onFocus)
       document.removeEventListener("visibilitychange", onVisibility)
     }
-  }, [refresh])
+  }, [refresh, unlocked])
 
   const discard = useCallback(async (id: string) => {
     await nativeCapture.discardPending(id)

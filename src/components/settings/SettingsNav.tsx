@@ -8,6 +8,7 @@ export const SETTINGS_SECTIONS = [
   { id: "preferences", label: "Preferences" },
   { id: "finance", label: "Budgets & goals" },
   { id: "notifications", label: "Reminders" },
+  { id: "security", label: "Security" },
   { id: "data-backup", label: "Data & backup" },
   { id: "application", label: "App" },
 ] as const

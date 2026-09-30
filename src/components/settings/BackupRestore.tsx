@@ -1,350 +1,178 @@
 "use client"
 
 import { useRef, useState } from "react"
+import { AlertCircle, CheckCircle, Download, Lock, ShieldCheck, Upload } from "lucide-react"
+import { useVault } from "@/context/VaultContext"
+import { useSettingsContext } from "@/context/SettingsContext"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { exportAllData, importAllData, logSecurityEvent } from "@/lib/storage"
-import { encryptData, decryptData, computeChecksum, verifyChecksum } from "@/lib/crypto"
-import { Download, Upload, CheckCircle, AlertCircle, Lock, ShieldCheck, ShieldAlert } from "lucide-react"
 import { DeleteConfirmDialog } from "@/components/transactions/DeleteConfirmDialog"
 import { BACKUP_MAX_FILE_SIZE_MB } from "@/lib/constants"
-import { useSettingsContext } from "@/context/SettingsContext"
+import { decryptData, encryptData } from "@/lib/crypto"
 import { saveOrShareFile } from "@/lib/fileExport"
-
-const BACKUP_INTERVAL_LABELS: Record<string, string> = {
-  never: "Never",
-  daily: "Daily",
-  weekly: "Weekly",
-  monthly: "Monthly",
-}
+import { createBackupJson, logSecurityEvent, parseBackupJson } from "@/lib/storage"
+import { nativeVault } from "@/lib/nativeVault"
+import type { VaultData } from "@/lib/vault/schema"
 
 type Status = { type: "success" | "error" | "warning"; message: string }
-type ImportPhase = "none" | "needs-password" | "confirming"
 
 export function BackupRestore() {
   const fileRef = useRef<HTMLInputElement>(null)
+  const vault = useVault()
   const { settings, updateSettings } = useSettingsContext()
-  const backupInterval = settings.backupInterval ?? "never"
-  const [backupPassword, setBackupPassword] = useState(() => typeof window === "undefined" ? "" : sessionStorage.getItem("tracker_backup_password") ?? "")
-
   const [status, setStatus] = useState<Status | null>(null)
   const [exporting, setExporting] = useState(false)
-  const [exportEncrypt, setExportEncrypt] = useState(false)
   const [exportPassword, setExportPassword] = useState("")
-
-  const [importPhase, setImportPhase] = useState<ImportPhase>("none")
-  const [pendingText, setPendingText] = useState<string | null>(null)
-  const [encryptedPayload, setEncryptedPayload] = useState<string | null>(null)
+  const [confirmPassword, setConfirmPassword] = useState("")
+  const [pendingEncrypted, setPendingEncrypted] = useState<string | null>(null)
+  const [pendingVault, setPendingVault] = useState<VaultData | null>(null)
   const [importPassword, setImportPassword] = useState("")
   const [decrypting, setDecrypting] = useState(false)
-  const [passwordError, setPasswordError] = useState<string | null>(null)
-  const [checksumValid, setChecksumValid] = useState<boolean | null>(null)
 
-  const resetImport = () => {
-    setImportPhase("none")
-    setPendingText(null)
-    setEncryptedPayload(null)
-    setImportPassword("")
-    setPasswordError(null)
-    setChecksumValid(null)
+  const requireFreshAuthentication = async () => {
+    if (!nativeVault.isNative()) return true
+    return nativeVault.unlock()
   }
 
-  // A02/A08: export with optional encryption + SHA-256 checksum
   const handleExport = async () => {
+    setStatus(null)
+    if (exportPassword.length < 12) {
+      setStatus({ type: "error", message: "Use an encryption password with at least 12 characters." })
+      return
+    }
+    if (exportPassword !== confirmPassword) {
+      setStatus({ type: "error", message: "The two encryption passwords do not match." })
+      return
+    }
     setExporting(true)
     try {
-      const rawJson = exportAllData()
-      const checksum = await computeChecksum(rawJson)
-      const dataWithChecksum = { ...JSON.parse(rawJson), checksum }
-      const signedJson = JSON.stringify(dataWithChecksum, null, 2)
+      if (!await requireFreshAuthentication()) throw new Error("Authentication was cancelled")
+      const encrypted = await encryptData(createBackupJson(vault.data), exportPassword)
+      const envelope = JSON.stringify({
+        format: "tracker-encrypted-backup",
+        version: 2,
+        encrypted: true,
+        exportedAt: new Date().toISOString(),
+        kdf: { name: "PBKDF2-SHA256", iterations: 250_000 },
+        cipher: { name: "AES-256-GCM" },
+        payload: encrypted,
+      }, null, 2)
       const date = new Date().toISOString().slice(0, 10)
-
-      let finalContent: string
-      let filename: string
-
-      if (exportEncrypt && !exportPassword) {
-        setStatus({ type: "error", message: "Enter a password before exporting an encrypted backup." })
-        return
-      }
-
-      if (exportEncrypt && exportPassword) {
-        const payload = await encryptData(signedJson, exportPassword)
-        finalContent = JSON.stringify(
-          { encrypted: true, exportedAt: new Date().toISOString(), payload },
-          null, 2
-        )
-        filename = `expense-tracker-backup-${date}.enc.json`
-        logSecurityEvent("backup_export_encrypted")
-      } else {
-        finalContent = signedJson
-        filename = `expense-tracker-backup-${date}.json`
-      }
-
-      const result = await saveOrShareFile(finalContent, filename, "application/json")
-      setStatus({
-        type: "success",
-        message: result === "shared" ? "Backup is ready. Choose where to save or share it." : "Backup downloaded successfully.",
-      })
-    } catch (e) {
-      setStatus({ type: "error", message: "Export failed. Please try again." })
-      console.error(e)
+      const result = await saveOrShareFile(envelope, `tracker-backup-${date}.enc.json`, "application/json")
+      await updateSettings({ lastBackupAt: new Date().toISOString(), backupInterval: "never" })
+      setExportPassword("")
+      setConfirmPassword("")
+      logSecurityEvent("backup_export_encrypted")
+      setStatus({ type: "success", message: result === "shared" ? "Encrypted backup is ready to save or share." : "Encrypted backup downloaded." })
+    } catch (error) {
+      setStatus({ type: "error", message: error instanceof Error ? error.message : "Backup export failed." })
     } finally {
       setExporting(false)
     }
   }
 
-  // A08: on file select, detect encrypted files and read content
-  const handleFileSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
+  const stageBackup = (plaintext: string) => {
+    const parsed = parseBackupJson(plaintext, vault.data)
+    if (!parsed.success) {
+      setStatus({ type: "error", message: parsed.error })
+      return
+    }
+    setPendingVault(parsed.vault)
+  }
+
+  const handleFileSelected = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    event.target.value = ""
     if (!file) return
-    e.target.value = ""
     setStatus(null)
     if (file.size > BACKUP_MAX_FILE_SIZE_MB * 1024 * 1024) {
-      setStatus({ type: "error", message: `File too large (max ${BACKUP_MAX_FILE_SIZE_MB} MB)` })
+      setStatus({ type: "error", message: `File is too large. Maximum size is ${BACKUP_MAX_FILE_SIZE_MB} MB.` })
       return
     }
     const reader = new FileReader()
-    reader.onload = (ev) => {
-      const text = ev.target?.result as string
+    reader.onload = () => {
+      const text = String(reader.result ?? "")
       try {
-        const parsed = JSON.parse(text)
-        if (parsed.encrypted === true && typeof parsed.payload === "string") {
-          setEncryptedPayload(parsed.payload)
-          setImportPhase("needs-password")
-        } else {
-          setPendingText(text)
-          setImportPhase("confirming")
+        const envelope = JSON.parse(text) as { encrypted?: boolean; payload?: unknown }
+        if (envelope.encrypted === true && typeof envelope.payload === "string") {
+          setPendingEncrypted(envelope.payload)
+          return
         }
+        setStatus({ type: "warning", message: "This is an older unencrypted backup. It can be restored, but store it somewhere private." })
+        stageBackup(text)
       } catch {
-        setStatus({ type: "error", message: "Invalid backup file" })
+        setStatus({ type: "error", message: "The selected file is not a valid Tracker backup." })
       }
     }
-    reader.onerror = () => setStatus({ type: "error", message: "Could not read the file" })
+    reader.onerror = () => setStatus({ type: "error", message: "The backup file could not be read." })
     reader.readAsText(file)
   }
 
-  // A02: decrypt encrypted backup using entered password
   const handleDecrypt = async () => {
-    if (!encryptedPayload || !importPassword) return
+    if (!pendingEncrypted || !importPassword) return
     setDecrypting(true)
-    setPasswordError(null)
+    setStatus(null)
     try {
-      const decrypted = await decryptData(encryptedPayload, importPassword)
+      stageBackup(await decryptData(pendingEncrypted, importPassword))
+      setPendingEncrypted(null)
+      setImportPassword("")
       logSecurityEvent("backup_decrypt_success")
-      setPendingText(decrypted)
-      setImportPhase("confirming")
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : "Decryption failed"
-      setPasswordError(msg)
+    } catch (error) {
+      setStatus({ type: "error", message: error instanceof Error ? error.message : "Backup decryption failed." })
       logSecurityEvent("backup_decrypt_failure")
     } finally {
       setDecrypting(false)
     }
   }
 
-  // A08: verify SHA-256 checksum before importing
-  const handleConfirmImport = async () => {
-    if (!pendingText) return
-
+  const restore = async () => {
+    if (!pendingVault) return
     try {
-      const parsed = JSON.parse(pendingText)
-      if (parsed.checksum && typeof parsed.checksum === "string") {
-        const { checksum, ...rest } = parsed
-        const valid = await verifyChecksum(JSON.stringify(rest, null, 2), checksum)
-        setChecksumValid(valid)
-        if (!valid) {
-          setStatus({ type: "warning", message: "Checksum mismatch — file may have been modified. Proceed with caution." })
-          logSecurityEvent("backup_checksum_mismatch")
-          return
-        }
-        logSecurityEvent("backup_checksum_verified")
-      }
-    } catch {
-      // No checksum in old backups — proceed without verification
-    }
-
-    doImport(pendingText)
-  }
-
-  const doImport = (text: string) => {
-    const result = importAllData(text)
-    resetImport()
-    if (result.success) {
-      setStatus({ type: "success", message: "Data restored successfully. Refresh to see changes." })
-    } else {
-      setStatus({ type: "error", message: result.error ?? "Import failed" })
+      if (!await requireFreshAuthentication()) throw new Error("Authentication was cancelled")
+      if (!await vault.replace(pendingVault)) throw new Error("The encrypted vault could not be updated")
+      setPendingVault(null)
+      setStatus({ type: "success", message: "Backup restored and verified successfully." })
+      logSecurityEvent("backup_import_success", { transactionCount: pendingVault.transactions.length })
+    } catch (error) {
+      setStatus({ type: "error", message: error instanceof Error ? error.message : "Backup restore failed." })
     }
   }
-
-  const backupReady = backupInterval === "never" ? "Disabled" : backupPassword.length < 8 ? "Password needed" : "Active"
-  const backupTone = backupReady === "Active" ? "text-emerald-700 bg-emerald-50 dark:text-emerald-300 dark:bg-emerald-950" : backupReady === "Password needed" ? "text-amber-700 bg-amber-50 dark:text-amber-300 dark:bg-amber-950" : "text-zinc-600 bg-zinc-100 dark:text-zinc-300 dark:bg-zinc-800"
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between rounded-lg border border-zinc-200 bg-zinc-50/60 p-3 dark:border-zinc-700 dark:bg-zinc-800/40"><div><span className="text-sm font-medium">Automatic backup</span><p className="mt-0.5 text-xs text-zinc-500">Encrypted local download schedule</p></div><span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${backupTone}`}>{backupReady}</span></div>
+      <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-950 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-100">
+        <p className="flex items-center gap-2 font-medium"><ShieldCheck className="h-4 w-4" />Local encrypted vault</p>
+        <p className="mt-1 text-xs opacity-80">Confirmed financial records remain on this device. Portable backups are always password-encrypted.</p>
+      </div>
+
       <div className="grid gap-4 xl:grid-cols-2">
-      <div className="order-1 space-y-2 rounded-lg border border-zinc-200 p-3 dark:border-zinc-800">
-        <div>
-          <p className="text-sm font-medium text-zinc-800 dark:text-zinc-200">Manual backup</p>
-          <p className="text-xs text-zinc-400">Download a copy of your data now. Password protection is recommended.</p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Button
-            variant="outline" size="sm" className="gap-2"
-            onClick={handleExport}
-            disabled={exporting}
-          >
-            <Download className="w-4 h-4" />
-            {exporting ? "Exporting…" : "Export Backup"}
+        <section className="space-y-3 rounded-xl border border-zinc-200 p-3 dark:border-zinc-800">
+          <div><p className="text-sm font-medium">Create portable backup</p><p className="text-xs text-zinc-500">Use at least 12 characters. The password cannot be recovered.</p></div>
+          <Input type="password" value={exportPassword} onChange={(event) => setExportPassword(event.target.value)} placeholder="Encryption password" autoComplete="new-password" />
+          <Input type="password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} placeholder="Confirm password" autoComplete="new-password" />
+          <Button className="w-full gap-2" onClick={() => void handleExport()} disabled={exporting}>
+            <Download className="h-4 w-4" />{exporting ? "Encrypting…" : "Create encrypted backup"}
           </Button>
-          <Button variant="outline" size="sm" className="gap-2" onClick={() => fileRef.current?.click()}>
-            <Upload className="w-4 h-4" />
-            Import Backup
-          </Button>
-          <input ref={fileRef} type="file" accept=".json" className="hidden" onChange={handleFileSelected} />
-        </div>
+          {settings.lastBackupAt && <p className="text-xs text-zinc-500">Last portable backup: {new Date(settings.lastBackupAt).toLocaleString()}</p>}
+        </section>
 
-        {/* A02: optional encryption for export */}
-        <label className="flex items-center gap-2 cursor-pointer w-fit">
-          <input
-            type="checkbox"
-            className="h-3.5 w-3.5 rounded border-input"
-            checked={exportEncrypt}
-            onChange={(e) => setExportEncrypt(e.target.checked)}
-          />
-          <Lock className="w-3 h-3 text-zinc-400" />
-          <span className="text-xs text-zinc-500">Password-protect backup</span>
-        </label>
-        {exportEncrypt && (
-          <Input
-            type="password"
-            placeholder="Encryption password"
-            className="h-8 w-56 text-sm"
-            value={exportPassword}
-            onChange={(e) => setExportPassword(e.target.value)}
-            autoComplete="new-password"
-          />
-        )}
+        <section className="space-y-3 rounded-xl border border-zinc-200 p-3 dark:border-zinc-800">
+          <div><p className="text-sm font-medium">Restore portable backup</p><p className="text-xs text-zinc-500">The file is validated before any current data is replaced.</p></div>
+          <Button variant="outline" className="w-full gap-2" onClick={() => fileRef.current?.click()}><Upload className="h-4 w-4" />Choose backup file</Button>
+          <input ref={fileRef} type="file" accept=".json,.enc" className="hidden" onChange={handleFileSelected} />
+          {pendingEncrypted && <div className="space-y-2"><div className="flex items-center gap-2 text-xs font-medium"><Lock className="h-3.5 w-3.5" />Encrypted backup selected</div><Input type="password" value={importPassword} onChange={(event) => setImportPassword(event.target.value)} placeholder="Backup password" autoComplete="current-password" onKeyDown={(event) => { if (event.key === "Enter") void handleDecrypt() }} /><Button className="w-full" onClick={() => void handleDecrypt()} disabled={!importPassword || decrypting}>{decrypting ? "Decrypting…" : "Decrypt and verify"}</Button></div>}
+        </section>
       </div>
 
-      {/* Status message */}
-      {status && (
-        <div className={`order-5 flex items-start gap-2 text-sm xl:col-span-2 ${
-          status.type === "success" ? "text-emerald-600" :
-          status.type === "warning" ? "text-amber-500" : "text-rose-500"
-        }`}>
-          {status.type === "success" ? <CheckCircle className="w-4 h-4 mt-0.5 shrink-0" /> :
-           status.type === "warning" ? <ShieldAlert className="w-4 h-4 mt-0.5 shrink-0" /> :
-           <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />}
-          {status.message}
-          {status.type === "warning" && (
-            <button
-              className="ml-auto text-xs underline shrink-0"
-              onClick={() => pendingText && doImport(pendingText)}
-            >
-              Import anyway
-            </button>
-          )}
-        </div>
-      )}
+      {status && <div role="status" className={`flex items-start gap-2 text-sm ${status.type === "success" ? "text-emerald-600" : status.type === "warning" ? "text-amber-600" : "text-rose-600"}`}>{status.type === "success" ? <CheckCircle className="mt-0.5 h-4 w-4 shrink-0" /> : <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />}{status.message}</div>}
 
-      {/* Checksum verified indicator */}
-      {checksumValid === true && (
-        <div className="order-5 flex items-center gap-1.5 text-xs text-emerald-600 xl:col-span-2">
-          <ShieldCheck className="w-3.5 h-3.5" />
-          Integrity verified
-        </div>
-      )}
-
-      <p className="order-4 text-xs text-zinc-500 dark:text-zinc-400 xl:col-span-2">
-        Backups contain sensitive financial information and an integrity checksum. Use password protection before sharing or storing them.
-      </p>
-
-      <div className="order-2 space-y-2 rounded-lg border border-zinc-200 p-3 dark:border-zinc-800">
-        <p className="text-sm font-medium text-zinc-800 dark:text-zinc-200">Schedule encrypted backups</p>
-        <label className="text-xs text-zinc-500">Automatic backup password (minimum 8 characters)</label>
-        <Input
-          type="password"
-          placeholder="Required for automatic backups"
-          className="h-9 w-full text-sm"
-          value={backupPassword}
-          onChange={(e) => { const value = e.target.value; setBackupPassword(value); if (value) sessionStorage.setItem("tracker_backup_password", value); else sessionStorage.removeItem("tracker_backup_password") }}
-          autoComplete="new-password"
-        />
-        <p className="text-xs text-zinc-400">Kept only until this browser tab closes. Automatic backups are skipped until at least 8 characters are entered.</p>
-      </div>
-
-      {/* Auto backup interval */}
-      <div className="order-3 space-y-2 rounded-lg border border-zinc-200 p-3 dark:border-zinc-800 xl:col-span-2">
-        <div className="flex items-center gap-3 pt-1">
-        <span className="text-sm text-zinc-700 dark:text-zinc-300 shrink-0">Frequency</span>
-        <Select
-          value={backupInterval}
-          onValueChange={(v) => {
-            const next = v as "never" | "daily" | "weekly" | "monthly"
-            if (next !== "never" && backupPassword.length < 8) {
-              setStatus({ type: "error", message: "Enter an automatic backup password with at least 8 characters first." })
-              return
-            }
-            const patch = backupInterval === "never" && next !== "never"
-              ? { backupInterval: next, lastBackupAt: undefined }
-              : { backupInterval: next }
-            updateSettings(patch)
-          }}
-        >
-          <SelectTrigger className="w-32 h-8 text-sm">
-            <SelectValue>{BACKUP_INTERVAL_LABELS[backupInterval]}</SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            {Object.entries(BACKUP_INTERVAL_LABELS).map(([value, label]) => (
-              <SelectItem key={value} value={value}>{label}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        {backupInterval !== "never" && settings.lastBackupAt && (
-          <span className="text-xs text-zinc-400">
-            Last: {new Date(settings.lastBackupAt).toLocaleDateString()}
-          </span>
-        )}
-        </div>
-      </div>
-      </div>
-
-      {/* Encrypted file password prompt */}
-      {importPhase === "needs-password" && (
-        <div className="p-3 rounded-md border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/50 space-y-2">
-          <div className="flex items-center gap-1.5 text-sm font-medium">
-            <Lock className="w-3.5 h-3.5" />
-            Encrypted backup — enter password to restore
-          </div>
-          <Input
-            type="password"
-            placeholder="Password"
-            className="h-8 text-sm"
-            value={importPassword}
-            onChange={(e) => { setImportPassword(e.target.value); setPasswordError(null) }}
-            onKeyDown={(e) => e.key === "Enter" && handleDecrypt()}
-            autoComplete="current-password"
-            autoFocus
-          />
-          {passwordError && <p className="text-xs text-rose-500">{passwordError}</p>}
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={resetImport}>Cancel</Button>
-            <Button size="sm" disabled={!importPassword || decrypting} onClick={handleDecrypt}>
-              {decrypting ? "Decrypting…" : "Decrypt & Continue"}
-            </Button>
-          </div>
-        </div>
-      )}
-
-      {/* Import confirmation dialog */}
       <DeleteConfirmDialog
-        open={importPhase === "confirming"}
-        onOpenChange={(open) => { if (!open) resetImport() }}
-        title="Replace all data?"
-        description="This will replace ALL your current transactions, categories, and settings with the backup file. This cannot be undone."
-        onConfirm={handleConfirmImport}
+        open={pendingVault !== null}
+        onOpenChange={(open) => { if (!open) setPendingVault(null) }}
+        title="Replace all local data?"
+        description={`The verified backup contains ${pendingVault?.transactions.length ?? 0} transactions. Current data will first remain available as an encrypted recovery snapshot.`}
+        confirmLabel="Replace data"
+        onConfirm={() => void restore()}
       />
     </div>
   )

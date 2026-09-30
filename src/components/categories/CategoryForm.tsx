@@ -28,7 +28,7 @@ interface Props {
   category?: Category
   defaultType?: "income" | "expense"
   existingNames?: string[]
-  onSubmit: (data: CategoryFormData) => void
+  onSubmit: (data: CategoryFormData) => Promise<unknown> | unknown
   onCancel: () => void
 }
 
@@ -49,7 +49,7 @@ export function CategoryForm({ category, defaultType = "expense", existingNames 
   const selectedColor = watch("color")
   const selectedType = watch("type")
 
-  const handleFormSubmit = (data: FormFields) => {
+  const handleFormSubmit = async (data: FormFields) => {
     const duplicate = existingNames
       .filter((n) => n.toLowerCase() !== category?.name?.toLowerCase())
       .some((n) => n.toLowerCase() === data.name.toLowerCase())
@@ -57,7 +57,7 @@ export function CategoryForm({ category, defaultType = "expense", existingNames 
       setError("name", { type: "manual", message: "A category with this name already exists" })
       return
     }
-    onSubmit({
+    await onSubmit({
       name: data.name,
       type: data.type,
       color: data.color,

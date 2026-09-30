@@ -59,32 +59,99 @@ class TrackerNativePlugin : Plugin() {
     }
 
     @com.getcapacitor.PluginMethod
-    fun listPending(call: PluginCall) {
+    fun listPending(call: PluginCall) = vaultAction(call) {
         val result = JSArray()
         val pending = SecurePendingStore(context).list()
         pending.items.forEach { result.put(it) }
-        call.resolve(JSObject().put("items", result).put("error", pending.error))
+        JSObject().put("items", result).put("error", pending.error)
     }
 
     @com.getcapacitor.PluginMethod
-    fun discardPending(call: PluginCall) {
-        val id = call.getString("id") ?: return call.reject("Missing pending transaction id")
-        if (SecurePendingStore(context).remove(id)) call.resolve() else call.reject("Could not update the secure review inbox")
+    fun discardPending(call: PluginCall) = vaultAction(call) {
+        val id = call.getString("id") ?: throw IllegalArgumentException("Missing pending transaction id")
+        if (!SecurePendingStore(context).remove(id)) throw IllegalStateException("Could not update the secure review inbox")
+        JSObject()
     }
 
     @com.getcapacitor.PluginMethod
-    fun dismissPendingError(call: PluginCall) { SecurePendingStore(context).dismissError(); call.resolve() }
+    fun dismissPendingError(call: PluginCall) = vaultAction(call) {
+        SecurePendingStore(context).dismissError()
+        JSObject()
+    }
+
+    @com.getcapacitor.PluginMethod
+    fun getVaultStatus(call: PluginCall) {
+        val store = EncryptedVaultStore(context)
+        call.resolve(JSObject()
+            .put("exists", store.exists())
+            .put("unlocked", VaultSession.isUnlocked())
+            .put("hasRecovery", store.hasRecovery()))
+    }
+
+    @com.getcapacitor.PluginMethod
+    fun lockVault(call: PluginCall) {
+        VaultSession.lock()
+        call.resolve()
+    }
+
+    @com.getcapacitor.PluginMethod
+    fun readVault(call: PluginCall) = vaultAction(call) {
+        JSObject().put("vault", JSObject.fromJSONObject(EncryptedVaultStore(context).read()))
+    }
+
+    @com.getcapacitor.PluginMethod
+    fun initializeVault(call: PluginCall) = vaultAction(call) {
+        val candidate = call.getObject("vault") ?: throw IllegalArgumentException("Vault data is required")
+        val stored = EncryptedVaultStore(context).initialize(candidate)
+        JSObject().put("vault", JSObject.fromJSONObject(stored))
+    }
+
+    @com.getcapacitor.PluginMethod
+    fun writeVault(call: PluginCall) = vaultAction(call) {
+        val candidate = call.getObject("vault") ?: throw IllegalArgumentException("Vault data is required")
+        val expectedRevision = call.getLong("expectedRevision") ?: throw IllegalArgumentException("Vault revision is required")
+        val stored = EncryptedVaultStore(context).write(candidate, expectedRevision)
+        JSObject().put("vault", JSObject.fromJSONObject(stored))
+    }
+
+    @com.getcapacitor.PluginMethod
+    fun restorePreviousVault(call: PluginCall) = vaultAction(call) {
+        JSObject().put("vault", JSObject.fromJSONObject(EncryptedVaultStore(context).restorePrevious()))
+    }
+
+    @com.getcapacitor.PluginMethod
+    fun eraseVault(call: PluginCall) = vaultAction(call) {
+        context.getSharedPreferences("tracker-capture", Activity.MODE_PRIVATE).edit().clear().commit()
+        // Delete key material first. Any ciphertext left by an interrupted
+        // cleanup is then cryptographically unrecoverable.
+        VaultKeyManager(context).erase()
+        EncryptedVaultStore(context).erase()
+        SecurePendingStore(context).erase()
+        JSObject()
+    }
 
     @com.getcapacitor.PluginMethod
     fun authenticate(call: PluginCall) {
         val host = activity as? FragmentActivity ?: return call.reject("Authentication is unavailable")
+        try {
+            // Create the auth-bound wrapping key before the prompt so the
+            // successful device authentication can authorize its first use.
+            VaultKeyManager(context).prepare()
+        } catch (error: Exception) {
+            return call.reject("Device security could not prepare the encrypted vault", error)
+        }
         val authenticators = BiometricManager.Authenticators.BIOMETRIC_STRONG or BiometricManager.Authenticators.DEVICE_CREDENTIAL
         val availability = BiometricManager.from(host).canAuthenticate(authenticators)
         if (availability != BiometricManager.BIOMETRIC_SUCCESS) return call.reject("Set a device PIN or biometric lock first")
         host.runOnUiThread {
             val prompt = BiometricPrompt(host, ContextCompat.getMainExecutor(host), object : BiometricPrompt.AuthenticationCallback() {
                 override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
-                    call.resolve(JSObject().put("authenticated", true))
+                    try {
+                        VaultKeyManager(context).unlockOrCreate()
+                        call.resolve(JSObject().put("authenticated", true))
+                    } catch (error: Exception) {
+                        call.reject("The encrypted vault could not be unlocked", error)
+                    }
                 }
                 override fun onAuthenticationError(errorCode: Int, errString: CharSequence) { call.reject(errString.toString()) }
                 override fun onAuthenticationFailed() { /* prompt remains open */ }
@@ -94,6 +161,17 @@ class TrackerNativePlugin : Plugin() {
                 .setSubtitle("Confirm your identity to view financial data")
                 .setAllowedAuthenticators(authenticators)
                 .build())
+        }
+    }
+
+    private fun vaultAction(call: PluginCall, action: () -> JSObject) {
+        try {
+            if (!VaultSession.isUnlocked()) throw SecurityException("Tracker is locked")
+            call.resolve(action())
+        } catch (error: SecurityException) {
+            call.reject(error.message ?: "Tracker is locked", "VAULT_LOCKED", error)
+        } catch (error: Exception) {
+            call.reject(error.message ?: "Secure storage operation failed", "VAULT_ERROR", error)
         }
     }
 }

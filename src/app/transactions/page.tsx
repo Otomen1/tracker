@@ -59,7 +59,7 @@ function TransactionsPageContent() {
 
   const handleAdd = useCallback(async (data: TransactionFormData) => {
     if (!await addTransaction(data)) {
-      showToast("Transaction could not be saved. Check browser storage and try again.", "error")
+      showToast("Transaction could not be saved. Check local storage and try again.", "error")
       return false
     }
     setAddOpen(false)
@@ -70,7 +70,7 @@ function TransactionsPageContent() {
 
   const handleUpdate = useCallback(async (id: string, data: TransactionFormData) => {
     if (!await updateTransaction(id, data)) {
-      showToast("Changes could not be saved. Check browser storage and try again.", "error")
+      showToast("Changes could not be saved. Check local storage and try again.", "error")
       return false
     }
     showToast("Changes saved", "success")

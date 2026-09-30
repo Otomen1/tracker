@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { act, renderHook } from "@testing-library/react"
 import { TransactionsProvider } from "@/context/TransactionsContext"
+import { VaultProvider } from "@/context/VaultContext"
 import { useTransactions } from "@/hooks/useTransactions"
 import { STORAGE_KEYS } from "@/lib/constants"
 import { Transaction } from "@/types"
@@ -17,7 +18,7 @@ const transaction: Transaction = {
 }
 
 const wrapper = ({ children }: { children: React.ReactNode }) => (
-  <TransactionsProvider>{children}</TransactionsProvider>
+  <VaultProvider><TransactionsProvider>{children}</TransactionsProvider></VaultProvider>
 )
 
 describe("TransactionsProvider persistence", () => {

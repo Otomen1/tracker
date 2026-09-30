@@ -5,11 +5,14 @@ import { useSettingsContext } from "@/context/SettingsContext"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
+import { useToast } from "@/context/ToastContext"
 
 export function ReminderSettings() {
   const { settings, updateSettings } = useSettingsContext()
   const [permission, setPermission] = useState<NotificationPermission>("default")
   const [isSupported, setIsSupported] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const { showToast } = useToast()
 
   useEffect(() => {
     const supported = "Notification" in window
@@ -22,16 +25,29 @@ export function ReminderSettings() {
   }
 
   const handleToggle = async () => {
-    if (settings.reminderEnabled) {
-      updateSettings({ reminderEnabled: false })
-      return
+    setSaving(true)
+    try {
+      if (settings.reminderEnabled) {
+        if (!await updateSettings({ reminderEnabled: false })) showToast("Reminder setting could not be saved.", "error")
+        return
+      }
+      if (permission !== "granted") {
+        const result = await Notification.requestPermission()
+        setPermission(result)
+        if (result !== "granted") return
+      }
+      if (!await updateSettings({ reminderEnabled: true, reminderTime: settings.reminderTime ?? "20:00" })) {
+        showToast("Reminder setting could not be saved.", "error")
+      }
+    } catch {
+      showToast("Notification permission could not be requested.", "error")
+    } finally {
+      setSaving(false)
     }
-    if (permission !== "granted") {
-      const result = await Notification.requestPermission()
-      setPermission(result)
-      if (result !== "granted") return
-    }
-    updateSettings({ reminderEnabled: true, reminderTime: settings.reminderTime ?? "20:00" })
+  }
+
+  const saveTime = async (reminderTime: string) => {
+    if (!await updateSettings({ reminderTime })) showToast("Reminder time could not be saved.", "error")
   }
 
   return (
@@ -42,6 +58,7 @@ export function ReminderSettings() {
           role="switch"
           aria-checked={settings.reminderEnabled}
           onClick={handleToggle}
+          disabled={saving}
           aria-label="Daily reminder"
           className={`relative inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
             settings.reminderEnabled ? "bg-emerald-500" : "bg-zinc-300 dark:bg-zinc-600"
@@ -78,7 +95,7 @@ export function ReminderSettings() {
             type="time"
             className="min-h-11 w-32"
             value={settings.reminderTime ?? "20:00"}
-            onChange={(e) => updateSettings({ reminderTime: e.target.value })}
+            onChange={(event) => void saveTime(event.target.value)}
           />
           <p className="text-xs text-zinc-400">
             The app must be open in a browser tab to receive notifications.

@@ -1,6 +1,6 @@
 # Tracker
 
-A privacy-first personal expense tracker built with Next.js. Browser storage remains the primary offline store. The local web server can optionally synchronize it with a local PostgreSQL database.
+Tracker is a local-first personal finance app built with Next.js and Capacitor. It has no account system, cloud synchronization, analytics, or financial-data API. The web/PWA build stores records in that browser; the Android APK stores confirmed financial records in an encrypted native vault.
 
 ## Run locally
 
@@ -9,39 +9,30 @@ npm ci
 npm run dev
 ```
 
-Open http://localhost:3000.
+Open <http://localhost:3000>.
 
-## Optional local PostgreSQL synchronization
+No `.env` secrets, PostgreSQL server, pgAdmin installation, Clerk account, or Neon database is required.
 
-The regular Next.js web build exposes `/api/sync`. The browser always saves locally first, queues changes while PostgreSQL is unavailable, and retries later. Database credentials remain on the server.
+## Local security model
 
-1. Copy `.env.example` to `.env.local`.
-2. Replace `REPLACE_WITH_YOUR_PASSWORD` with the password for `tracker_user`.
-3. Confirm PostgreSQL is running and the existing `accounts`, `categories`, `transactions`, and `settings` tables are in the `public` schema.
-4. Run `npm run dev` and open `http://localhost:3000`.
-5. Check **Settings → Data & backup → PostgreSQL sync**.
+- The Android vault uses AES-256-GCM with a random data-encryption key.
+- Android Keystore protects the key-wrapping key and requires the device PIN or a strong biometric.
+- The unwrapped data key exists only during an unlocked app session and is cleared when the app locks.
+- Tracker locks after 30 seconds in the background and supports **Settings → Local security → Lock now**.
+- Screenshots and screen recording are blocked by `FLAG_SECURE` in the APK.
+- Android backup, cleartext traffic, WebView debugging in release builds, broad file sharing, and the Internet permission are disabled.
+- Notification capture is opt-in, restricted to approved package IDs, processed locally, and placed in a separate encrypted review inbox.
+- Portable backups require a password of at least 12 characters and use PBKDF2-SHA256 (250,000 iterations) plus AES-256-GCM.
 
-On the first successful sync, Tracker creates `tracker_sync_records`, `tracker_sync_operations`, and `tracker_sync_version_seq`. These contain sync versions, operation IDs, and deletion tombstones. Existing application tables are not dropped or recreated.
+The browser/PWA build remains local-only but browser storage is not encrypted by Tracker. Protect the computer account with a strong login and full-disk encryption. Use the Android APK when app-level vault encryption is required.
 
-Check database connectivity and table compatibility:
+## Safe upgrade from 1.1.x
 
-```bash
-curl http://localhost:3000/api/sync
-```
+Version 1.2.0 keeps the package ID `com.otomen.tracker`, so Android can update the existing installation only when the APK is signed with the original signing key.
 
-The Capacitor build stays local-only because a static Android bundle has no Next.js server. It does not attempt to connect to PostgreSQL.
+On the first successful unlock after updating, Tracker copies and validates the existing browser-stored records into the encrypted vault. The original copy is retained until the encrypted vault survives another successful unlock; only then is sensitive legacy storage removed. Do not uninstall the old app or clear its storage before installing the correctly signed update.
 
-## Phone and account synchronization
-
-The Vercel deployment supports Clerk accounts and a Neon PostgreSQL database. Connect both integrations to the same Vercel project:
-
-1. In **Vercel → Project → Storage**, create or connect a Neon PostgreSQL database.
-2. In **Vercel Marketplace**, add Clerk to the project.
-3. Confirm Vercel provides `DATABASE_URL`, `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, and `CLERK_SECRET_KEY`.
-4. Redeploy the project.
-5. Open the existing PWA URL on the phone and sign in.
-
-The PWA URL and browser storage remain unchanged during deployment. Existing transactions are placed in the authenticated sync queue and uploaded after sign-in. Keep the phone PWA open until the status changes to **Synced**. Each Clerk user has isolated sync records and operation history.
+Before updating, create and verify a backup from **Settings → Data & backup**. Backups created by 1.2.0 are password-encrypted. Older plaintext JSON backups can still be imported, with a warning.
 
 ## Quality checks
 
@@ -50,24 +41,22 @@ npm test
 npm run typecheck
 npm run lint
 npm run build
+npm run android:sync
+cd android
+./gradlew testDebugUnitTest assembleDebug
 ```
 
-## Data and backups
+## Release signing
 
-The app stores its working data in browser local storage. PostgreSQL synchronization does not replace backups. Export backups regularly from **Settings → Data & Backup**. Backups contain financial information, so password protection is recommended. Automatic-backup passwords are kept only for the current browser tab and are never included in exports.
+Release artifacts deliberately fail when `android/keystore.properties` is missing. Restore that file and the original keystore on the build computer before running:
+
+```bash
+cd android
+./gradlew assembleRelease
+```
+
+Signing files and private APK outputs are excluded from Git. Never generate a new key for an update to the installed app: Android will treat it as a different signer and refuse the update.
 
 ## Technology
 
-Next.js 16 App Router, React 19, TypeScript, Tailwind CSS, Radix UI, Recharts, Zod, Vitest, and PWA support.
-
-## Private Android build
-
-The Capacitor Android target adds local-only notification capture for Ryt Bank and MAE. It stores normalized pending items in an Android Keystore-encrypted queue, requires review before saving, and never uploads notification or financial data.
-
-```bash
-npm run android:sync
-cd android
-./gradlew testDebugUnitTest assembleRelease
-```
-
-Release signing reads `android/keystore.properties`; signing files and private APK outputs are excluded from Git. Notification access is granted explicitly during first-run setup. Google Wallet capture remains disabled until a real notification format is tested.
+Next.js 16 App Router, React 19, TypeScript, Tailwind CSS, Radix UI, Recharts, Zod, Vitest, PWA support, Capacitor 8, Android Keystore, and AndroidX Biometric.

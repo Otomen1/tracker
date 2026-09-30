@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { useTheme } from "next-themes"
 import { Sun, Moon, Monitor } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { useSettingsContext } from "@/context/SettingsContext"
 
 const options = [
   { value: "light", label: "Light", icon: Sun },
@@ -13,9 +14,18 @@ const options = [
 
 export function ThemeToggle() {
   const { theme, setTheme } = useTheme()
+  const { settings, updateSettings } = useSettingsContext()
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => setMounted(true), [])
+  useEffect(() => {
+    if (mounted) setTheme(settings.theme)
+  }, [mounted, setTheme, settings.theme])
+
+  const selectTheme = async (value: typeof options[number]["value"]) => {
+    setTheme(value)
+    if (!await updateSettings({ theme: value })) setTheme(settings.theme)
+  }
 
   return (
     <div className="flex rounded-lg border border-zinc-200 dark:border-zinc-800 overflow-hidden">
@@ -23,7 +33,7 @@ export function ThemeToggle() {
         <button
           key={value}
           type="button"
-          onClick={() => setTheme(value)}
+          onClick={() => void selectTheme(value)}
           aria-pressed={mounted && theme === value}
           className={cn(
             "min-h-11 flex-1 flex items-center justify-center gap-2 px-2 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-zinc-500",

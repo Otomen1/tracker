@@ -18,6 +18,7 @@ interface Props {
   title?: string
   description?: string
   cascadeCount?: number
+  confirmLabel?: string
   onConfirm: (cascade: boolean) => void
 }
 
@@ -27,6 +28,7 @@ export function DeleteConfirmDialog({
   title = "Delete transaction",
   description = "This action cannot be undone.",
   cascadeCount,
+  confirmLabel = "Delete",
   onConfirm,
 }: Props) {
   const [cascade, setCascade] = useState(false)
@@ -63,7 +65,7 @@ export function DeleteConfirmDialog({
             onClick={() => onConfirm(cascade)}
             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
           >
-            Delete
+            {confirmLabel}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

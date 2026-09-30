@@ -49,7 +49,7 @@ export default function DashboardPage() {
 
   const handleAddTransaction = async (data: TransactionFormData) => {
     if (!await addTransaction(data)) {
-      showToast("Transaction could not be saved. Check browser storage and try again.", "error")
+      showToast("Transaction could not be saved. Check local storage and try again.", "error")
       return false
     }
     setAddOpen(false)

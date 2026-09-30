@@ -7,12 +7,12 @@ import { TransactionsProvider } from "@/context/TransactionsContext"
 import { CategoriesProvider } from "@/context/CategoriesContext"
 import { AccountsProvider } from "@/context/AccountsContext"
 import { ReviewInboxProvider } from "@/context/ReviewInboxContext"
-import { SyncProvider } from "@/context/SyncContext"
+import { VaultProvider } from "@/context/VaultContext"
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
-      <SyncProvider>
+      <VaultProvider>
         <SettingsProvider>
           <ToastProvider>
             <CategoriesProvider>
@@ -24,7 +24,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
             </CategoriesProvider>
           </ToastProvider>
         </SettingsProvider>
-      </SyncProvider>
+      </VaultProvider>
     </ThemeProvider>
   )
 }

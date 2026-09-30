@@ -12,9 +12,9 @@ interface Props {
   type: "income" | "expense"
   categories: Category[]
   transactions: Transaction[]
-  onAdd: (data: CategoryFormData) => void
-  onUpdate: (id: string, data: Partial<CategoryFormData>) => void
-  onDelete: (id: string) => { success: boolean; error?: string }
+  onAdd: (data: CategoryFormData) => Promise<unknown>
+  onUpdate: (id: string, data: Partial<CategoryFormData>) => Promise<boolean>
+  onDelete: (id: string) => Promise<{ success: boolean; error?: string }>
 }
 
 export function CategoryList({

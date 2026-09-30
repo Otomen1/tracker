@@ -15,7 +15,7 @@ interface Props {
   category?: Category
   defaultType?: "income" | "expense"
   existingNames?: string[]
-  onSubmit: (data: CategoryFormData) => void
+  onSubmit: (data: CategoryFormData) => Promise<unknown> | unknown
 }
 
 export function CategoryDialog({
@@ -26,9 +26,9 @@ export function CategoryDialog({
   existingNames,
   onSubmit,
 }: Props) {
-  const handleSubmit = (data: CategoryFormData) => {
-    onSubmit(data)
-    onOpenChange(false)
+  const handleSubmit = async (data: CategoryFormData) => {
+    const result = await onSubmit(data)
+    if (result !== false && result !== null) onOpenChange(false)
   }
 
   return (

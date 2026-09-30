@@ -1,76 +1,24 @@
 "use client"
 
-import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react"
-import { DEFAULT_CATEGORIES, STORAGE_KEYS } from "@/lib/constants"
-import { Category, CategoryFormData, EntryType } from "@/types"
+import { createContext, useCallback, useContext, useMemo } from "react"
+import { useVault } from "@/context/VaultContext"
+import type { Category, CategoryFormData, EntryType } from "@/types"
 
 interface CategoriesContextValue {
   categories: Category[]
-  addCategory: (data: CategoryFormData) => Category | null
-  updateCategory: (id: string, data: Partial<CategoryFormData>) => boolean
-  deleteCategory: (id: string, transactions: { categoryId: string }[]) => { success: boolean; error?: string }
+  addCategory: (data: CategoryFormData) => Promise<Category | null>
+  updateCategory: (id: string, data: Partial<CategoryFormData>) => Promise<boolean>
+  deleteCategory: (id: string, transactions: { categoryId: string }[]) => Promise<{ success: boolean; error?: string }>
   getCategoriesForType: (type: EntryType) => Category[]
 }
 
 const CategoriesContext = createContext<CategoriesContextValue | null>(null)
-const SAME_TAB_EVENT = "tracker-storage-change"
 
 export function CategoriesProvider({ children }: { children: React.ReactNode }) {
-  const [categories, setCategories] = useState<Category[]>(DEFAULT_CATEGORIES)
-  const currentRef = useRef(categories)
+  const { data: vault, mutate } = useVault()
+  const categories = vault.categories
 
-  const replaceFromStorage = useCallback((raw: string | null) => {
-    try {
-      const next = raw === null ? DEFAULT_CATEGORIES : JSON.parse(raw)
-      if (!Array.isArray(next)) return
-      currentRef.current = next
-      setCategories(next)
-    } catch {
-      // The storage recovery banner reports malformed persisted data.
-    }
-  }, [])
-
-  useEffect(() => {
-    // Refresh persisted categories only after hydration has completed.
-    replaceFromStorage(localStorage.getItem(STORAGE_KEYS.CATEGORIES))
-    const handleStorage = (event: StorageEvent) => {
-      if (event.storageArea === localStorage && event.key === STORAGE_KEYS.CATEGORIES) {
-        replaceFromStorage(event.newValue)
-      }
-    }
-    const handleSameTab = (event: Event) => {
-      const detail = (event as CustomEvent<{ key: string; value: string }>).detail
-      if (detail?.key === STORAGE_KEYS.CATEGORIES) replaceFromStorage(detail.value)
-    }
-    window.addEventListener("storage", handleStorage)
-    window.addEventListener(SAME_TAB_EVENT, handleSameTab)
-    return () => {
-      window.removeEventListener("storage", handleStorage)
-      window.removeEventListener(SAME_TAB_EVENT, handleSameTab)
-    }
-  }, [replaceFromStorage])
-
-  const mutate = useCallback((mutation: (current: Category[]) => Category[]): boolean => {
-    const current = currentRef.current
-    const next = mutation(current)
-    if (next === current || JSON.stringify(next) === JSON.stringify(current)) return true
-    try {
-      const serialized = JSON.stringify(next)
-      localStorage.setItem(STORAGE_KEYS.CATEGORIES, serialized)
-      currentRef.current = next
-      setCategories(next)
-      window.dispatchEvent(new CustomEvent(SAME_TAB_EVENT, {
-        detail: { key: STORAGE_KEYS.CATEGORIES, value: serialized },
-      }))
-      return true
-    } catch (error) {
-      const quotaExceeded = error instanceof DOMException && error.name === "QuotaExceededError"
-      window.dispatchEvent(new CustomEvent(quotaExceeded ? "storage-quota-exceeded" : "storage-write-failed"))
-      return false
-    }
-  }, [])
-
-  const addCategory = useCallback((data: CategoryFormData): Category | null => {
+  const addCategory = useCallback(async (data: CategoryFormData) => {
     const category: Category = {
       id: `cat_${crypto.randomUUID()}`,
       name: data.name,
@@ -79,30 +27,37 @@ export function CategoriesProvider({ children }: { children: React.ReactNode }) 
       isDefault: false,
       createdAt: new Date().toISOString(),
     }
-    return mutate((current) => [...current, category]) ? category : null
+    const saved = await mutate((current) => ({ ...current, categories: [...current.categories, category] }))
+    return saved ? category : null
   }, [mutate])
 
-  const updateCategory = useCallback((id: string, data: Partial<CategoryFormData>) =>
-    mutate((current) => current.map((category) => category.id === id ? { ...category, ...data } : category)),
-  [mutate])
+  const updateCategory = useCallback((id: string, patch: Partial<CategoryFormData>) => mutate((current) => ({
+    ...current,
+    categories: current.categories.map((category) => category.id === id ? { ...category, ...patch } : category),
+  })), [mutate])
 
-  const deleteCategory = useCallback((id: string, transactions: { categoryId: string }[]) => {
-    const category = currentRef.current.find((item) => item.id === id)
+  const deleteCategory = useCallback(async (id: string, transactions: { categoryId: string }[]) => {
+    const category = categories.find((item) => item.id === id)
     if (!category) return { success: false, error: "Category not found" }
     if (category.isDefault) return { success: false, error: "Cannot delete default categories" }
     if (transactions.some((transaction) => transaction.categoryId === id)) {
       return { success: false, error: "Category is used by existing transactions" }
     }
-    return mutate((current) => current.filter((item) => item.id !== id))
-      ? { success: true }
-      : { success: false, error: "Category could not be saved" }
-  }, [mutate])
+    return await mutate((current) => ({
+      ...current,
+      categories: current.categories.filter((item) => item.id !== id),
+    })) ? { success: true } : { success: false, error: "Category could not be saved" }
+  }, [categories, mutate])
 
   const getCategoriesForType = useCallback((type: EntryType) =>
-    currentRef.current.filter((category) => category.type === type), [])
+    categories.filter((category) => category.type === type), [categories])
+
+  const value = useMemo(() => ({ categories, addCategory, updateCategory, deleteCategory, getCategoriesForType }), [
+    categories, addCategory, updateCategory, deleteCategory, getCategoriesForType,
+  ])
 
   return (
-    <CategoriesContext.Provider value={{ categories, addCategory, updateCategory, deleteCategory, getCategoriesForType }}>
+    <CategoriesContext.Provider value={value}>
       {children}
     </CategoriesContext.Provider>
   )

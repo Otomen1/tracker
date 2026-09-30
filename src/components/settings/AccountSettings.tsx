@@ -25,19 +25,19 @@ export function AccountSettings() {
           ...current,
           [account.id]: { ...draft, ...patch },
         }))
-        const save = () => {
+        const save = async () => {
           const balance = Number(draft.openingBalance)
           if (!draft.name.trim()) return showToast("Enter an account name.", "error")
           if (!Number.isFinite(balance)) return showToast("Enter a valid opening balance.", "error")
-          if (updateAccount(account.id, { name: draft.name.trim(), openingBalance: balance })) {
+          if (await updateAccount(account.id, { name: draft.name.trim(), openingBalance: balance })) {
             showToast(`${draft.name.trim()} updated`, "success")
           } else {
             showToast("Account could not be saved.", "error")
           }
         }
-        const toggleActive = () => {
+        const toggleActive = async () => {
           const nextActive = !account.isActive
-          if (updateAccount(account.id, { isActive: nextActive })) showToast(nextActive ? "Account enabled" : "Account disabled", "success")
+          if (await updateAccount(account.id, { isActive: nextActive })) showToast(nextActive ? "Account enabled" : "Account disabled", "success")
           else showToast("Account could not be updated.", "error")
         }
 

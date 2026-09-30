@@ -1,28 +1,22 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import Link from "next/link"
 import { AlertTriangle, RotateCcw } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { getStorageHealth, restoreRecoverySnapshot } from "@/lib/storage"
+import { useVault } from "@/context/VaultContext"
 
 export function StorageRecoveryBanner() {
-  const [health, setHealth] = useState<{ healthy: boolean; hasRecovery: boolean } | null>(null)
+  const vault = useVault()
   const [restoreFailed, setRestoreFailed] = useState(false)
 
-  useEffect(() => {
-    const result = getStorageHealth()
-    setHealth({ healthy: result.healthy, hasRecovery: result.hasRecovery })
-  }, [])
+  if (!vault.error || !vault.unlocked) return null
 
-  if (!health || health.healthy) return null
-
-  const restore = () => {
-    if (!restoreRecoverySnapshot()) {
+  const restore = async () => {
+    if (!await vault.restorePrevious()) {
       setRestoreFailed(true)
       return
     }
-    window.location.reload()
   }
 
   return (
@@ -31,10 +25,10 @@ export function StorageRecoveryBanner() {
         <AlertTriangle className="h-5 w-5 shrink-0" />
         <div className="flex-1">
           <p className="text-sm font-semibold">Some saved data could not be read</p>
-          <p className="text-xs opacity-80">{restoreFailed ? "The recovery snapshot could not be restored." : "The app stopped before changing it. Restore your last snapshot or review Data & Backup."}</p>
+          <p className="text-xs opacity-80">{restoreFailed ? "The recovery snapshot could not be restored." : vault.error}</p>
         </div>
         <div className="flex gap-2">
-          {health.hasRecovery && <Button size="sm" variant="outline" className="gap-1.5" onClick={restore}><RotateCcw className="h-4 w-4" />Restore previous data</Button>}
+          {vault.hasRecovery && <Button size="sm" variant="outline" className="gap-1.5" onClick={() => void restore()}><RotateCcw className="h-4 w-4" />Restore previous data</Button>}
           <Button size="sm" asChild><Link href="/settings#data-backup">Data settings</Link></Button>
         </div>
       </div>

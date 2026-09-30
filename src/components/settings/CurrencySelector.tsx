@@ -3,12 +3,18 @@
 import { useSettingsContext } from "@/context/SettingsContext"
 import { CURRENCIES } from "@/lib/constants"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { useToast } from "@/context/ToastContext"
 
 export function CurrencySelector() {
   const { settings, updateSettings } = useSettingsContext()
+  const { showToast } = useToast()
+
+  const save = async (currency: string) => {
+    if (!await updateSettings({ currency })) showToast("Currency could not be saved.", "error")
+  }
 
   return (
-    <Select value={settings.currency} onValueChange={(v) => updateSettings({ currency: v })}>
+    <Select value={settings.currency} onValueChange={(value) => void save(value)}>
       <SelectTrigger className="min-h-11 w-full sm:w-56">
         <SelectValue />
       </SelectTrigger>

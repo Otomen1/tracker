@@ -18,7 +18,7 @@ export class ErrorBoundary extends Component<Props, State> {
             Something went wrong
           </h2>
           <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-4">
-            Refresh the page to continue. Your data is safe in local storage.
+            Reopen Tracker to continue. Saved data remains on this device.
           </p>
           <button
             onClick={() => this.setState({ hasError: false })}

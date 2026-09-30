@@ -3,7 +3,6 @@ import { Inter } from "next/font/google"
 import "./globals.css"
 import { AppShell } from "@/components/layout/AppShell"
 import { Providers } from "@/components/providers/Providers"
-import { ClerkProvider } from "@clerk/nextjs"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -25,11 +24,10 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode
 }>) {
-  const app = <Providers><AppShell>{children}</AppShell></Providers>
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={inter.className}>
-        {process.env.CAPACITOR_BUILD !== "1" && process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY ? <ClerkProvider>{app}</ClerkProvider> : app}
+        <Providers><AppShell>{children}</AppShell></Providers>
       </body>
     </html>
   )

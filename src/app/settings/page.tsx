@@ -1,6 +1,5 @@
 "use client"
 
-import { useEffect, useState } from "react"
 import Link from "next/link"
 import { ThemeToggle } from "@/components/settings/ThemeToggle"
 import { CurrencySelector } from "@/components/settings/CurrencySelector"
@@ -15,7 +14,10 @@ import { PageHeader } from "@/components/layout/PageHeader"
 import { SettingsNav } from "@/components/settings/SettingsNav"
 import { AccountSettings } from "@/components/settings/AccountSettings"
 import { AndroidCaptureSettings } from "@/components/settings/AndroidCaptureSettings"
-import { DatabaseSyncSettings } from "@/components/settings/DatabaseSyncSettings"
+import { LocalSecuritySettings } from "@/components/settings/LocalSecuritySettings"
+import { useVault } from "@/context/VaultContext"
+import { useHydrated } from "@/hooks/useHydrated"
+import { nativeVault } from "@/lib/nativeVault"
 
 function SettingGroup({ id, title, description, children, warning = false }: { id: string; title: string; description?: string; children: React.ReactNode; warning?: boolean }) {
   return (
@@ -42,34 +44,14 @@ function SettingSection({ title, description, children }: { title: string; descr
 }
 
 function StorageUsage() {
-  const [usage, setUsage] = useState<{ kb: number; pct: number } | null>(null)
-
-  useEffect(() => {
-    if (typeof window === "undefined") return
-    try {
-      const bytes = Object.entries(localStorage)
-        .filter(([k]) => k.startsWith("tracker_"))
-        .reduce((sum, [k, v]) => sum + k.length + v.length, 0) * 2
-      const kb = Math.round(bytes / 1024)
-      const pct = Math.min((bytes / (5 * 1024 * 1024)) * 100, 100)
-      setUsage({ kb, pct })
-    } catch {}
-  }, [])
-
-  if (!usage) return null
+  const { data } = useVault()
+  const hydrated = useHydrated()
+  const isNative = hydrated && nativeVault.isNative()
 
   return (
-    <div className="space-y-1.5">
-      <div className="flex items-center justify-between text-xs text-zinc-500">
-        <span>App data usage</span>
-        <span>{usage.kb} KB of ~5 MB ({usage.pct.toFixed(1)}%)</span>
-      </div>
-      <div className="w-full bg-zinc-100 dark:bg-zinc-800 rounded-full h-1.5">
-        <div
-          className={`h-1.5 rounded-full transition-all ${usage.pct > 80 ? "bg-rose-500" : "bg-emerald-500"}`}
-          style={{ width: `${usage.pct}%` }}
-        />
-      </div>
+    <div className="rounded-xl border border-zinc-200 p-3 text-sm dark:border-zinc-800">
+      <p className="font-medium text-zinc-900 dark:text-zinc-100">{data.transactions.length.toLocaleString()} transactions</p>
+      <p className="mt-1 text-xs text-zinc-500">{data.accounts.length} accounts · {data.categories.length} categories · {isNative ? "encrypted app-private storage" : "this browser only"}</p>
     </div>
   )
 }
@@ -135,20 +117,20 @@ export default function SettingsPage() {
           </SettingSection>
         </SettingGroup>
 
-        <SettingGroup id="data-backup" title="Data & backup" description="Export or restore private financial records" warning>
-          <SettingSection title="PostgreSQL sync" description="Optional local database synchronization. Tracker continues working while the database is offline.">
-            <DatabaseSyncSettings />
+        <SettingGroup id="security" title="Local security" description="Protect financial records stored on this device" warning>
+          <SettingSection title="Vault & app lock" description="Encryption, device authentication, and emergency erase controls">
+            <LocalSecuritySettings />
           </SettingSection>
+        </SettingGroup>
 
-          <Separator />
-
+        <SettingGroup id="data-backup" title="Data & backup" description="Export or restore private financial records" warning>
           <SettingSection title="Data Backup" description="Export or restore your data">
             <BackupRestore />
           </SettingSection>
 
           <Separator />
 
-          <SettingSection title="Storage" description="Local storage used by this app">
+          <SettingSection title="Storage" description="Records currently held on this device">
             <StorageUsage />
           </SettingSection>
         </SettingGroup>

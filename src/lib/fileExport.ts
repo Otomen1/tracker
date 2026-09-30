@@ -24,12 +24,16 @@ export async function saveOrShareFile(content: string, filename: string, mimeTyp
       directory: Directory.Cache,
       recursive: true,
     })
-    await Share.share({
-      title: "Tracker backup",
-      text: "Save this Tracker backup somewhere private.",
-      files: [result.uri],
-      dialogTitle: "Save or share backup",
-    })
+    try {
+      await Share.share({
+        title: "Tracker backup",
+        text: "Save this encrypted Tracker backup somewhere private.",
+        files: [result.uri],
+        dialogTitle: "Save or share encrypted backup",
+      })
+    } finally {
+      await Filesystem.deleteFile({ path: filename, directory: Directory.Cache }).catch(() => undefined)
+    }
     return "shared"
   }
 

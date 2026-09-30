@@ -12,8 +12,8 @@ interface Props {
   category: Category
   existingNames: string[]
   hasTransactions: boolean
-  onUpdate: (id: string, data: Partial<CategoryFormData>) => void
-  onDelete: (id: string) => { success: boolean; error?: string }
+  onUpdate: (id: string, data: Partial<CategoryFormData>) => Promise<boolean>
+  onDelete: (id: string) => Promise<{ success: boolean; error?: string }>
 }
 
 export function CategoryCard({ category, existingNames, hasTransactions, onUpdate, onDelete }: Props) {
@@ -22,8 +22,8 @@ export function CategoryCard({ category, existingNames, hasTransactions, onUpdat
   const [deleteError, setDeleteError] = useState("")
   const { fmt } = useSettingsContext()
 
-  const handleDelete = () => {
-    const result = onDelete(category.id)
+  const handleDelete = async () => {
+    const result = await onDelete(category.id)
     if (!result.success) {
       setDeleteError(result.error ?? "Cannot delete")
       setDeleteOpen(false)

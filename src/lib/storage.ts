@@ -1,391 +1,120 @@
+import { DEFAULT_CATEGORIES, DEFAULT_SETTINGS } from "@/lib/constants"
+import {
+  accountSchema,
+  categorySchema,
+  readLegacyVault,
+  settingsSchema,
+  transactionSchema,
+  validateVault,
+  writeWebVault,
+  type VaultData,
+} from "@/lib/vault/schema"
+import type { Account, Category, Settings, Transaction } from "@/types"
 import { z } from "zod"
-import { Account, Transaction, Category, Settings } from "@/types"
-import { CURRENCIES, DEFAULT_CATEGORIES, DEFAULT_SETTINGS, STORAGE_KEYS, SCHEMA_VERSION } from "./constants"
-import { isValidHexColor } from "./utils"
-
-const FALLBACK_COLOR = "#6b7280"
-
-const validDate = z.string().refine((value) => !Number.isNaN(Date.parse(value)), "Invalid date")
-const calendarDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine((value) => {
-  const [year, month, day] = value.split("-").map(Number)
-  const parsed = new Date(Date.UTC(year, month - 1, day))
-  return parsed.getUTCFullYear() === year && parsed.getUTCMonth() === month - 1 && parsed.getUTCDate() === day
-}, "Invalid date")
-const currencyCodes = CURRENCIES.map((currency) => currency.code)
-
-const transactionSchema = z.object({
-  id: z.string(),
-  type: z.enum(["income", "expense", "transfer"]),
-  amount: z.number().finite().safe().positive(),
-  categoryId: z.string(),
-  description: z.string().trim().min(1).max(200),
-  date: calendarDate,
-  notes: z.string().max(500).optional(),
-  tags: z.array(z.string().max(50)).max(20).optional(),
-  isRecurring: z.boolean().optional(),
-  recurringDay: z.number().int().min(1).max(31).optional(),
-  recurringId: z.string().optional(),
-  createdAt: validDate,
-  updatedAt: validDate,
-  accountId: z.string().optional(),
-  fromAccountId: z.string().optional(),
-  toAccountId: z.string().optional(),
-  notificationSource: z.object({
-    provider: z.enum(["ryt", "mae", "google_wallet"]),
-    fingerprint: z.string().min(16).max(128),
-    capturedAt: validDate,
-  }).optional(),
-}).superRefine((transaction, context) => {
-  if (transaction.type === "transfer" && (!transaction.fromAccountId || !transaction.toAccountId || transaction.fromAccountId === transaction.toAccountId)) {
-    context.addIssue({ code: z.ZodIssueCode.custom, message: "Invalid transfer accounts" })
-  }
-})
-
-const accountSchema = z.object({
-  id: z.string().min(1),
-  name: z.string().trim().min(1).max(60),
-  currency: z.string().refine((value) => currencyCodes.includes(value), "Unsupported currency"),
-  openingBalance: z.number().finite().safe(),
-  isActive: z.boolean(),
-  createdAt: validDate,
-  updatedAt: validDate,
-})
-
-const categorySchema = z.object({
-  id: z.string(),
-  name: z.string().trim().min(1).max(30),
-  type: z.preprocess(
-    (v) => (v === "both" ? "expense" : v),
-    z.enum(["income", "expense"])
-  ),
-  color: z.string().regex(/^#[0-9A-Fa-f]{3,6}$/, "Invalid color"),
-  isDefault: z.boolean(),
-  budget: z.number().finite().nonnegative().optional(),
-  createdAt: validDate,
-})
-
-const settingsSchema = z.object({
-  currency: z.string().refine((value) => currencyCodes.includes(value), "Unsupported currency"),
-  theme: z.enum(["light", "dark", "system"]),
-  monthlySavingsGoal: z.number().finite().nonnegative(),
-  backupInterval: z.enum(["never", "daily", "weekly", "monthly"]).optional(),
-  lastBackupAt: z.string().optional(),
-  reminderEnabled: z.boolean().optional(),
-  reminderTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).optional(),
-})
 
 const backupSchema = z.object({
-  transactions: z.array(transactionSchema).max(50000),
-  categories: z.array(categorySchema).max(500).optional(),
-  settings: settingsSchema.optional(),
-  accounts: z.array(accountSchema).max(50).optional(),
+  schemaVersion: z.union([z.string(), z.number()]).optional(),
+  exportedAt: z.string().optional(),
+  transactions: z.array(transactionSchema).max(50_000),
+  categories: z.array(categorySchema).max(500).default(DEFAULT_CATEGORIES),
+  accounts: z.array(accountSchema).max(50).default([]),
+  settings: settingsSchema.default(DEFAULT_SETTINGS),
+  androidSetupComplete: z.boolean().optional(),
 })
 
-function safeRead<T>(key: string, fallback: T): T {
-  if (typeof window === "undefined") return fallback
-  try {
-    const raw = localStorage.getItem(key)
-    if (raw === null) return fallback
-    return JSON.parse(raw) as T
-  } catch {
-    return fallback
-  }
+export type BackupImportResult = { success: true; vault: VaultData } | { success: false; error: string }
+
+function portableSettings(settings: Settings): Settings {
+  const legacy = settings as Settings & { backupPassword?: string }
+  const { backupPassword: _secret, lastBackupAt: _deviceOnly, backupInterval: _schedule, ...portable } = legacy
+  return portable
 }
 
-function safeWrite(key: string, value: unknown): void {
-  if (typeof window === "undefined") return
-  try {
-    localStorage.setItem(key, JSON.stringify(value))
-  } catch (e) {
-    if (e instanceof DOMException && e.name === "QuotaExceededError") {
-      window.dispatchEvent(new CustomEvent("storage-quota-exceeded"))
-    }
-  }
+function duplicateId(items: { id: string }[]) {
+  return items.length !== new Set(items.map((item) => item.id)).size
 }
 
-// --- Import validators (used for lenient import path) ---
-
-function isValidCategory(c: unknown): boolean {
-  if (!c || typeof c !== "object") return false
-  const o = c as Record<string, unknown>
-  return (
-    typeof o.id === "string" &&
-    typeof o.name === "string" &&
-    (o.type === "income" || o.type === "expense" || o.type === "both") &&
-    typeof o.color === "string" &&
-    typeof o.isDefault === "boolean" &&
-    typeof o.createdAt === "string"
-  )
-}
-
-// --- Schema migrations ---
-
-type Migration = { from: string; to: string; run: () => void }
-
-const MIGRATIONS: Migration[] = [
-  { from: "1", to: "2", run: () => { /* Accounts are optional until Android setup. */ } },
-]
-
-function runMigrations(storedVersion: string | null): void {
-  let version = storedVersion ?? "0"
-  for (const migration of MIGRATIONS) {
-    if (migration.from === version) {
-      migration.run()
-      version = migration.to
-      safeWrite(STORAGE_KEYS.SCHEMA_VERSION, version)
-    }
-  }
-}
-
-// --- Public API ---
-
-export function getTransactions(): Transaction[] {
-  return safeRead<Transaction[]>(STORAGE_KEYS.TRANSACTIONS, [])
-}
-
-export function saveTransactions(transactions: Transaction[]): void {
-  safeWrite(STORAGE_KEYS.TRANSACTIONS, transactions)
-}
-
-export function getCategories(): Category[] {
-  return safeRead<Category[]>(STORAGE_KEYS.CATEGORIES, [])
-}
-
-export function saveCategories(categories: Category[]): void {
-  safeWrite(STORAGE_KEYS.CATEGORIES, categories)
-}
-
-export function getSettings(): Settings {
-  return safeRead<Settings>(STORAGE_KEYS.SETTINGS, DEFAULT_SETTINGS)
-}
-
-export function saveSettings(settings: Settings): void {
-  safeWrite(STORAGE_KEYS.SETTINGS, settings)
-}
-
-export function getAccounts(): Account[] {
-  return safeRead<Account[]>(STORAGE_KEYS.ACCOUNTS, [])
-}
-
-// A09: structured security event log (console only — no financial data included)
-export function logSecurityEvent(event: string, meta?: Record<string, unknown>): void {
-  console.info(`[Security] ${new Date().toISOString()} ${event}`, meta ?? "")
-}
-
-export function exportAllData(): string {
-  if (typeof window === "undefined") return "{}"
-  const data = {
-    schemaVersion: SCHEMA_VERSION,
-    exportedAt: new Date().toISOString(),
-    transactions: getTransactions(),
-    categories: getCategories(),
-    settings: (() => { const legacy = getSettings() as Settings & { backupPassword?: string }; const { backupPassword: _secret, lastBackupAt: _deviceOnly, ...portable } = legacy; return portable })(),
-    accounts: getAccounts(),
-  }
-  const json = JSON.stringify(data, null, 2)
-  logSecurityEvent("backup_export", { transactionCount: data.transactions.length })
-  return json
-}
-
-type ImportPayload = {
-  transactions: Transaction[]
-  categories?: Category[]
-  settings?: Settings
-  accounts?: Account[]
-}
-
-type RecoverySnapshot = {
-  capturedAt: string
-  values: Record<string, string | null>
-}
-
-const ATOMIC_KEYS = [
-  STORAGE_KEYS.TRANSACTIONS,
-  STORAGE_KEYS.CATEGORIES,
-  STORAGE_KEYS.SETTINGS,
-  STORAGE_KEYS.SCHEMA_VERSION,
-  STORAGE_KEYS.ACCOUNTS,
-] as const
-
-function restoreRawValues(values: Record<string, string | null>): void {
-  for (const key of ATOMIC_KEYS) {
-    const value = values[key]
-    if (value === null || value === undefined) localStorage.removeItem(key)
-    else localStorage.setItem(key, value)
-  }
-}
-
-function commitImport(payload: ImportPayload): { success: boolean; error?: string } {
-  const previous = Object.fromEntries(ATOMIC_KEYS.map((key) => [key, localStorage.getItem(key)]))
-  const recovery: RecoverySnapshot = { capturedAt: new Date().toISOString(), values: previous }
-
-  try {
-    localStorage.setItem(STORAGE_KEYS.RECOVERY, JSON.stringify(recovery))
-    localStorage.setItem(STORAGE_KEYS.TRANSACTIONS, JSON.stringify(payload.transactions))
-    if (payload.categories) localStorage.setItem(STORAGE_KEYS.CATEGORIES, JSON.stringify(payload.categories))
-    if (payload.settings) localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(payload.settings))
-    if (payload.accounts) localStorage.setItem(STORAGE_KEYS.ACCOUNTS, JSON.stringify(payload.accounts))
-    localStorage.setItem(STORAGE_KEYS.SCHEMA_VERSION, SCHEMA_VERSION)
-    localStorage.removeItem(STORAGE_KEYS.CORRUPTION)
-    return { success: true }
-  } catch (error) {
-    try {
-      restoreRawValues(previous)
-    } catch {
-      // Keep the recovery snapshot available if the browser cannot roll back immediately.
-    }
-    if (error instanceof DOMException && error.name === "QuotaExceededError") {
-      window.dispatchEvent(new CustomEvent("storage-quota-exceeded"))
-    }
-    logSecurityEvent("backup_import_failure", { reason: "atomic_write_failed" })
-    return { success: false, error: "Restore failed. Your previous data was kept." }
-  }
-}
-
-function validateRelationships(payload: ImportPayload): string | undefined {
-  const transactionIds = new Set<string>()
-  for (const transaction of payload.transactions) {
-    if (transactionIds.has(transaction.id)) return "Duplicate transaction ID"
-    transactionIds.add(transaction.id)
-  }
-
-  const categories = payload.categories ?? getCategories()
-  if (categories.length === 0) return undefined
-  const categoryIds = new Set<string>()
-  for (const category of categories) {
-    if (categoryIds.has(category.id)) return "Duplicate category ID"
-    categoryIds.add(category.id)
-  }
-  const missingCategory = payload.transactions.find((transaction) => transaction.type !== "transfer" && !categoryIds.has(transaction.categoryId))
+function relationshipError(transactions: Transaction[], categories: Category[], accounts: Account[]) {
+  if (duplicateId(transactions)) return "Duplicate transaction ID"
+  if (duplicateId(categories)) return "Duplicate category ID"
+  if (duplicateId(accounts)) return "Duplicate account ID"
+  const categoryIds = new Set(categories.map((category) => category.id))
+  const missingCategory = transactions.find((item) => item.type !== "transfer" && !categoryIds.has(item.categoryId))
   if (missingCategory) return `Missing category for transaction "${missingCategory.description}"`
-  const accounts = payload.accounts ?? getAccounts()
   const accountIds = new Set(accounts.map((account) => account.id))
-  if (accountIds.size !== accounts.length) return "Duplicate account ID"
-  const invalidAccount = payload.transactions.find((transaction) =>
-    (transaction.accountId && !accountIds.has(transaction.accountId)) ||
-    (transaction.fromAccountId && !accountIds.has(transaction.fromAccountId)) ||
-    (transaction.toAccountId && !accountIds.has(transaction.toAccountId)))
+  const invalidAccount = transactions.find((item) =>
+    (item.accountId && !accountIds.has(item.accountId)) ||
+    (item.fromAccountId && !accountIds.has(item.fromAccountId)) ||
+    (item.toAccountId && !accountIds.has(item.toAccountId)))
   if (invalidAccount) return `Missing account for transaction "${invalidAccount.description}"`
   return undefined
 }
 
+export function createBackupJson(vault: VaultData): string {
+  const backup = {
+    format: "tracker-portable-backup",
+    schemaVersion: 3,
+    exportedAt: new Date().toISOString(),
+    transactions: vault.transactions,
+    categories: vault.categories,
+    accounts: vault.accounts,
+    settings: portableSettings(vault.settings),
+    androidSetupComplete: vault.androidSetupComplete,
+  }
+  logSecurityEvent("backup_export", { transactionCount: vault.transactions.length })
+  return JSON.stringify(backup, null, 2)
+}
+
+export function parseBackupJson(json: string, current?: VaultData): BackupImportResult {
+  let raw: unknown
+  try { raw = JSON.parse(json) } catch { return { success: false, error: "Could not parse backup file" } }
+  const parsed = backupSchema.safeParse(raw)
+  if (!parsed.success) return { success: false, error: `Invalid backup file: ${parsed.error.issues[0]?.message ?? "schema validation failed"}` }
+
+  const relationships = relationshipError(parsed.data.transactions, parsed.data.categories, parsed.data.accounts)
+  if (relationships) return { success: false, error: `Invalid backup file: ${relationships}` }
+
+  try {
+    return { success: true, vault: validateVault({
+      schemaVersion: 3,
+      revision: current?.revision ?? 0,
+      updatedAt: new Date().toISOString(),
+      transactions: parsed.data.transactions,
+      categories: parsed.data.categories,
+      accounts: parsed.data.accounts,
+      settings: { ...DEFAULT_SETTINGS, ...parsed.data.settings },
+      androidSetupComplete: parsed.data.androidSetupComplete ?? parsed.data.accounts.length > 0,
+    }) }
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : "Invalid backup file" }
+  }
+}
+
+// Compatibility helpers keep the local-only browser/PWA usable. The Android
+// build uses VaultContext and never persists confirmed financial data here.
+export function exportAllData(): string {
+  if (typeof window === "undefined") return "{}"
+  return createBackupJson(readLegacyVault(localStorage))
+}
+
 export function importAllData(json: string): { success: boolean; error?: string } {
-  let parsed: unknown
+  if (typeof window === "undefined") return { success: false, error: "Storage is unavailable" }
+  let current: VaultData
+  try { current = readLegacyVault(localStorage) } catch { current = validateVault({
+    schemaVersion: 3, revision: 0, updatedAt: new Date().toISOString(), transactions: [], categories: DEFAULT_CATEGORIES,
+    accounts: [], settings: DEFAULT_SETTINGS, androidSetupComplete: false,
+  }) }
+  const result = parseBackupJson(json, current)
+  if (!result.success) return result
   try {
-    parsed = JSON.parse(json)
+    writeWebVault(localStorage, result.vault)
+    logSecurityEvent("backup_import_success", { transactionCount: result.vault.transactions.length })
+    return { success: true }
   } catch {
-    return { success: false, error: "Could not parse backup file" }
-  }
-  if (!parsed || typeof parsed !== "object") {
-    return { success: false, error: "Invalid backup file: missing transactions" }
-  }
-
-  const raw = parsed as Record<string, unknown>
-  const transactionCheck = z.array(transactionSchema).max(50000).safeParse(raw.transactions)
-  if (!transactionCheck.success) {
-    const message = Array.isArray(raw.transactions)
-      ? transactionCheck.error.issues[0]?.message ?? "Invalid transactions"
-      : "missing transactions"
-    return { success: false, error: `Invalid backup file: ${message}` }
-  }
-
-  let categories: Category[] | undefined
-  if (raw.categories !== undefined) {
-    if (!Array.isArray(raw.categories) || raw.categories.length > 500) {
-      return { success: false, error: "Invalid backup file: invalid categories" }
-    }
-    categories = raw.categories
-      .filter(isValidCategory)
-      .map((category) => {
-        const value = category as Category
-        return {
-          ...value,
-          type: value.type === ("both" as string) ? "expense" : value.type,
-          color: isValidHexColor(value.color) ? value.color : FALLBACK_COLOR,
-        }
-      })
-    const categoryCheck = z.array(categorySchema).max(500).safeParse(categories)
-    if (!categoryCheck.success) {
-      return { success: false, error: `Invalid backup file: ${categoryCheck.error.issues[0]?.message ?? "invalid categories"}` }
-    }
-    categories = categoryCheck.data as Category[]
-  }
-
-  let settings: Settings | undefined
-  if (raw.settings !== undefined) {
-    const settingsCheck = settingsSchema.safeParse(raw.settings)
-    if (!settingsCheck.success) return { success: false, error: "Invalid backup file: invalid settings" }
-    settings = settingsCheck.data
-  }
-
-  let accounts: Account[] | undefined
-  if (raw.accounts !== undefined) {
-    const accountCheck = z.array(accountSchema).max(50).safeParse(raw.accounts)
-    if (!accountCheck.success) return { success: false, error: "Invalid backup file: invalid accounts" }
-    accounts = accountCheck.data
-  }
-
-  const payload = { transactions: transactionCheck.data, categories, settings, accounts }
-  const relationshipError = validateRelationships(payload)
-  if (relationshipError) return { success: false, error: `Invalid backup file: ${relationshipError}` }
-
-  const committed = commitImport(payload)
-  if (committed.success) {
-    logSecurityEvent("backup_import_success", { transactionCount: payload.transactions.length })
-  }
-  return committed
-}
-
-export function getStorageHealth(): { healthy: boolean; errors: string[]; hasRecovery: boolean } {
-  if (typeof window === "undefined") return { healthy: true, errors: [], hasRecovery: false }
-  const errors: string[] = []
-  const checks = [
-    [STORAGE_KEYS.TRANSACTIONS, z.array(transactionSchema)],
-    [STORAGE_KEYS.CATEGORIES, z.array(categorySchema)],
-    [STORAGE_KEYS.SETTINGS, settingsSchema],
-    [STORAGE_KEYS.ACCOUNTS, z.array(accountSchema)],
-  ] as const
-
-  for (const [key, schema] of checks) {
-    const raw = localStorage.getItem(key)
-    if (raw === null) continue
-    try {
-      if (!schema.safeParse(JSON.parse(raw)).success) errors.push(key)
-    } catch {
-      errors.push(key)
-    }
-  }
-  return {
-    healthy: errors.length === 0,
-    errors,
-    hasRecovery: localStorage.getItem(STORAGE_KEYS.RECOVERY) !== null,
+    return { success: false, error: "Restore failed. Your previous data was kept." }
   }
 }
 
-export function restoreRecoverySnapshot(): boolean {
-  if (typeof window === "undefined") return false
-  try {
-    const snapshot = JSON.parse(localStorage.getItem(STORAGE_KEYS.RECOVERY) ?? "") as RecoverySnapshot
-    restoreRawValues(snapshot.values)
-    localStorage.removeItem(STORAGE_KEYS.CORRUPTION)
-    return true
-  } catch {
-    return false
-  }
-}
-
-export function initializeStorage(): void {
-  if (typeof window === "undefined") return
-  const health = getStorageHealth()
-  if (!health.healthy) {
-    localStorage.setItem(STORAGE_KEYS.CORRUPTION, JSON.stringify({ detectedAt: new Date().toISOString(), keys: health.errors }))
-    return
-  }
-  const stored = localStorage.getItem(STORAGE_KEYS.SCHEMA_VERSION)
-  if (!stored) {
-    const existing = localStorage.getItem(STORAGE_KEYS.CATEGORIES)
-    if (!existing) saveCategories(DEFAULT_CATEGORIES)
-  }
-  runMigrations(stored)
-  safeWrite(STORAGE_KEYS.SCHEMA_VERSION, SCHEMA_VERSION)
+export function logSecurityEvent(event: string, meta?: Record<string, unknown>) {
+  console.info(`[Security] ${new Date().toISOString()} ${event}`, meta ?? "")
 }

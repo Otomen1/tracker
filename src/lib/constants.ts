@@ -30,7 +30,7 @@ export const STORAGE_KEYS = {
   SYNC_STATE: "tracker_sync_state",
 } as const
 
-export const SCHEMA_VERSION = "2"
+export const SCHEMA_VERSION = "3"
 
 export const DEFAULT_ANDROID_ACCOUNTS: Account[] = [
   { id: "account_ryt", name: "Ryt Bank", currency: "MYR", openingBalance: 0, isActive: true, createdAt: EPOCH, updatedAt: EPOCH },

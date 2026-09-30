@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useCategories } from "@/hooks/useCategories"
 import { useSettingsContext } from "@/context/SettingsContext"
 import { Input } from "@/components/ui/input"
@@ -10,16 +10,18 @@ function CategoryBudgetRow({ name, color, budget, onSave }: {
   name: string
   color: string
   budget?: number
-  onSave: (budget: number | undefined) => void
+  onSave: (budget: number | undefined) => Promise<boolean>
 }) {
   const { fmt } = useSettingsContext()
   const [value, setValue] = useState(budget?.toString() ?? "")
   const [saved, setSaved] = useState(false)
 
-  const handleSave = () => {
+  useEffect(() => setValue(budget?.toString() ?? ""), [budget])
+
+  const handleSave = async () => {
     const parsed = parseFloat(value)
-    onSave(!isNaN(parsed) && parsed > 0 ? parsed : undefined)
-    setSaved(true)
+    const success = await onSave(!isNaN(parsed) && parsed > 0 ? parsed : undefined)
+    setSaved(success)
     setTimeout(() => setSaved(false), 2000)
   }
 

@@ -1,10 +1,11 @@
 import { act, renderHook } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { CategoriesProvider, useCategoriesContext } from "@/context/CategoriesContext"
+import { VaultProvider } from "@/context/VaultContext"
 import { STORAGE_KEYS } from "@/lib/constants"
 
 const wrapper = ({ children }: { children: React.ReactNode }) => (
-  <CategoriesProvider>{children}</CategoriesProvider>
+  <VaultProvider><CategoriesProvider>{children}</CategoriesProvider></VaultProvider>
 )
 
 beforeEach(() => {
@@ -13,14 +14,14 @@ beforeEach(() => {
 })
 
 describe("CategoriesProvider", () => {
-  it("shares mutations with every consumer and persists them", () => {
+  it("shares mutations with every consumer and persists them", async () => {
     const first = renderHook(() => useCategoriesContext(), { wrapper })
     const second = renderHook(() => useCategoriesContext(), { wrapper })
 
     // Separate provider trees still synchronize through the same-tab event,
     // which also protects consumers mounted outside a shared route subtree.
-    act(() => {
-      first.result.current.addCategory({ name: "Travel", type: "expense", color: "#123456" })
+    await act(async () => {
+      await first.result.current.addCategory({ name: "Travel", type: "expense", color: "#123456" })
     })
 
     expect(second.result.current.categories.some((category) => category.name === "Travel")).toBe(true)
@@ -29,16 +30,16 @@ describe("CategoriesProvider", () => {
     )
   })
 
-  it("keeps the current state and reports failure when storage rejects a write", () => {
+  it("keeps the current state and reports failure when storage rejects a write", async () => {
     const { result } = renderHook(() => useCategoriesContext(), { wrapper })
     const before = result.current.categories
     vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
       throw new DOMException("full", "QuotaExceededError")
     })
 
-    let created: ReturnType<typeof result.current.addCategory>
-    act(() => {
-      created = result.current.addCategory({ name: "Travel", type: "expense", color: "#123456" })
+    let created: Awaited<ReturnType<typeof result.current.addCategory>>
+    await act(async () => {
+      created = await result.current.addCategory({ name: "Travel", type: "expense", color: "#123456" })
     })
 
     expect(created!).toBeNull()

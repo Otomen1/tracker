@@ -43,9 +43,8 @@ export function TransactionForm({ transaction, categories, onSubmit, onCancel }:
   const [tags, setTags] = useState<string[]>(transaction?.tags ?? [])
   const [tagInput, setTagInput] = useState("")
   const [newCategoryOpen, setNewCategoryOpen] = useState(false)
-  // Categories created inline this session, in case the parent's own `categories`
-  // prop hasn't re-rendered yet — same-tab localStorage writes don't trigger the
-  // cross-tab "storage" event useLocalStorage relies on for sync.
+  // Keep inline-created categories available immediately while the parent
+  // finishes its context-driven render.
   const [createdCategories, setCreatedCategories] = useState<Category[]>([])
   const { addCategory } = useCategories()
   const { showToast } = useToast()
@@ -158,15 +157,16 @@ export function TransactionForm({ transaction, categories, onSubmit, onCancel }:
     if (category) applyCategoryDescriptionDefault(category.name)
   }
 
-  const handleCreateCategory = (data: CategoryFormData) => {
-    const created = addCategory(data)
+  const handleCreateCategory = async (data: CategoryFormData) => {
+    const created = await addCategory(data)
     if (!created) {
-      showToast("Category could not be saved. Check browser storage and try again.", "error")
-      return
+      showToast("Category could not be saved. Check local storage and try again.", "error")
+      return null
     }
     setCreatedCategories((prev) => [...prev, created])
     setValue("categoryId", created.id)
     applyCategoryDescriptionDefault(created.name)
+    return created
   }
 
   return (
