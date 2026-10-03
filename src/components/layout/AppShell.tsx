@@ -20,6 +20,7 @@ import { AppLock } from "@/components/android/AppLock"
 import { useHydrated } from "@/hooks/useHydrated"
 import { useVault } from "@/context/VaultContext"
 import { nativeVault } from "@/lib/nativeVault"
+import { NativeBackCoordinator } from "./NativeBackCoordinator"
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   useReminderNotification()
@@ -38,7 +39,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const showContent = !hydrated || !nativeVault.isNative() || unlocked
   // Keep the one-handed floating action on the transaction list only. The
   // dashboard already presents an explicit primary add action.
-  const showQuickAdd = hydrated && pathname === "/transactions"
+  const showQuickAdd = hydrated && (pathname === "/transactions" || pathname === "/")
 
   const handleQuickAdd = async (data: TransactionFormData) => {
     if (!await addTransaction(data)) {
@@ -53,6 +54,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <>
+      <NativeBackCoordinator />
       {showContent && (
         <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950">
           <a

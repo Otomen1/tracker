@@ -11,8 +11,8 @@ import { STORAGE_KEYS } from "@/lib/constants"
 const STEPS = [
   {
     icon: TrendingUp,
-    title: "Welcome to Expense Tracker",
-    description: "Track your income and expenses privately — everything stays on your device. No accounts, no servers, no subscriptions.",
+    title: "Welcome to Tracker",
+    description: "Track your income and expenses privately — everything stays on your device. No sign-in or server required. Track activity by bank, card or wallet source.",
   },
   {
     icon: Tags,

@@ -1,6 +1,7 @@
 import { Category, TransactionFilters, TransactionType } from "@/types"
 
 export interface TransactionsDeepLinkFilter {
+  accountId?: string
   categoryId?: string
   dateFrom?: string
   dateTo?: string
@@ -12,6 +13,7 @@ export interface TransactionsDeepLinkFilter {
 // directly. URLSearchParams handles encoding safely.
 export function buildTransactionsDeepLink(filter: TransactionsDeepLinkFilter): string {
   const params = new URLSearchParams()
+  if (filter.accountId) params.set("accountId", filter.accountId)
   if (filter.categoryId) params.set("categoryId", filter.categoryId)
   if (filter.dateFrom) params.set("dateFrom", filter.dateFrom)
   if (filter.dateTo) params.set("dateTo", filter.dateTo)
@@ -31,6 +33,9 @@ export function parseTransactionsDeepLink(
   categories: Category[]
 ): TransactionFilters {
   const filters: TransactionFilters = {}
+
+  const accountId = searchParams.get("accountId")
+  if (accountId && accountId.length <= 200) filters.accountId = accountId
 
   const categoryId = searchParams.get("categoryId")
   if (categoryId && categories.some((c) => c.id === categoryId)) {

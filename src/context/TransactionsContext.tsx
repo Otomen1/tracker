@@ -2,6 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo } from "react"
 import { useVault } from "@/context/VaultContext"
+import { hasFingerprint, parseMoney } from "@/domain/finance"
 import { getMonthKey } from "@/lib/formatters"
 import { applyBulkDelete, applyBulkRecategorize, applyBulkRestore } from "@/lib/transactionBatch"
 import type { EntryType, PendingTransaction, Transaction, TransactionFormData } from "@/types"
@@ -20,7 +21,8 @@ interface TransactionsContextValue {
   bulkRestoreTransactions: (items: Transaction[]) => Promise<boolean>
   bulkRecategorize: (ids: string[], categoryId: string) => Promise<boolean>
   confirmCaptured: (pending: PendingTransaction, data: { type: EntryType; amount: number; categoryId: string; description: string; date: string; accountId: string }) => Promise<CapturedTransactionResult>
-  confirmTransfer: (pending: PendingTransaction, fromAccountId: string, toAccountId: string, description: string, date: string) => Promise<CapturedTransactionResult>
+  linkCaptured: (pending: PendingTransaction, transactionId: string) => Promise<boolean>
+  confirmTransfer: (pending: PendingTransaction, fromAccountId: string, toAccountId: string, description: string, date: string, amount?: number) => Promise<CapturedTransactionResult>
 }
 
 const TransactionsContext = createContext<TransactionsContextValue | null>(null)
@@ -40,6 +42,7 @@ export function TransactionsProvider({ children }: { children: React.ReactNode }
       const currentMonth = getMonthKey()
       const additions: Transaction[] = []
       for (const template of current.filter((item) => item.isRecurring && !item.recurringId)) {
+        if (template.accountId && data.accounts.some(a => a.id === template.accountId && !a.isActive)) continue
         if (current.some((item) => item.recurringId === template.id && item.date.startsWith(currentMonth))) continue
         const [year, month] = currentMonth.split("-").map(Number)
         const maxDay = new Date(year, month, 0).getDate()
@@ -57,7 +60,7 @@ export function TransactionsProvider({ children }: { children: React.ReactNode }
       }
       return additions.length ? [...additions, ...current] : current
     })
-  }, [mutate, unlocked])
+  }, [mutate, unlocked, data.accounts])
 
   useEffect(() => {
     generateRecurring()
@@ -71,12 +74,13 @@ export function TransactionsProvider({ children }: { children: React.ReactNode }
   }, [generateRecurring])
 
   const addTransaction = useCallback((data: TransactionFormData) => mutate((current) => {
+    if (data.commandId && current.some(t => t.id === data.commandId)) return current
     const now = new Date().toISOString()
     const transaction: Transaction = {
-      id: crypto.randomUUID(),
+      id: data.commandId ?? crypto.randomUUID(),
       type: data.type,
-      amount: Number.parseFloat(data.amount),
-      categoryId: data.categoryId,
+      amount: parseMoney(data.amount),
+      categoryId: data.type === "transfer" ? "" : data.categoryId,
       description: data.description,
       date: data.date,
       notes: data.notes || undefined,
@@ -85,7 +89,10 @@ export function TransactionsProvider({ children }: { children: React.ReactNode }
       recurringDay: data.isRecurring ? (data.recurringDay ?? new Date().getDate()) : undefined,
       createdAt: now,
       updatedAt: now,
-      accountId: data.accountId,
+      accountId: data.type === "transfer" ? undefined : data.accountId,
+      fromAccountId: data.type === "transfer" ? data.fromAccountId : undefined,
+      toAccountId: data.type === "transfer" ? data.toAccountId : undefined,
+      isRefund: data.isRefund || undefined,
     }
     return [transaction, ...current]
   }), [mutate])
@@ -94,7 +101,11 @@ export function TransactionsProvider({ children }: { children: React.ReactNode }
     current.map((item) => item.id === id ? {
       ...item,
       ...data,
-      amount: Number.parseFloat(data.amount),
+      accountId: data.type === "transfer" ? undefined : data.accountId,
+      fromAccountId: data.type === "transfer" ? data.fromAccountId : undefined,
+      toAccountId: data.type === "transfer" ? data.toAccountId : undefined,
+      categoryId: data.type === "transfer" ? "" : data.categoryId,
+      amount: parseMoney(data.amount),
       notes: data.notes || undefined,
       tags: data.tags?.length ? data.tags : undefined,
       isRecurring: data.isRecurring || undefined,
@@ -107,7 +118,7 @@ export function TransactionsProvider({ children }: { children: React.ReactNode }
     const now = new Date().toISOString()
     let duplicate = false
     const saved = await mutate((current) => {
-      if (current.some((item) => item.notificationSource?.fingerprint === pending.fingerprint)) {
+      if (current.some((item) => hasFingerprint(item, pending.fingerprint))) {
         duplicate = true
         return current
       }
@@ -121,17 +132,17 @@ export function TransactionsProvider({ children }: { children: React.ReactNode }
     return !saved ? "failed" : duplicate ? "duplicate" : "added"
   }, [mutate])
 
-  const confirmTransfer = useCallback(async (pending: PendingTransaction, fromAccountId: string, toAccountId: string, description: string, date: string): Promise<CapturedTransactionResult> => {
+  const confirmTransfer = useCallback(async (pending: PendingTransaction, fromAccountId: string, toAccountId: string, description: string, date: string, amount = pending.amount): Promise<CapturedTransactionResult> => {
     if (fromAccountId === toAccountId) return "failed"
     const now = new Date().toISOString()
     let duplicate = false
     const saved = await mutate((current) => {
-      if (current.some((item) => item.notificationSource?.fingerprint === pending.fingerprint)) {
+      if (current.some((item) => hasFingerprint(item, pending.fingerprint))) {
         duplicate = true
         return current
       }
       return [{
-        id: crypto.randomUUID(), type: "transfer" as const, amount: pending.amount, categoryId: "", description, date,
+        id: crypto.randomUUID(), type: "transfer" as const, amount, categoryId: "", description, date,
         accountId: fromAccountId, fromAccountId, toAccountId,
         notificationSource: { provider: pending.provider, fingerprint: pending.fingerprint, capturedAt: pending.capturedAt },
         createdAt: now, updatedAt: now,
@@ -139,6 +150,13 @@ export function TransactionsProvider({ children }: { children: React.ReactNode }
     })
     return !saved ? "failed" : duplicate ? "duplicate" : "added"
   }, [mutate])
+
+  const linkCaptured = useCallback((pending: PendingTransaction, transactionId: string) => mutate(current => {
+    if (current.some(t => hasFingerprint(t, pending.fingerprint))) return current
+    const target = current.find(t => t.id === transactionId)
+    if (!target || target.type !== "transfer" || ![target.fromAccountId, target.toAccountId].includes(pending.accountId)) throw new Error("Choose a transfer involving the detected account.")
+    return current.map(t => t.id === transactionId ? { ...t, linkedNotifications: [...(t.linkedNotifications ?? []), { provider: pending.provider, fingerprint: pending.fingerprint, capturedAt: pending.capturedAt }], updatedAt: new Date().toISOString() } : t)
+  }), [mutate])
 
   const deleteTransaction = useCallback((id: string) => mutate((current) => current.filter((item) => item.id !== id)), [mutate])
   const deleteWithCascade = useCallback((id: string) => mutate((current) => current.filter((item) => item.id !== id && item.recurringId !== id)), [mutate])
@@ -159,8 +177,9 @@ export function TransactionsProvider({ children }: { children: React.ReactNode }
     bulkRecategorize,
     confirmCaptured,
     confirmTransfer,
+    linkCaptured,
   }), [transactions, addTransaction, updateTransaction, deleteTransaction, deleteWithCascade, restoreTransaction,
-    bulkDeleteTransactions, bulkRestoreTransactions, bulkRecategorize, confirmCaptured, confirmTransfer])
+    bulkDeleteTransactions, bulkRestoreTransactions, bulkRecategorize, confirmCaptured, confirmTransfer, linkCaptured])
 
   return <TransactionsContext.Provider value={value}>{children}</TransactionsContext.Provider>
 }

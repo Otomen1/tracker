@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react"
 import { TransactionFilters, Category, TransactionType } from "@/types"
+import { useAccounts } from "@/context/AccountsContext"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
@@ -34,6 +35,7 @@ function FilterChip({ label, onRemove }: { label: string; onRemove: () => void }
 }
 
 export function TransactionFiltersBar({ filters, categories, tags, fmt, onChange, onClearAll }: Props) {
+  const { accounts } = useAccounts()
   const [search, setSearch] = useState(filters.search ?? "")
   const [minAmount, setMinAmount] = useState(filters.minAmount !== undefined ? String(filters.minAmount) : "")
   const [maxAmount, setMaxAmount] = useState(filters.maxAmount !== undefined ? String(filters.maxAmount) : "")
@@ -60,6 +62,7 @@ export function TransactionFiltersBar({ filters, categories, tags, fmt, onChange
   }, [minAmount, maxAmount])
 
   const hasFilters =
+    filters.accountId ||
     filters.type ||
     filters.categoryId ||
     filters.dateFrom ||
@@ -103,6 +106,11 @@ export function TransactionFiltersBar({ filters, categories, tags, fmt, onChange
 
   return (
     <div className="space-y-2">
+      {accounts.length > 0 && <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-300">Transaction source
+        <select aria-label="Transaction source" className="mt-1 min-h-11 w-full rounded-md border bg-background px-3 text-sm sm:w-56" value={filters.accountId ?? ""} onChange={e => onChange({ ...filters, accountId: e.target.value || undefined })}>
+          <option value="">All sources</option>{accounts.map(account => <option key={account.id} value={account.id}>{account.name}{account.isActive ? "" : " (archived)"}</option>)}
+        </select>
+      </label>}
       {/* Always visible: search, type, date range, plus the advanced-filters toggle */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:flex xl:flex-wrap xl:items-end">
         <div className="space-y-1"><label htmlFor="transaction-search" className="text-xs font-medium text-zinc-600 dark:text-zinc-300">Search</label><Input

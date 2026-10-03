@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -19,7 +19,7 @@ interface Props {
   description?: string
   cascadeCount?: number
   confirmLabel?: string
-  onConfirm: (cascade: boolean) => void
+  onConfirm: (cascade: boolean) => void | boolean | Promise<void | boolean>
 }
 
 export function DeleteConfirmDialog({
@@ -31,6 +31,9 @@ export function DeleteConfirmDialog({
   confirmLabel = "Delete",
   onConfirm,
 }: Props) {
+  const saving = useRef(false)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const [cascade, setCascade] = useState(false)
 
   useEffect(() => {
@@ -40,8 +43,8 @@ export function DeleteConfirmDialog({
   const showCascade = (cascadeCount ?? 0) > 0
 
   return (
-    <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent>
+    <AlertDialog open={open} onOpenChange={next => { if (!saving.current) onOpenChange(next) }}>
+      <AlertDialogContent onEscapeKeyDown={e => { if (saving.current) e.preventDefault() }}>
         <AlertDialogHeader>
           <AlertDialogTitle>{title}</AlertDialogTitle>
           <AlertDialogDescription>{description}</AlertDialogDescription>
@@ -59,13 +62,22 @@ export function DeleteConfirmDialog({
           </label>
         )}
 
+        {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
         <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogCancel disabled={busy}>Cancel</AlertDialogCancel>
           <AlertDialogAction
-            onClick={() => onConfirm(cascade)}
+            disabled={busy}
+            onClick={async event => {
+              event.preventDefault()
+              if (saving.current) return
+              saving.current = true; setBusy(true); setError(null)
+              try { if (await onConfirm(cascade) !== false) onOpenChange(false) }
+              catch { setError("Could not complete this action. Retry.") }
+              finally { saving.current = false; setBusy(false) }
+            }}
             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
           >
-            {confirmLabel}
+            {busy ? "Saving…" : confirmLabel}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

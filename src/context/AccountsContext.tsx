@@ -3,50 +3,40 @@
 import { createContext, useCallback, useContext, useMemo } from "react"
 import { useVault } from "@/context/VaultContext"
 import { DEFAULT_ANDROID_ACCOUNTS } from "@/lib/constants"
-import type { Account, Transaction } from "@/types"
+import type { Account } from "@/types"
 
-interface AccountInput {
-  name: string
-  currency: string
-  openingBalance: number
-  isActive: boolean
-}
-
+export type AccountInput = Pick<Account, "name" | "currency" | "isActive" | "kind">
 interface AccountsContextValue {
+  addAccount: (input: AccountInput) => Promise<boolean>
   accounts: Account[]
   androidSetupComplete: boolean
-  initializeAndroidAccounts: (balances: { ryt: number; maybank: number }) => Promise<boolean>
+  initializeAndroidAccounts: () => Promise<boolean>
   updateAccount: (id: string, patch: Partial<AccountInput>) => Promise<boolean>
-  getBalance: (id: string, transactions: Transaction[]) => number
 }
 
 const AccountsContext = createContext<AccountsContextValue | null>(null)
 
-export function calculateAccountBalance(account: Account, transactions: Transaction[]): number {
-  const movement = transactions.reduce((sum, item) => {
-    if (item.type === "income" && item.accountId === account.id) return sum + item.amount
-    if (item.type === "expense" && item.accountId === account.id) return sum - item.amount
-    if (item.type === "transfer" && item.fromAccountId === account.id) return sum - item.amount
-    if (item.type === "transfer" && item.toAccountId === account.id) return sum + item.amount
-    return sum
-  }, 0)
-  return Math.round((account.openingBalance + movement + Number.EPSILON) * 100) / 100
-}
 
 export function AccountsProvider({ children }: { children: React.ReactNode }) {
   const { data, mutate } = useVault()
   const accounts = data.accounts
 
-  const initializeAndroidAccounts = useCallback((balances: { ryt: number; maybank: number }) => {
+  const initializeAndroidAccounts = useCallback(() => {
     const now = new Date().toISOString()
     const next = DEFAULT_ANDROID_ACCOUNTS.map((account) => ({
       ...account,
-      openingBalance: account.id === "account_ryt" ? balances.ryt : balances.maybank,
+      openingBalance: 0,
       createdAt: now,
       updatedAt: now,
     }))
-    return mutate((current) => ({ ...current, accounts: next, androidSetupComplete: true }))
+    return mutate((current) => ({ ...current, accounts: [...current.accounts, ...next.filter(a => !current.accounts.some(old => old.id === a.id))], androidSetupComplete: true }))
   }, [mutate])
+
+  const addAccount = useCallback((input: AccountInput) => mutate(current => {
+    if (current.accounts.length && input.currency !== current.accounts[0].currency) throw new Error("Use the same currency as your existing accounts. Mixed-currency totals are not supported.")
+    const now = new Date().toISOString()
+    return { ...current, accounts: [...current.accounts, { ...input, openingBalance: 0, id: crypto.randomUUID(), createdAt: now, updatedAt: now }] }
+  }), [mutate])
 
   const updateAccount = useCallback((id: string, patch: Partial<AccountInput>) => mutate((current) => ({
     ...current,
@@ -57,14 +47,11 @@ export function AccountsProvider({ children }: { children: React.ReactNode }) {
 
   const value = useMemo<AccountsContextValue>(() => ({
     accounts,
+    addAccount,
     androidSetupComplete: data.androidSetupComplete,
     initializeAndroidAccounts,
     updateAccount,
-    getBalance: (id, transactions) => {
-      const account = accounts.find((item) => item.id === id)
-      return account ? calculateAccountBalance(account, transactions) : 0
-    },
-  }), [accounts, data.androidSetupComplete, initializeAndroidAccounts, updateAccount])
+  }), [accounts, addAccount, data.androidSetupComplete, initializeAndroidAccounts, updateAccount])
 
   return <AccountsContext.Provider value={value}>{children}</AccountsContext.Provider>
 }

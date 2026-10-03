@@ -1,6 +1,9 @@
 "use client"
 
 import { useEffect } from "react"
+import { useVault } from "@/context/VaultContext"
+import { trackerNativePlugin } from "@/lib/trackerNativePlugin"
+import { nativeVault } from "@/lib/nativeVault"
 import { useSettingsContext } from "@/context/SettingsContext"
 
 const LAST_REMINDER_KEY = "tracker_last_reminder_date"
@@ -15,9 +18,14 @@ function getCurrentHHMM(): string {
 }
 
 export function useReminderNotification() {
+  const { unlocked } = useVault()
   const { settings } = useSettingsContext()
 
   useEffect(() => {
+    if (nativeVault.isNative()) {
+      if (unlocked) void trackerNativePlugin.setReminder({ enabled: !!settings.reminderEnabled, time: settings.reminderTime ?? "20:00" }).catch(() => undefined)
+      return
+    }
     if (!settings.reminderEnabled || !settings.reminderTime) return
     if (typeof window === "undefined" || !("Notification" in window)) return
     if (Notification.permission !== "granted") return
@@ -29,7 +37,7 @@ export function useReminderNotification() {
       if (localStorage.getItem(LAST_REMINDER_KEY) === today) return
       if (getCurrentHHMM() >= reminderTime) {
         localStorage.setItem(LAST_REMINDER_KEY, today)
-        new Notification("Expense Tracker", {
+        new Notification("Tracker", {
           body: "Don't forget to log your expenses today!",
           icon: "/icons/icon-192x192.png",
           tag: "daily-reminder",
@@ -40,5 +48,5 @@ export function useReminderNotification() {
     check()
     const id = setInterval(check, 60_000)
     return () => clearInterval(id)
-  }, [settings.reminderEnabled, settings.reminderTime])
+  }, [settings.reminderEnabled, settings.reminderTime, unlocked])
 }

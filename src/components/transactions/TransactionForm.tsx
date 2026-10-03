@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState, KeyboardEvent } from "react"
+import { useEffect, useMemo, useState, useRef, KeyboardEvent } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
@@ -16,30 +16,39 @@ import { shouldAutoFillDescription } from "@/lib/descriptionDefault"
 import { cn } from "@/lib/utils"
 import { X, RefreshCw, Plus, ChevronDown } from "lucide-react"
 import { useToast } from "@/context/ToastContext"
+import { parseMoney, validateEntry } from "@/domain/finance"
 import { useAccounts } from "@/context/AccountsContext"
 
 const NEW_CATEGORY_VALUE = "__new_category__"
 
 const schema = z.object({
-  type: z.enum(["income", "expense"]),
-  amount: z.string().refine((v) => parseFloat(v) > 0, "Must be a positive number"),
-  categoryId: z.string().min(1, "Please select a category"),
+  type: z.enum(["income", "expense", "transfer"]),
+  amount: z.string().refine((v) => { try { return parseMoney(v) > 0 } catch { return false } }, "Enter a positive amount with at most two decimals"),
+  categoryId: z.string(),
   description: z.string().trim().min(1, "Description is required").max(200),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date"),
   notes: z.string().max(500).optional(),
   isRecurring: z.boolean().optional(),
   recurringDay: z.number().min(1).max(31).optional(),
   accountId: z.string().optional(),
+  fromAccountId: z.string().optional(),
+  toAccountId: z.string().optional(),
+  isRefund: z.boolean().optional(),
 })
 
 interface Props {
   transaction?: Transaction
   categories: Category[]
   onSubmit: (data: TransactionFormData) => boolean | void | Promise<boolean | void>
+  onDirtyChange?: (dirty: boolean) => void
   onCancel: () => void
 }
 
-export function TransactionForm({ transaction, categories, onSubmit, onCancel }: Props) {
+export function TransactionForm({ transaction, categories, onSubmit, onCancel, onDirtyChange }: Props) {
+  const commandId = useRef(transaction?.id ?? crypto.randomUUID())
+  const saving = useRef(false)
+  const [savingState, setSavingState] = useState(false)
+  const [submitError, setSubmitError] = useState<string | null>(null)
   const [tags, setTags] = useState<string[]>(transaction?.tags ?? [])
   const [tagInput, setTagInput] = useState("")
   const [newCategoryOpen, setNewCategoryOpen] = useState(false)
@@ -68,11 +77,11 @@ export function TransactionForm({ transaction, categories, onSubmit, onCancel }:
     handleSubmit,
     watch,
     setValue,
-    formState: { errors },
+    formState: { errors, isSubmitting, isDirty },
   } = useForm<TransactionFormData>({
     resolver: zodResolver(schema),
     defaultValues: {
-      type: transaction?.type === "income" ? "income" : "expense",
+      type: transaction?.type ?? "expense",
       amount: transaction?.amount?.toString() ?? "",
       categoryId: transaction?.categoryId ?? "",
       description: transaction?.description ?? "",
@@ -81,10 +90,18 @@ export function TransactionForm({ transaction, categories, onSubmit, onCancel }:
       isRecurring: transaction?.isRecurring ?? false,
       recurringDay: transaction?.recurringDay ?? new Date().getDate(),
       accountId: transaction?.accountId ?? activeAccounts[0]?.id,
+      fromAccountId: transaction?.fromAccountId ?? activeAccounts[0]?.id,
+      toAccountId: transaction?.toAccountId ?? activeAccounts[1]?.id,
+      isRefund: transaction?.isRefund ?? false,
     },
   })
 
+  useEffect(() => { onDirtyChange?.(isDirty || JSON.stringify(tags) !== JSON.stringify(transaction?.tags ?? [])) }, [isDirty, tags, transaction?.tags, onDirtyChange])
+
+  const pending = savingState || isSubmitting
   const selectedType = watch("type")
+  const isRefund = watch("isRefund")
+  const categoryType = isRefund ? "expense" : selectedType
   const isRecurring = watch("isRecurring")
 
   const allCategories = useMemo(() => {
@@ -92,7 +109,7 @@ export function TransactionForm({ transaction, categories, onSubmit, onCancel }:
     return [...categories, ...extra]
   }, [categories, createdCategories])
 
-  const filteredCategories = allCategories.filter((c) => c.type === selectedType)
+  const filteredCategories = allCategories.filter((c) => c.type === categoryType)
   const selectedCategory = allCategories.find((c) => c.id === watch("categoryId"))
 
   // Only re-validate when the Type toggle actually changes (the only thing
@@ -104,10 +121,10 @@ export function TransactionForm({ transaction, categories, onSubmit, onCancel }:
   // render where categoryId updated slightly ahead of createdCategories.
   useEffect(() => {
     const current = watch("categoryId")
-    const stillValid = allCategories.some((c) => c.id === current && c.type === selectedType)
+    const stillValid = allCategories.some((c) => c.id === current && c.type === categoryType)
     if (!stillValid) setValue("categoryId", "")
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedType])
+  }, [selectedType, isRefund])
 
   const addTag = () => {
     const trimmed = tagInput.trim().toLowerCase().replace(/\s+/g, "-")
@@ -124,8 +141,17 @@ export function TransactionForm({ transaction, categories, onSubmit, onCancel }:
     }
   }
 
-  const handleFormSubmit = (data: TransactionFormData) => {
-    onSubmit({ ...data, tags })
+  const handleFormSubmit = async (data: TransactionFormData) => {
+    if (saving.current) return
+    saving.current = true
+    setSavingState(true)
+    setSubmitError(null)
+    try {
+      const payload = { ...data, commandId: commandId.current, tags, categoryId: data.type === "transfer" ? "" : data.categoryId, isRecurring: data.type === "transfer" ? false : data.isRecurring, isRefund: data.type === "income" && data.isRefund }
+      validateEntry({ ...payload, amount: parseMoney(data.amount), id: transaction?.id ?? "draft", createdAt: "", updatedAt: "" }, accounts, allCategories, transaction)
+      if (await onSubmit(payload) === false) setSubmitError("Could not save. Your input is kept; check storage or unlock and retry.")
+    } catch (reason) { setSubmitError(reason instanceof Error ? reason.message : "Could not save. Retry.") }
+    finally { saving.current = false; setSavingState(false) }
   }
 
   const applyCategoryDescriptionDefault = (categoryName: string) => {
@@ -171,7 +197,8 @@ export function TransactionForm({ transaction, categories, onSubmit, onCancel }:
 
   return (
     <>
-      <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4 sm:space-y-5">
+      <form aria-label="Transaction editor" onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4 sm:space-y-5">
+        <fieldset disabled={pending} className="space-y-4 sm:space-y-5">
         <div className="space-y-1.5">
           <Label htmlFor="amount">Amount</Label>
           <Input
@@ -192,12 +219,12 @@ export function TransactionForm({ transaction, categories, onSubmit, onCancel }:
         <div className="space-y-1.5">
           <Label>Type</Label>
           <div className="flex rounded-md border border-input overflow-hidden">
-            {(["expense", "income"] as const).map((t) => (
+            {(["expense", "income", "transfer"] as const).map((t) => (
               <button
                 key={t}
                 type="button"
                 aria-pressed={selectedType === t}
-                onClick={() => setValue("type", t)}
+                onClick={() => { setValue("type", t, { shouldDirty: true }); setValue("isRefund", false); setValue("isRecurring", false) }}
                 className={cn(
                   "min-h-11 flex-1 py-2 text-sm font-medium capitalize transition-colors",
                   selectedType === t
@@ -213,14 +240,24 @@ export function TransactionForm({ transaction, categories, onSubmit, onCancel }:
           </div>
         </div>
 
-        {activeAccounts.length > 0 && <div className="space-y-1.5">
-          <Label>Account</Label>
-          <Select value={watch("accountId") ?? activeAccounts[0].id} onValueChange={(value) => setValue("accountId", value)}>
+        {selectedType !== "transfer" && activeAccounts.length > 0 && <div className="space-y-1.5">
+          <Label>{selectedType === "expense" ? "Paid from" : "Received into"}</Label>
+          <Select value={watch("accountId") ?? activeAccounts[0].id} onValueChange={(value) => setValue("accountId", value, { shouldDirty: true })}>
             <SelectTrigger aria-label="Account"><SelectValue placeholder="Choose an account" /></SelectTrigger>
             <SelectContent>{activeAccounts.map((account) => <SelectItem key={account.id} value={account.id}>{account.name}</SelectItem>)}</SelectContent>
           </Select>
         </div>}
 
+        {selectedType === "transfer" && <div className="grid gap-3 sm:grid-cols-2">
+          {(["fromAccountId", "toAccountId"] as const).map(field => <label key={field} className="space-y-1 text-sm">{field === "fromAccountId" ? "From account" : "To account"}
+            <select aria-label={field === "fromAccountId" ? "From account" : "To account"} className="min-h-11 w-full rounded-md border bg-background px-3" {...register(field)}>
+              <option value="">Choose an account</option>{accounts.filter(a => a.isActive || a.id === transaction?.[field]).map(a => <option key={a.id} value={a.id}>{a.name} ({a.currency})</option>)}
+            </select>
+          </label>)}
+          <p className="text-xs text-muted-foreground sm:col-span-2">Transfers between your own sources and card repayments do not count as new spending. Choose Expense for a payment to someone else.</p>
+        </div>}
+        {selectedType === "income" && accounts.find(a => a.id === watch("accountId"))?.kind === "credit_card" && <label className="flex min-h-11 items-center gap-2 text-sm"><input type="checkbox" {...register("isRefund")} />Refund (reverses recorded spending)</label>}
+        {selectedType !== "transfer" && <>
         <div className="space-y-1.5">
           <Label htmlFor="category-trigger">Category</Label>
           <Select value={watch("categoryId")} onValueChange={handleCategoryValueChange}>
@@ -264,6 +301,7 @@ export function TransactionForm({ transaction, categories, onSubmit, onCancel }:
           {errors.categoryId && <p id="category-error" className="text-xs text-destructive">{errors.categoryId.message}</p>}
         </div>
 
+        </>}
         <div className="space-y-1.5">
           <Label htmlFor="description">Description</Label>
           <Input
@@ -371,16 +409,18 @@ export function TransactionForm({ transaction, categories, onSubmit, onCancel }:
           </div>
         </div>
 
+        {submitError && <p role="alert" className="text-sm text-destructive">{submitError}</p>}
         <div className="sticky bottom-[-1rem] z-10 -mx-4 flex gap-2 border-t border-zinc-200 bg-background px-4 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-3 dark:border-zinc-800 sm:static sm:mx-0 sm:border-0 sm:p-0 sm:pt-2">
-          <Button type="button" variant="outline" className="flex-1" onClick={onCancel}>Cancel</Button>
-          <Button type="submit" className="flex-1">{transaction ? "Save Changes" : "Add Transaction"}</Button>
+          <Button type="button" variant="outline" className="flex-1" disabled={pending} onClick={onCancel}>Cancel</Button>
+          <Button type="submit" disabled={pending} className="flex-1">{pending ? "Saving…" : transaction ? "Save Changes" : "Add Transaction"}</Button>
         </div>
+        </fieldset>
       </form>
 
       <CategoryDialog
         open={newCategoryOpen}
         onOpenChange={setNewCategoryOpen}
-        defaultType={selectedType}
+        defaultType={selectedType === "income" && !isRefund ? "income" : "expense"}
         existingNames={filteredCategories.map((c) => c.name)}
         onSubmit={handleCreateCategory}
       />

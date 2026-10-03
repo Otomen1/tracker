@@ -19,10 +19,21 @@ class EncryptedVaultStore(private val context: Context) {
     private val previousBackupFile = File(previousFile.path + ".bak")
     private val atomicFile = AtomicFile(file)
     private val previousAtomicFile = AtomicFile(previousFile)
+    // Container version stays 3; logical payload schemas 3/4 share this AAD.
+    private val migrationFile = AtomicFile(File(context.filesDir, "tracker-vault-pre-v4.enc"))
     private val associatedData = "com.otomen.tracker:vault:3".toByteArray()
 
     fun exists(): Boolean = synchronized(FILE_LOCK) { file.exists() || atomicBackupFile.exists() }
     fun hasRecovery(): Boolean = synchronized(FILE_LOCK) { previousFile.exists() || previousBackupFile.exists() }
+
+    fun hasMigrationRecovery(): Boolean = synchronized(FILE_LOCK) { migrationFile.baseFile.exists() || File(migrationFile.baseFile.path + ".bak").exists() }
+
+    fun restoreMigration(): JSONObject = synchronized(FILE_LOCK) {
+        val restored = parseAndValidate(decrypt(migrationFile.openRead().use { it.readBytes() }))
+        if (exists()) writeAtomically(previousAtomicFile, atomicFile.openRead().use { it.readBytes() })
+        writeEncrypted(encrypt(restored.toString().toByteArray()))
+        restored
+    }
 
     fun read(): JSONObject = synchronized(FILE_LOCK) {
         if (!exists()) throw IllegalStateException("The encrypted vault has not been created")
@@ -34,10 +45,14 @@ class EncryptedVaultStore(private val context: Context) {
         writeInternal(candidate, 0)
     }
 
-    fun write(candidate: JSONObject, expectedRevision: Long): JSONObject = synchronized(FILE_LOCK) {
+    fun write(candidate: JSONObject, expectedRevision: Long, restoring: Boolean = false): JSONObject = synchronized(FILE_LOCK) {
         val current = read()
         val currentRevision = current.optLong("revision", -1)
         if (currentRevision != expectedRevision) throw IllegalStateException("Vault changed; reload and try again")
+        if (current.optInt("schemaVersion") == 3 && !hasMigrationRecovery()) {
+            writeAtomically(migrationFile, atomicFile.openRead().use { it.readBytes() })
+        }
+        validateRelationships(candidate, current, restoring)
         if (exists()) {
             // read() above lets AtomicFile restore an interrupted prior write.
             writeAtomically(previousAtomicFile, atomicFile.openRead().use { it.readBytes() })
@@ -59,23 +74,27 @@ class EncryptedVaultStore(private val context: Context) {
         atomicBackupFile.delete()
         previousFile.delete()
         previousBackupFile.delete()
+        migrationFile.delete()
         Unit
     }
 
     private fun writeInternal(candidate: JSONObject, revision: Long): JSONObject {
+        require(candidate.optInt("schemaVersion") in 3..4) { "Unsupported vault version" }
         val next = JSONObject(candidate.toString())
-        next.put("schemaVersion", 3)
+        next.put("schemaVersion", 4)
         next.put("revision", revision)
         next.put("updatedAt", isoTimestamp())
         val validated = parseAndValidate(next.toString().toByteArray())
         writeEncrypted(encrypt(validated.toString().toByteArray()))
-        return validated
+        val reopened = read()
+        require(reopened.toString() == validated.toString()) { "Vault verification failed; use recovery" }
+        return reopened
     }
 
     private fun parseAndValidate(plaintext: ByteArray): JSONObject {
         require(plaintext.size <= 12 * 1024 * 1024) { "Vault exceeds the 12 MB safety limit" }
         val vault = JSONObject(String(plaintext, Charsets.UTF_8))
-        require(vault.optInt("schemaVersion") == 3) { "Unsupported vault version" }
+        require(vault.optInt("schemaVersion") in 3..4) { "Unsupported vault version" }
         require(vault.optLong("revision", -1) >= 0) { "Invalid vault revision" }
         requiredString(vault, "updatedAt", 64)
 
@@ -103,7 +122,7 @@ class EncryptedVaultStore(private val context: Context) {
             require(amount.isFinite() && amount > 0) { "Invalid transaction amount" }
             requiredString(item, "categoryId", 200, allowEmpty = true)
             requiredString(item, "description", 200)
-            require(DATE_PATTERN.matches(requiredString(item, "date", 10))) { "Invalid transaction date" }
+            require(validDate(requiredString(item, "date", 10))) { "Invalid transaction date" }
             requiredString(item, "createdAt", 64)
             requiredString(item, "updatedAt", 64)
             if (type == "transfer") {
@@ -138,6 +157,11 @@ class EncryptedVaultStore(private val context: Context) {
             requiredString(item, "name", 60)
             require(requiredString(item, "currency", 3).length == 3) { "Invalid account currency" }
             require(item.getDouble("openingBalance").isFinite()) { "Invalid opening balance" }
+            if (item.has("kind")) require(item.getString("kind") in listOf("bank", "cash", "ewallet", "credit_card")) { "Invalid account kind" }
+            if (item.has("creditLimit")) require(item.getDouble("creditLimit").isFinite() && item.getDouble("creditLimit") >= 0) { "Invalid credit limit" }
+            if (item.has("lastFour")) require(Regex("^[0-9]{4}$").matches(item.getString("lastFour"))) { "Use only the last four digits" }
+            if (item.has("statementBalance")) require(item.getDouble("statementBalance").isFinite()) { "Invalid statement balance" }
+            for (field in listOf("statementDate", "dueDate")) if (item.has(field)) require(validDate(item.getString(field))) { "Invalid statement date" }
             item.getBoolean("isActive")
             requiredString(item, "createdAt", 64)
             requiredString(item, "updatedAt", 64)
@@ -150,6 +174,42 @@ class EncryptedVaultStore(private val context: Context) {
         require(theme == "light" || theme == "dark" || theme == "system") { "Invalid theme" }
         val goal = settings.getDouble("monthlySavingsGoal")
         require(goal.isFinite() && goal >= 0) { "Invalid savings goal" }
+    }
+
+    private fun validDate(value: String): Boolean {
+        if (!DATE_PATTERN.matches(value)) return false
+        val parser = SimpleDateFormat("yyyy-MM-dd", Locale.US).apply { isLenient = false }
+        val position = java.text.ParsePosition(0)
+        return parser.parse(value, position) != null && position.index == value.length
+    }
+
+    private fun validateRelationships(candidate: JSONObject, previous: JSONObject, restoring: Boolean) {
+        fun indexed(items: JSONArray): Map<String, JSONObject> = (0 until items.length()).associate { items.getJSONObject(it).getString("id") to items.getJSONObject(it) }
+        val accounts = indexed(candidate.getJSONArray("accounts"))
+        val categories = indexed(candidate.getJSONArray("categories"))
+        val old = indexed(previous.getJSONArray("transactions"))
+        val entries = candidate.getJSONArray("transactions")
+        for (i in 0 until entries.length()) {
+            val item = entries.getJSONObject(i)
+            val prior = old[item.getString("id")]
+            if (!restoring && prior?.toString() == item.toString()) continue // retain validatable legacy records
+            fun account(field: String): JSONObject {
+                val id = item.optString(field)
+                val result = accounts[id] ?: throw IllegalArgumentException("Choose a valid account")
+                require(restoring || result.getBoolean("isActive") || prior?.optString(field) == id) { "Choose an active account" }
+                return result
+            }
+            if (item.getString("type") == "transfer") {
+                val from = account("fromAccountId")
+                val to = account("toAccountId")
+                require(from.getString("currency") == to.getString("currency")) { "Cross-currency transfers are unsupported" }
+            } else {
+                val category = categories[item.getString("categoryId")] ?: throw IllegalArgumentException("Choose a valid category")
+                require(category.getString("type") == if (item.optBoolean("isRefund")) "expense" else item.getString("type")) { "Category type mismatch" }
+                if (accounts.isNotEmpty() && (item.has("accountId") || prior == null || prior.has("accountId"))) account("accountId")
+                if (item.optBoolean("isRefund")) require(item.getString("type") == "income" && account("accountId").optString("kind") == "credit_card") { "Invalid card refund" }
+            }
+        }
     }
 
     private fun requireUniqueIds(items: JSONArray, label: String) {

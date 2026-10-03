@@ -76,11 +76,11 @@ export const SavingsTrendChart = memo(function SavingsTrendChart({ trend, summar
   return (
     <Card className="border-zinc-200 dark:border-zinc-800">
       <CardHeader className="pb-2">
-        <CardTitle className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">Savings Trend</CardTitle>
+        <CardTitle className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">Recorded Net Trend</CardTitle>
         <p className="text-xs text-zinc-400">
           {hasGoal
-            ? `Actual savings vs. current monthly goal of ${fmt(trend.points[0].goal)}`
-            : "No savings goal configured — showing actual savings only"}
+            ? `Recorded net vs. current monthly goal of ${fmt(trend.points[0].goal)}`
+            : "No recorded net goal configured — showing recorded net only"}
         </p>
       </CardHeader>
       <CardContent>
@@ -88,8 +88,8 @@ export const SavingsTrendChart = memo(function SavingsTrendChart({ trend, summar
           role="img"
           aria-label={
             hasGoal
-              ? "Bar chart comparing actual monthly savings to your current monthly goal"
-              : "Bar chart showing actual savings by month"
+              ? "Bar chart comparing recorded monthly net to your current monthly goal"
+              : "Bar chart showing recorded net by month"
           }
         >
           <ResponsiveContainer width="100%" height={240}>
@@ -130,8 +130,8 @@ export const SavingsTrendChart = memo(function SavingsTrendChart({ trend, summar
         </div>
 
         <table className="sr-only">
-          <caption>Actual savings vs. current monthly goal, by month</caption>
-          <thead><tr><th>Month</th><th>Actual savings</th><th>Goal</th><th>Achievement</th></tr></thead>
+          <caption>Recorded net vs. current monthly goal, by month</caption>
+          <thead><tr><th>Month</th><th>Recorded net</th><th>Goal</th><th>Achievement</th></tr></thead>
           <tbody>
             {trend.points.map((p) => (
               <tr key={p.month}>

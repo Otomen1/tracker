@@ -10,6 +10,7 @@ export default defineConfig({
   reporter: process.env.CI ? "github" : "list",
   use: {
     baseURL,
+    launchOptions: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH ? { executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH } : undefined,
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
   },
@@ -20,7 +21,7 @@ export default defineConfig({
   webServer: {
     // CI already builds above and should exercise the deployable server. This
     // also avoids development HMR WebSockets interacting with the production CSP.
-    command: process.env.CI ? "npm run start" : "npm run dev",
+    command: process.env.CI ? "npm run start -- --hostname 127.0.0.1" : "npm run dev",
     url: baseURL,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,

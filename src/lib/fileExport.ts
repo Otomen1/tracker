@@ -2,8 +2,8 @@
 
 import { Capacitor } from "@capacitor/core"
 
-function toBase64(content: string): string {
-  const bytes = new TextEncoder().encode(content)
+function toBase64(content: string | Uint8Array): string {
+  const bytes = typeof content === "string" ? new TextEncoder().encode(content) : content
   let binary = ""
   const chunkSize = 0x8000
   for (let offset = 0; offset < bytes.length; offset += chunkSize) {
@@ -12,7 +12,7 @@ function toBase64(content: string): string {
   return btoa(binary)
 }
 
-export async function saveOrShareFile(content: string, filename: string, mimeType: string): Promise<"shared" | "downloaded"> {
+export async function saveOrShareFile(content: string | Uint8Array, filename: string, mimeType: string): Promise<"shared" | "downloaded"> {
   if (Capacitor.isNativePlatform()) {
     const [{ Filesystem, Directory }, { Share }] = await Promise.all([
       import("@capacitor/filesystem"),
@@ -26,10 +26,10 @@ export async function saveOrShareFile(content: string, filename: string, mimeTyp
     })
     try {
       await Share.share({
-        title: "Tracker backup",
-        text: "Save this encrypted Tracker backup somewhere private.",
+        title: "Tracker export",
+        text: "Save this Tracker export somewhere private.",
         files: [result.uri],
-        dialogTitle: "Save or share encrypted backup",
+        dialogTitle: "Save or share Tracker export",
       })
     } finally {
       await Filesystem.deleteFile({ path: filename, directory: Directory.Cache }).catch(() => undefined)
@@ -37,7 +37,7 @@ export async function saveOrShareFile(content: string, filename: string, mimeTyp
     return "shared"
   }
 
-  const blob = new Blob([content], { type: mimeType })
+  const blob = new Blob([typeof content === "string" ? content : new Uint8Array(content).buffer], { type: mimeType })
   const url = URL.createObjectURL(blob)
   const link = document.createElement("a")
   link.href = url

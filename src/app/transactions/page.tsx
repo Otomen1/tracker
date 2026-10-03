@@ -18,6 +18,7 @@ import { ExportButton } from "@/components/transactions/ExportButton"
 import { formatDate } from "@/lib/formatters"
 import { cn } from "@/lib/utils"
 import { useToast } from "@/context/ToastContext"
+import { ReviewInboxCard } from "@/components/android/ReviewInboxCard"
 import { PageHeader } from "@/components/layout/PageHeader"
 
 function TransactionsPageContent() {
@@ -116,7 +117,7 @@ function TransactionsPageContent() {
 
   return (
     <div className="space-y-5">
-      <PageHeader title="Transactions" description="Search, review, and manage your financial activity" action={<Button size="sm" className="hidden gap-1.5 lg:inline-flex" onClick={() => setAddOpen(true)}>
+      <PageHeader title="Activity" description="Search, review, and manage your financial activity" action={<Button size="sm" className="hidden gap-1.5 lg:inline-flex" onClick={() => setAddOpen(true)}>
           <Plus className="w-4 h-4" />
           Add Transaction
         </Button>} />
@@ -161,7 +162,8 @@ function TransactionsPageContent() {
 
       <div className="space-y-4 rounded-2xl border border-zinc-200 bg-white p-3.5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 sm:p-4">
         <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
-          <TransactionFiltersBar
+          <ReviewInboxCard />
+      <TransactionFiltersBar
             filters={filters}
             categories={categories}
             tags={allTags}

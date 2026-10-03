@@ -35,7 +35,7 @@ interface Props {
 export function CategoryForm({ category, defaultType = "expense", existingNames = [], onSubmit, onCancel }: Props) {
   const {
     register, handleSubmit, watch, setValue, setError,
-    formState: { errors },
+    formState: { errors, isSubmitting },
   } = useForm<FormFields>({
     resolver: zodResolver(schema),
     defaultValues: {
@@ -140,8 +140,8 @@ export function CategoryForm({ category, defaultType = "expense", existingNames 
       </div>
 
       <div className="flex gap-2 pt-2">
-        <Button type="button" variant="outline" className="flex-1" onClick={onCancel}>Cancel</Button>
-        <Button type="submit" className="flex-1">{category ? "Save Changes" : "Add Category"}</Button>
+        <Button type="button" variant="outline" className="flex-1" disabled={isSubmitting} onClick={onCancel}>Cancel</Button>
+        <Button type="submit" disabled={isSubmitting} className="flex-1">{isSubmitting ? "Saving…" : category ? "Save Changes" : "Add Category"}</Button>
       </div>
     </form>
   )

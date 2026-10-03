@@ -25,7 +25,7 @@ export function SavingsGoalCard({ currentNet }: Props) {
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <Target className="w-4 h-4 text-zinc-500" />
-            <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Savings Goal</span>
+            <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Recorded Net Goal</span>
           </div>
           <div className="text-right">
             <span className={cn("text-sm font-semibold", isAchieved ? "text-emerald-600" : isBehind ? "text-rose-500" : "text-zinc-900 dark:text-zinc-100")}>
@@ -40,7 +40,7 @@ export function SavingsGoalCard({ currentNet }: Props) {
             aria-valuenow={Math.max(percentage, 0)}
             aria-valuemin={0}
             aria-valuemax={100}
-            aria-label="Savings goal progress"
+            aria-label="Recorded net goal progress"
             className={cn("h-2 rounded-full transition-all", isAchieved ? "bg-emerald-500" : isBehind ? "bg-rose-400" : "bg-zinc-900 dark:bg-zinc-100")}
             style={{ width: `${Math.max(percentage, 0)}%` }}
           />

@@ -1,80 +1,77 @@
 "use client"
 
-import { useState } from "react"
-import { useAccounts, calculateAccountBalance } from "@/context/AccountsContext"
-import { useTransactions } from "@/hooks/useTransactions"
+import { useRef, useState } from "react"
+import { useAccounts, type AccountInput } from "@/context/AccountsContext"
 import { useSettingsContext } from "@/context/SettingsContext"
-import { useToast } from "@/context/ToastContext"
+import { useVault } from "@/context/VaultContext"
+import type { Account, AccountKind } from "@/types"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 
+function AccountEditor({ account, onDone }: { account?: Account; onDone?: () => void }) {
+  const { accounts, addAccount, updateAccount } = useAccounts()
+  const { settings } = useSettingsContext()
+  const { error: storageError } = useVault()
+  const [name, setName] = useState(account?.name ?? "")
+  const [kind, setKind] = useState<AccountKind>(account?.kind ?? "bank")
+  const [busy, setBusy] = useState(false)
+  const saving = useRef(false)
+  const [error, setError] = useState<string | null>(null)
+  const [saved, setSaved] = useState(false)
+  const currency = account?.currency ?? accounts[0]?.currency ?? settings.currency
+  return <form aria-label={account ? `Edit account ${account.name}` : "New account"} className="space-y-3" onSubmit={async event => {
+    event.preventDefault()
+    if (saving.current) return
+    saving.current = true; setBusy(true); setError(null); setSaved(false)
+    try {
+      const input: AccountInput = { name: name.trim(), kind, currency, isActive: account?.isActive ?? true }
+      if (!(account ? await updateAccount(account.id, input) : await addAccount(input))) throw new Error("Could not save source. Retry.")
+      setSaved(true); onDone?.()
+    } catch (reason) { setError(reason instanceof Error ? reason.message : "Could not save.") }
+    finally { saving.current = false; setBusy(false) }
+  }}>
+    <fieldset disabled={busy} className="space-y-3">
+      <label className="block text-sm">Account name<Input value={name} maxLength={60} required onChange={e => setName(e.target.value)} /></label>
+      <label className="block text-sm">Account kind<select className="min-h-11 w-full rounded-md border bg-background px-3" value={kind} onChange={e => setKind(e.target.value as AccountKind)} disabled={!!account}>
+        <option value="bank">Bank</option><option value="cash">Cash</option><option value="ewallet">E-wallet</option><option value="credit_card">Credit card</option>
+      </select></label>
+      <p className="text-xs text-muted-foreground">Transaction currency: {currency}. This source identifies recorded activity; no balance, assets or card debt is calculated.</p>
+      {error && <p role="alert" className="text-sm text-destructive">{error} {storageError}</p>}
+      {saved && <p role="status" className="text-sm text-emerald-700">Source saved.</p>}
+      <Button type="submit" disabled={busy}>{busy ? "Saving…" : account ? "Save changes" : "Create account"}</Button>
+    </fieldset>
+  </form>
+}
+
+function AccountCard({ account }: { account: Account }) {
+  const { updateAccount } = useAccounts()
+  const { error: storageError } = useVault()
+  const [busy, setBusy] = useState(false)
+  const guard = useRef(false)
+  const [error, setError] = useState<string | null>(null)
+  const capture = account.id === "account_ryt" || account.id === "account_maybank"
+  return <section id={account.id} className="scroll-mt-5 space-y-3 rounded-xl border bg-background p-4">
+    <div className="flex justify-between gap-3"><h2 className="font-semibold">{account.name}</h2><span className="text-xs">{account.isActive ? "Active" : "Archived"}</span></div>
+    <p className="text-xs text-muted-foreground">{capture ? "Ryt/MAE notification source. Enable capture in Bank capture on Android." : "Manual transaction source. Automatic notification capture is not configured for this source."}</p>
+    <details><summary className="min-h-11 cursor-pointer py-3 text-sm font-medium">Edit source</summary><AccountEditor account={account} /></details>
+    <Button variant="outline" disabled={busy} onClick={async () => {
+      if (guard.current) return
+      if (account.isActive && !window.confirm("Archive source? Transactions stay. Turn off recurring entries first. Disable its bank capture separately if needed.")) return
+      guard.current = true; setBusy(true); setError(null)
+      try { if (!await updateAccount(account.id, { isActive: !account.isActive })) setError("Could not update source. Check recurring entries and retry.") }
+      finally { guard.current = false; setBusy(false) }
+    }}>{busy ? "Saving…" : account.isActive ? "Archive source" : "Reactivate source"}</Button>
+    {error && <p role="alert" className="text-sm text-destructive">{error} {storageError}</p>}
+  </section>
+}
+
 export function AccountSettings() {
-  const { accounts, updateAccount } = useAccounts()
-  const { transactions } = useTransactions()
-  const { fmt } = useSettingsContext()
-  const { showToast } = useToast()
-  const [drafts, setDrafts] = useState<Record<string, { name: string; openingBalance: string }>>({})
-  if (!accounts.length) return <p className="text-sm text-zinc-600 dark:text-zinc-400">Accounts are created during Android setup. Your browser data stays separate.</p>
-
-  return (
-    <div className="space-y-3">
-      {accounts.map((account) => {
-        const draft = drafts[account.id] ?? { name: account.name, openingBalance: String(account.openingBalance) }
-        const currentBalance = calculateAccountBalance(account, transactions)
-        const setDraft = (patch: Partial<typeof draft>) => setDrafts((current) => ({
-          ...current,
-          [account.id]: { ...draft, ...patch },
-        }))
-        const save = async () => {
-          const balance = Number(draft.openingBalance)
-          if (!draft.name.trim()) return showToast("Enter an account name.", "error")
-          if (!Number.isFinite(balance)) return showToast("Enter a valid opening balance.", "error")
-          if (await updateAccount(account.id, { name: draft.name.trim(), openingBalance: balance })) {
-            showToast(`${draft.name.trim()} updated`, "success")
-          } else {
-            showToast("Account could not be saved.", "error")
-          }
-        }
-        const toggleActive = async () => {
-          const nextActive = !account.isActive
-          if (await updateAccount(account.id, { isActive: nextActive })) showToast(nextActive ? "Account enabled" : "Account disabled", "success")
-          else showToast("Account could not be updated.", "error")
-        }
-
-        return (
-          <section key={account.id} aria-label={`${account.name} account settings`} className="space-y-3 rounded-xl border border-zinc-200 p-3.5 dark:border-zinc-700 sm:p-4">
-            <div className="flex flex-wrap items-start justify-between gap-2">
-              <div>
-                <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">{account.name}</p>
-                <p className="mt-0.5 text-xs text-zinc-600 dark:text-zinc-400">Current balance</p>
-              </div>
-              <div className="text-right">
-                <p className="text-base font-semibold tabular-nums text-zinc-900 dark:text-zinc-100">{fmt(currentBalance)}</p>
-                <span className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium ${account.isActive ? "bg-emerald-50 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300" : "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"}`}>
-                  {account.isActive ? "Active" : "Disabled"}
-                </span>
-              </div>
-            </div>
-
-            <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_10rem]">
-              <label className="space-y-1.5 text-xs font-medium text-zinc-700 dark:text-zinc-300">
-                Account name
-                <Input className="min-h-11" value={draft.name} onChange={(event) => setDraft({ name: event.target.value })} />
-              </label>
-              <label className="space-y-1.5 text-xs font-medium text-zinc-700 dark:text-zinc-300">
-                Opening balance ({account.currency})
-                <Input className="min-h-11 tabular-nums" inputMode="decimal" value={draft.openingBalance} onChange={(event) => setDraft({ openingBalance: event.target.value })} />
-              </label>
-            </div>
-            <p className="text-xs leading-5 text-zinc-600 dark:text-zinc-400">The current balance above is calculated from this starting amount and confirmed transactions.</p>
-
-            <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
-              <Button className="min-h-11" type="button" variant="outline" onClick={toggleActive}>{account.isActive ? "Disable account" : "Enable account"}</Button>
-              <Button className="min-h-11" type="button" onClick={save}>Save changes</Button>
-            </div>
-          </section>
-        )
-      })}
-    </div>
-  )
+  const { accounts } = useAccounts()
+  const [adding, setAdding] = useState(false)
+  return <div className="space-y-4">
+    <p className="text-sm text-muted-foreground">Keep a source for each bank, card, wallet or cash you use. Automatic capture supports Ryt and MAE only; other sources need manual entries.</p>
+    <Button onClick={() => setAdding(v => !v)}>{adding ? "Close new account" : "Add account"}</Button>
+    {adding && <section className="rounded-xl border p-4"><AccountEditor onDone={() => setAdding(false)} /></section>}
+    {accounts.map(account => <AccountCard key={account.id} account={account} />)}
+  </div>
 }

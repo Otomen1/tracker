@@ -6,6 +6,8 @@ import {
 } from "@/types"
 import { getMonthKey, addMonths } from "./formatters"
 
+import { analyticEntries } from "@/domain/finance"
+
 const round2 = (n: number) => Math.round(n * 100) / 100
 
 // A period key is either a month ("YYYY-MM") or a year ("YYYY"). Transaction
@@ -33,6 +35,7 @@ export function getDashboardStats(
   transactions: Transaction[],
   periodKey: string
 ): DashboardStats {
+  transactions = analyticEntries(transactions)
   const prevPeriodKey = previousPeriodKey(periodKey)
   const currentPeriod = transactions.filter((t) => t.date.startsWith(periodKey))
   const prevPeriod = transactions.filter((t) => t.date.startsWith(prevPeriodKey))
@@ -61,6 +64,7 @@ function computeCategoryBreakdown(
   categories: Category[],
   type: Transaction["type"]
 ): CategoryBreakdown[] {
+  transactions = analyticEntries(transactions)
   const filtered = transactions.filter(
     (t) => t.type === type && t.date.startsWith(periodKey)
   )
@@ -115,6 +119,7 @@ export function getBudgetStatus(
   periodKey: string,
   categories: Category[]
 ): BudgetStatus[] {
+  transactions = analyticEntries(transactions)
   const budgetedCategories = categories.filter(
     (c) => c.type === "expense" && c.budget && c.budget > 0
   )
@@ -147,6 +152,7 @@ export function getBudgetStatus(
 }
 
 function computeMonthSummary(transactions: Transaction[], monthKey: string): MonthlySummary {
+  transactions = analyticEntries(transactions)
   const monthTxns = transactions.filter((t) => t.date.startsWith(monthKey))
   const totalIncome = round2(monthTxns.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0))
   const totalExpenses = round2(monthTxns.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0))
@@ -224,6 +230,7 @@ export function getAnnualSummary(
   year: number,
   categories: Category[]
 ): AnnualSummary {
+  transactions = analyticEntries(transactions)
   const yearStr = year.toString()
 
   // Single-pass accumulator over all transactions
@@ -288,6 +295,7 @@ export function filterTransactions(
   filters: TransactionFilters
 ): Transaction[] {
   return transactions.filter((t) => {
+    if (filters.accountId && ![t.accountId, t.fromAccountId, t.toAccountId].includes(filters.accountId)) return false
     if (filters.type && t.type !== filters.type) return false
     if (filters.categoryId && t.categoryId !== filters.categoryId) return false
     if (filters.dateFrom && t.date < filters.dateFrom) return false
@@ -316,6 +324,7 @@ export function getCumulativeBalance(
   transactions: Transaction[],
   periodKey: string = getMonthKey()
 ): { month: string; balance: number }[] {
+  transactions = analyticEntries(transactions)
   if (transactions.length === 0) return []
 
   const sorted = [...transactions].sort((a, b) => a.date.localeCompare(b.date))
@@ -365,6 +374,7 @@ export function getSpendingInsights(
   categories: Category[],
   fmt: (n: number) => string
 ): Insight[] {
+  transactions = analyticEntries(transactions)
   const prevMonthKey = addMonths(monthKey, -1)
   const curTxns = transactions.filter((t) => t.date.startsWith(monthKey))
   const prevTxns = transactions.filter((t) => t.date.startsWith(prevMonthKey))

@@ -21,6 +21,7 @@ export function BackupRestore() {
   const vault = useVault()
   const { settings, updateSettings } = useSettingsContext()
   const [status, setStatus] = useState<Status | null>(null)
+  const operation = useRef(false)
   const [exporting, setExporting] = useState(false)
   const [exportPassword, setExportPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
@@ -44,6 +45,8 @@ export function BackupRestore() {
       setStatus({ type: "error", message: "The two encryption passwords do not match." })
       return
     }
+    if (operation.current) return
+    operation.current = true
     setExporting(true)
     try {
       if (!await requireFreshAuthentication()) throw new Error("Authentication was cancelled")
@@ -67,6 +70,7 @@ export function BackupRestore() {
     } catch (error) {
       setStatus({ type: "error", message: error instanceof Error ? error.message : "Backup export failed." })
     } finally {
+      operation.current = false
       setExporting(false)
     }
   }
@@ -110,6 +114,8 @@ export function BackupRestore() {
 
   const handleDecrypt = async () => {
     if (!pendingEncrypted || !importPassword) return
+    if (operation.current) return
+    operation.current = true
     setDecrypting(true)
     setStatus(null)
     try {
@@ -121,27 +127,31 @@ export function BackupRestore() {
       setStatus({ type: "error", message: error instanceof Error ? error.message : "Backup decryption failed." })
       logSecurityEvent("backup_decrypt_failure")
     } finally {
+      operation.current = false
       setDecrypting(false)
     }
   }
 
   const restore = async () => {
-    if (!pendingVault) return
+    if (!pendingVault || operation.current) return false
+    operation.current = true
     try {
       if (!await requireFreshAuthentication()) throw new Error("Authentication was cancelled")
       if (!await vault.replace(pendingVault)) throw new Error("The encrypted vault could not be updated")
       setPendingVault(null)
       setStatus({ type: "success", message: "Backup restored and verified successfully." })
       logSecurityEvent("backup_import_success", { transactionCount: pendingVault.transactions.length })
+      return true
     } catch (error) {
       setStatus({ type: "error", message: error instanceof Error ? error.message : "Backup restore failed." })
-    }
+      return false
+    } finally { operation.current = false }
   }
 
   return (
     <div className="space-y-4">
       <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-950 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-100">
-        <p className="flex items-center gap-2 font-medium"><ShieldCheck className="h-4 w-4" />Local encrypted vault</p>
+        <p className="flex items-center gap-2 font-medium"><ShieldCheck className="h-4 w-4" />{nativeVault.isNative() ? "Local encrypted vault" : "Local browser records"}</p>
         <p className="mt-1 text-xs opacity-80">Confirmed financial records remain on this device. Portable backups are always password-encrypted.</p>
       </div>
 
@@ -170,9 +180,9 @@ export function BackupRestore() {
         open={pendingVault !== null}
         onOpenChange={(open) => { if (!open) setPendingVault(null) }}
         title="Replace all local data?"
-        description={`The verified backup contains ${pendingVault?.transactions.length ?? 0} transactions. Current data will first remain available as an encrypted recovery snapshot.`}
+        description={`The verified backup contains ${pendingVault?.transactions.length ?? 0} transactions, ${pendingVault?.accounts.length ?? 0} accounts and ${pendingVault?.categories.length ?? 0} categories. It replaces the ${vault.data.transactions.length} transactions currently on this device. Create a portable backup first; the previous native snapshot covers only one write.`}
         confirmLabel="Replace data"
-        onConfirm={() => void restore()}
+        onConfirm={restore}
       />
     </div>
   )

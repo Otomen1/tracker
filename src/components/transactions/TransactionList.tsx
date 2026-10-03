@@ -67,6 +67,8 @@ export function TransactionList({
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false)
   const [recategorizeOpen, setRecategorizeOpen] = useState(false)
   const [recategorizeCategoryId, setRecategorizeCategoryId] = useState("")
+  const actionBusy = useRef(false)
+  const [actionPending, setActionPending] = useState(false)
   const selectToggleRef = useRef<HTMLButtonElement>(null)
 
   // Reset page when filter identity changes (not on individual transaction edits)
@@ -105,7 +107,7 @@ export function TransactionList({
   const handleDeleteConfirm = useCallback(async (cascade: boolean) => {
     if (!deleteTarget) return
     const deleted = deleteTarget
-    if (!await onDelete(deleted.id, cascade)) return
+    if (!await onDelete(deleted.id, cascade)) return false
     setDeleteTarget(null)
 
     const entryId = crypto.randomUUID()
@@ -119,12 +121,16 @@ export function TransactionList({
   }, [deleteTarget, onDelete])
 
   const handleUndo = useCallback(async () => {
-    if (undoQueue.length === 0) return
+    if (undoQueue.length === 0 || actionBusy.current) return
+    actionBusy.current = true
+    setActionPending(true)
     const entry = undoQueue[0]
     const timer = undoTimersRef.current.get(entry.id)
     if (timer) clearTimeout(timer)
     undoTimersRef.current.delete(entry.id)
-    if (await onBulkRestore(entry.transactions)) setUndoQueue((q) => q.slice(1))
+    try {
+      if (await onBulkRestore(entry.transactions)) setUndoQueue((q) => q.slice(1))
+    } finally { actionBusy.current = false; setActionPending(false) }
   }, [undoQueue, onBulkRestore])
 
   const exitSelectMode = useCallback(() => {
@@ -186,7 +192,7 @@ export function TransactionList({
       (t) => selectedIds.has(t.id) || (cascade && !!t.recurringId && selectedIds.has(t.recurringId))
     )
 
-    if (!await onBulkDelete(ids, cascade)) return
+    if (!await onBulkDelete(ids, cascade)) return false
     setBulkDeleteOpen(false)
     exitSelectMode()
 
@@ -201,11 +207,15 @@ export function TransactionList({
   }, [selectedIds, transactions, onBulkDelete, exitSelectMode])
 
   const handleRecategorizeConfirm = useCallback(async () => {
-    if (!recategorizeCategoryId || selectedIds.size === 0) return
-    if (!await onBulkRecategorize(Array.from(selectedIds), recategorizeCategoryId)) return
-    setRecategorizeOpen(false)
-    setRecategorizeCategoryId("")
-    exitSelectMode()
+    if (!recategorizeCategoryId || selectedIds.size === 0 || actionBusy.current) return
+    actionBusy.current = true
+    setActionPending(true)
+    try {
+      if (!await onBulkRecategorize(Array.from(selectedIds), recategorizeCategoryId)) return
+      setRecategorizeOpen(false)
+      setRecategorizeCategoryId("")
+      exitSelectMode()
+    } finally { actionBusy.current = false; setActionPending(false) }
   }, [recategorizeCategoryId, selectedIds, onBulkRecategorize, exitSelectMode])
 
   const isEmpty = transactions.length === 0
@@ -245,7 +255,7 @@ export function TransactionList({
             size="sm"
             variant="ghost"
             className="h-7 gap-1.5 text-zinc-100 dark:text-zinc-900 hover:bg-white/10 dark:hover:bg-black/10"
-            onClick={handleUndo}
+            disabled={actionPending} onClick={handleUndo}
           >
             <Undo2 className="w-3.5 h-3.5" />
             Undo
@@ -348,7 +358,7 @@ export function TransactionList({
                   disabled={page === 0}
                   onClick={() => setPage((p) => p - 1)}
                 >
-                  <ChevronLeft className="w-3.5 h-3.5" />
+                  <ChevronLeft aria-label="Previous page" className="w-3.5 h-3.5" />
                 </Button>
                 <span className="text-xs text-zinc-500 px-1.5">
                   {page + 1} / {totalPages}
@@ -360,7 +370,7 @@ export function TransactionList({
                   disabled={page >= totalPages - 1}
                   onClick={() => setPage((p) => p + 1)}
                 >
-                  <ChevronRight className="w-3.5 h-3.5" />
+                  <ChevronRight aria-label="Next page" className="w-3.5 h-3.5" />
                 </Button>
               </div>
             </div>
@@ -392,12 +402,12 @@ export function TransactionList({
         open={bulkDeleteOpen}
         onOpenChange={setBulkDeleteOpen}
         title={`Delete ${selectedIds.size} transaction${selectedIds.size !== 1 ? "s" : ""}`}
-        description="This action cannot be undone. You can undo within a few seconds."
+        description="Delete these transactions? You can undo within a few seconds."
         cascadeCount={bulkCascadeCount}
         onConfirm={handleBulkDeleteConfirm}
       />
 
-      <Dialog open={recategorizeOpen} onOpenChange={setRecategorizeOpen}>
+      <Dialog open={recategorizeOpen} onOpenChange={(value) => { if (!actionBusy.current) setRecategorizeOpen(value) }}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
             <DialogTitle>Recategorize {selectedIds.size} transaction{selectedIds.size !== 1 ? "s" : ""}</DialogTitle>
@@ -421,10 +431,10 @@ export function TransactionList({
             </Select>
           </div>
           <div className="flex gap-2 pt-2">
-            <Button variant="outline" className="flex-1" onClick={() => setRecategorizeOpen(false)}>
+            <Button variant="outline" className="flex-1" disabled={actionPending} onClick={() => setRecategorizeOpen(false)}>
               Cancel
             </Button>
-            <Button className="flex-1" disabled={!recategorizeCategoryId} onClick={handleRecategorizeConfirm}>
+            <Button className="flex-1" disabled={!recategorizeCategoryId || actionPending} onClick={handleRecategorizeConfirm}>
               Recategorize
             </Button>
           </div>

@@ -18,6 +18,8 @@ export const transactionSchema = z.object({
   date: calendarDate,
   notes: z.string().max(500).optional(),
   tags: z.array(z.string().max(50)).max(20).optional(),
+  isRefund: z.boolean().optional(),
+  linkedNotifications: z.array(z.object({ provider: z.enum(["ryt", "mae", "google_wallet"]), fingerprint: z.string().min(16).max(128), capturedAt: timestamp })).max(20).optional(),
   isRecurring: z.boolean().optional(),
   recurringDay: z.number().int().min(1).max(31).optional(),
   recurringId: z.string().max(200).optional(),
@@ -48,6 +50,12 @@ export const categorySchema = z.object({
 })
 
 export const accountSchema = z.object({
+  kind: z.enum(["bank", "cash", "ewallet", "credit_card"]).optional(),
+  creditLimit: z.number().finite().nonnegative().optional(),
+  lastFour: z.string().regex(/^\d{4}$/).optional(),
+  statementBalance: z.number().finite().optional(),
+  statementDate: calendarDate.optional(),
+  dueDate: calendarDate.optional(),
   id: z.string().min(1).max(200),
   name: z.string().trim().min(1).max(60),
   currency: z.string().length(3),
@@ -68,7 +76,7 @@ export const settingsSchema = z.object({
 })
 
 export interface VaultData {
-  schemaVersion: 3
+  schemaVersion: 4
   revision: number
   updatedAt: string
   transactions: Transaction[]
@@ -79,7 +87,7 @@ export interface VaultData {
 }
 
 export const vaultSchema = z.object({
-  schemaVersion: z.literal(3),
+  schemaVersion: z.union([z.literal(3), z.literal(4)]).transform(() => 4 as const),
   revision: z.number().int().nonnegative(),
   updatedAt: timestamp,
   transactions: z.array(transactionSchema).max(50_000),
@@ -101,7 +109,7 @@ function parseJson(raw: string | null, fallback: unknown, label: string): unknow
 
 export function emptyVault(): VaultData {
   return {
-    schemaVersion: 3,
+    schemaVersion: 4,
     revision: 0,
     updatedAt: new Date().toISOString(),
     transactions: [],
@@ -113,6 +121,8 @@ export function emptyVault(): VaultData {
 }
 
 export function readLegacyVault(storage: Pick<Storage, "getItem">): VaultData {
+  const marker = storage.getItem(STORAGE_KEYS.SCHEMA_VERSION)
+  if (marker && !["1", "2", "3", "4"].includes(marker)) throw new Error("Unsupported newer storage schema. Update Tracker before opening this data.")
   const candidate = {
     ...emptyVault(),
     transactions: parseJson(storage.getItem(STORAGE_KEYS.TRANSACTIONS), [], "Transaction"),

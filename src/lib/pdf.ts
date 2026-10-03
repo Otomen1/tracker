@@ -1,4 +1,5 @@
-import { Transaction, Category } from "@/types"
+import { saveOrShareFile } from "./fileExport"
+import { Transaction, Category, Account } from "@/types"
 import { formatCurrency, formatDate } from "./formatters"
 
 function computeTotals(transactions: Transaction[]) {
@@ -16,7 +17,8 @@ export async function transactionsToPDF(
   categories: Category[],
   rangeLabel: string,
   currency: string,
-  filename: string
+  filename: string,
+  accounts?: Account[]
 ): Promise<void> {
   const { jsPDF } = await import("jspdf")
   const { default: autoTable } = await import("jspdf-autotable")
@@ -50,7 +52,7 @@ export async function transactionsToPDF(
   const summaryItems = [
     { label: "Total Income", value: fmt(income), r: 22, g: 163, b: 74 },   // emerald-500
     { label: "Total Expenses", value: fmt(expenses), r: 239, g: 68, b: 68 }, // rose-500
-    { label: "Net Balance", value: (net >= 0 ? "+" : "") + fmt(net), r: net >= 0 ? 22 : 239, g: net >= 0 ? 163 : 68, b: net >= 0 ? 74 : 68 },
+    { label: "Recorded Net", value: (net >= 0 ? "+" : "") + fmt(net), r: net >= 0 ? 22 : 239, g: net >= 0 ? 163 : 68, b: net >= 0 ? 74 : 68 },
   ]
 
   summaryItems.forEach((item, i) => {
@@ -68,7 +70,7 @@ export async function transactionsToPDF(
   // ── Transaction table ────────────────────────────────────
   const tableData = sorted.map((t) => [
     formatDate(t.date),
-    t.description,
+    t.description + (accounts ? "\nSource: " + (t.type === "transfer" ? `${accounts.find(a => a.id === t.fromAccountId)?.name ?? t.fromAccountId ?? "Unassigned"} → ${accounts.find(a => a.id === t.toAccountId)?.name ?? t.toAccountId ?? "Unassigned"}` : accounts.find(a => a.id === t.accountId)?.name ?? t.accountId ?? "Unassigned") : ""),
     t.type === "transfer" ? "Internal transfer" : getCategoryName(t.categoryId),
     t.type === "income" ? "Income" : t.type === "expense" ? "Expense" : "Transfer",
     (t.type === "income" ? "+" : t.type === "expense" ? "-" : "") + fmt(t.amount),
@@ -109,5 +111,5 @@ export async function transactionsToPDF(
     },
   })
 
-  doc.save(filename)
+  await saveOrShareFile(new Uint8Array(doc.output("arraybuffer")), filename, "application/pdf")
 }

@@ -1,6 +1,6 @@
 # Tracker
 
-Tracker is a local-first personal finance app built with Next.js and Capacitor. It has no account system, cloud synchronization, analytics, or financial-data API. The web/PWA build stores records in that browser; the Android APK stores confirmed financial records in an encrypted native vault.
+Tracker is a local-first personal finance app built with Next.js and Capacitor. It has no account system, cloud synchronization, telemetry, or financial-data API. The web/PWA build stores records in that browser; the Android APK stores confirmed financial records in an encrypted native vault.
 
 ## Run locally
 
@@ -18,7 +18,7 @@ No `.env` secrets, PostgreSQL server, pgAdmin installation, Clerk account, or Ne
 - The Android vault uses AES-256-GCM with a random data-encryption key.
 - Android Keystore protects the key-wrapping key and requires the device PIN or a strong biometric.
 - The unwrapped data key exists only during an unlocked app session and is cleared when the app locks.
-- Tracker locks after 30 seconds in the background and supports **Settings → Local security → Lock now**.
+- Tracker locks after 30 seconds in the background and supports **Settings → Security & app lock → Lock now**.
 - Screenshots and screen recording are blocked by `FLAG_SECURE` in the APK.
 - Android backup, cleartext traffic, WebView debugging in release builds, broad file sharing, and the Internet permission are disabled.
 - Notification capture is opt-in, restricted to approved package IDs, processed locally, and placed in a separate encrypted review inbox.
@@ -28,11 +28,11 @@ The browser/PWA build remains local-only but browser storage is not encrypted by
 
 ## Safe upgrade from 1.1.x
 
-Version 1.2.0 keeps the package ID `com.otomen.tracker`, so Android can update the existing installation only when the APK is signed with the original signing key.
+Version 1.3.1 keeps the package ID `com.otomen.tracker`, so Android can update the existing installation only when the APK is signed with the original signing key.
 
 On the first successful unlock after updating, Tracker copies and validates the existing browser-stored records into the encrypted vault. The original copy is retained until the encrypted vault survives another successful unlock; only then is sensitive legacy storage removed. Do not uninstall the old app or clear its storage before installing the correctly signed update.
 
-Before updating, create and verify a backup from **Settings → Data & backup**. Backups created by 1.2.0 are password-encrypted. Older plaintext JSON backups can still be imported, with a warning.
+Before updating, create and verify a backup from **Settings → Backup, restore & storage**. Backups created by 1.2.0 and later are password-encrypted. Older plaintext JSON backups can still be imported, with a warning.
 
 ## Quality checks
 
@@ -43,7 +43,7 @@ npm run lint
 npm run build
 npm run android:sync
 cd android
-./gradlew testDebugUnitTest assembleDebug
+./gradlew :app:testDebugUnitTest :app:assembleDebug :app:assembleDebugAndroidTest
 ```
 
 ## Release signing
@@ -60,3 +60,9 @@ Signing files and private APK outputs are excluded from Git. Never generate a ne
 ## Technology
 
 Next.js 16 App Router, React 19, TypeScript, Tailwind CSS, Radix UI, Recharts, Zod, Vitest, PWA support, Capacitor 8, Android Keystore, and AndroidX Biometric.
+
+## Current implementation
+
+Accounts as transaction sources, recorded incoming/outgoing activity, source filters/exports, a unified transfer editor, routed settings, safe capture retries, native reminders and schema-v4 recovery are documented in [PROJECT_MASTER.md](PROJECT_MASTER.md). See [release gates](docs/release-checklist.md) before distributing an update. Run `npm run audit:dependencies`; the [documented expiring exception](docs/dependency-security.md) means raw npm audit is not clean.
+
+Account balances, total assets and card debt/statement tracking have been removed. Historical source links are preserved. Automatic notification capture supports Ryt and MAE; custom sources require manual entries until a verified parser is added.

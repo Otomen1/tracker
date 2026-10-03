@@ -3,7 +3,6 @@
 import { Card, CardContent } from "@/components/ui/card"
 import { Status, type StatusTone } from "@/components/ui/status"
 import { Insight, DashboardStats, BudgetStatus } from "@/types"
-import { cn } from "@/lib/utils"
 
 const INSIGHT_TONE: Record<Insight["type"], StatusTone> = {
   positive: "good",
@@ -21,9 +20,6 @@ interface Props {
 }
 
 export function HeroCard({ stats, monthLabel, overBudgetCategories, topInsight, fmt }: Props) {
-  const isPositive = stats.currentMonthNet > 0
-  const isZero = stats.currentMonthNet === 0
-
   let tone: StatusTone = "neutral"
   let label = stats.transactionCountThisMonth === 0
     ? "Add your first transaction to start this month’s overview"
@@ -40,13 +36,14 @@ export function HeroCard({ stats, monthLabel, overBudgetCategories, topInsight, 
   return (
     <Card className="border-zinc-200 dark:border-zinc-800">
       <CardContent className="p-5">
-        <p className="text-xs font-medium text-zinc-500 uppercase tracking-wide">{monthLabel} · Net</p>
-        <p className={cn("mt-1 text-4xl font-bold tracking-tight", isZero ? "text-zinc-900 dark:text-zinc-100" : isPositive ? "text-emerald-600" : "text-rose-500")}>
-          {isPositive ? "+" : ""}{fmt(stats.currentMonthNet)}
+        <p className="text-xs font-medium text-zinc-500 uppercase tracking-wide">{monthLabel} · Recorded spending</p>
+        <p className="mt-1 text-4xl font-bold tracking-tight">
+          {fmt(stats.currentMonthExpenses)}
         </p>
         <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
-          {fmt(stats.currentMonthIncome)} in · {fmt(stats.currentMonthExpenses)} out
+          {fmt(stats.currentMonthIncome)} recorded income · Transfers excluded
         </p>
+        <p className="mt-1 text-xs text-muted-foreground">Only recorded transactions are included. This is not your bank balance or total assets.</p>
         <div className="mt-3 border-t border-zinc-100 pt-3 dark:border-zinc-800">
           <Status tone={tone} label={label} />
         </div>

@@ -13,7 +13,8 @@ export const nativeVault = {
   lock: async () => { if (Capacitor.isNativePlatform()) await plugin.lockVault() },
   read: async () => (await plugin.readVault()).vault,
   initialize: async (vault: VaultData) => (await plugin.initializeVault({ vault })).vault,
-  write: async (vault: VaultData, expectedRevision: number) => (await plugin.writeVault({ vault, expectedRevision })).vault,
+  write: async (vault: VaultData, expectedRevision: number, restoring = false) => (await plugin.writeVault({ vault, expectedRevision, restoring })).vault,
   restorePrevious: async () => (await plugin.restorePreviousVault()).vault,
+  restoreMigration: async () => (await plugin.restoreMigrationVault()).vault,
   erase: async () => { if (Capacitor.isNativePlatform()) await plugin.eraseVault() },
 }

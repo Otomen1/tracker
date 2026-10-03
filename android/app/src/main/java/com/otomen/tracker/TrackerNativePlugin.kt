@@ -80,12 +80,23 @@ class TrackerNativePlugin : Plugin() {
     }
 
     @com.getcapacitor.PluginMethod
+    fun consumeLaunchInbox(call: PluginCall) {
+        activity.runOnUiThread { call.resolve(JSObject().put("open", (activity as? MainActivity)?.consumeOpenInbox() ?: false)) }
+    }
+
+    @com.getcapacitor.PluginMethod
+    fun setReminder(call: PluginCall) = vaultAction(call) {
+        ReminderScheduler.configure(context, call.getBoolean("enabled", false) == true, call.getString("time", "20:00")!!)
+        JSObject()
+    }
+
+    @com.getcapacitor.PluginMethod
     fun getVaultStatus(call: PluginCall) {
         val store = EncryptedVaultStore(context)
         call.resolve(JSObject()
             .put("exists", store.exists())
             .put("unlocked", VaultSession.isUnlocked())
-            .put("hasRecovery", store.hasRecovery()))
+            .put("hasRecovery", store.hasRecovery()).put("hasMigrationRecovery", store.hasMigrationRecovery()))
     }
 
     @com.getcapacitor.PluginMethod
@@ -110,7 +121,7 @@ class TrackerNativePlugin : Plugin() {
     fun writeVault(call: PluginCall) = vaultAction(call) {
         val candidate = call.getObject("vault") ?: throw IllegalArgumentException("Vault data is required")
         val expectedRevision = VaultRevision.parse(call.data.opt("expectedRevision"))
-        val stored = EncryptedVaultStore(context).write(candidate, expectedRevision)
+        val stored = EncryptedVaultStore(context).write(candidate, expectedRevision, call.getBoolean("restoring", false) == true)
         JSObject().put("vault", JSObject.fromJSONObject(stored))
     }
 
@@ -120,8 +131,15 @@ class TrackerNativePlugin : Plugin() {
     }
 
     @com.getcapacitor.PluginMethod
+    fun restoreMigrationVault(call: PluginCall) = vaultAction(call) {
+        JSObject().put("vault", JSObject.fromJSONObject(EncryptedVaultStore(context).restoreMigration()))
+    }
+
+    @com.getcapacitor.PluginMethod
     fun eraseVault(call: PluginCall) = vaultAction(call) {
         context.getSharedPreferences("tracker-capture", Activity.MODE_PRIVATE).edit().clear().commit()
+        ReminderScheduler.configure(context, false, "20:00")
+        context.getSharedPreferences("tracker-reminders", Activity.MODE_PRIVATE).edit().clear().commit()
         // Delete key material first. Any ciphertext left by an interrupted
         // cleanup is then cryptographically unrecoverable.
         VaultKeyManager(context).erase()

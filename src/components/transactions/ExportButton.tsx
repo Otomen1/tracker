@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
+import { useAccounts } from "@/context/AccountsContext"
 import { Transaction, Category } from "@/types"
 import { Button } from "@/components/ui/button"
 import { ChevronDown, Download, FileText } from "lucide-react"
@@ -83,9 +84,12 @@ function filterByRange(transactions: Transaction[], range: { from: string; to: s
 }
 
 export function ExportButton({ allTransactions, transactions, categories, currency }: Props) {
+  const { accounts } = useAccounts()
   const [open, setOpen] = useState(false)
   const [pdfLoading, setPdfLoading] = useState<string | null>(null)
   const ref = useRef<HTMLDivElement>(null)
+  const busy = useRef(false)
+  const [exportError, setExportError] = useState<string | null>(null)
   const isEmpty = allTransactions.length === 0
 
   useEffect(() => {
@@ -103,20 +107,25 @@ export function ExportButton({ allTransactions, transactions, categories, curren
     }
   }, [])
 
-  const handleCSV = (txns: Transaction[], filename: string) => {
-    downloadCSV(transactionsToCSV(txns, categories), filename)
-    setOpen(false)
-  }
-
-  const handlePDF = async (txns: Transaction[], rangeLabel: string, filename: string) => {
+  const runExport = async (filename: string, operation: () => Promise<void>) => {
+    if (busy.current) return
+    busy.current = true
     setPdfLoading(filename)
+    setExportError(null)
     try {
-      await transactionsToPDF(txns, categories, rangeLabel, currency, filename)
-    } finally {
-      setPdfLoading(null)
+      await operation()
       setOpen(false)
+    } catch {
+      setExportError("Export could not be completed. Try again or choose another destination.")
+    } finally {
+      busy.current = false
+      setPdfLoading(null)
     }
   }
+  const handleCSV = (txns: Transaction[], filename: string) =>
+    runExport(filename, () => downloadCSV(transactionsToCSV(txns, categories, accounts), filename))
+  const handlePDF = (txns: Transaction[], rangeLabel: string, filename: string) =>
+    runExport(filename, () => transactionsToPDF(txns, categories, rangeLabel, currency, filename, accounts))
 
   const rows: Array<{ label: string; txns: Transaction[]; csvFile: string; pdfFile: string; rangeLabel: string }> = [
     ...PRESETS.map((p) => ({
@@ -140,7 +149,7 @@ export function ExportButton({ allTransactions, transactions, categories, curren
       <Button
         variant="outline"
         size="sm"
-        disabled={isEmpty}
+        disabled={isEmpty || pdfLoading !== null}
         onClick={() => setOpen((v) => !v)}
         aria-haspopup="menu"
         aria-expanded={open}
@@ -151,8 +160,10 @@ export function ExportButton({ allTransactions, transactions, categories, curren
         <ChevronDown className={cn("w-3.5 h-3.5 transition-transform", open && "rotate-180")} />
       </Button>
 
+      {exportError && <p role="alert" className="text-sm text-red-600">{exportError}</p>}
       {open && (
         <div role="menu" className="absolute left-0 sm:left-auto sm:right-0 top-full mt-1 z-20 w-72 max-w-[calc(100vw-1rem)] rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 shadow-lg overflow-hidden">
+          <p className="px-3 py-2 text-xs text-zinc-500">CSV and PDF exports contain unencrypted records.</p>
           {/* Column headers */}
           <div className="flex items-center px-3 py-2 border-b border-zinc-100 dark:border-zinc-800">
             <span className="flex-1 text-xs font-medium text-zinc-400 uppercase tracking-wide">Date range</span>
@@ -170,20 +181,20 @@ export function ExportButton({ allTransactions, transactions, categories, curren
 
                 {/* CSV */}
                 <button
-                  disabled={row.txns.length === 0}
+                  disabled={row.txns.length === 0 || pdfLoading !== null}
                   onClick={() => handleCSV(row.txns, row.csvFile)}
-                  title={`Download ${row.label} as CSV`}
-                  className="w-16 flex justify-center py-1 rounded text-zinc-500 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                  aria-label={`Export ${row.label} as CSV`} title={`Download ${row.label} as CSV`}
+                  className="w-16 min-h-11 items-center flex justify-center py-1 rounded text-zinc-500 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                 >
                   <Download className="w-3.5 h-3.5" />
                 </button>
 
                 {/* PDF */}
                 <button
-                  disabled={row.txns.length === 0 || pdfLoading === row.pdfFile}
+                  disabled={row.txns.length === 0 || pdfLoading !== null}
                   onClick={() => handlePDF(row.txns, row.rangeLabel, row.pdfFile)}
-                  title={`Download ${row.label} as PDF`}
-                  className="w-16 flex justify-center py-1 rounded text-zinc-500 hover:text-rose-500 dark:hover:text-rose-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                  aria-label={`Export ${row.label} as PDF`} title={`Download ${row.label} as PDF`}
+                  className="w-16 min-h-11 items-center flex justify-center py-1 rounded text-zinc-500 hover:text-rose-500 dark:hover:text-rose-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                 >
                   {pdfLoading === row.pdfFile
                     ? <span className="text-[10px] text-zinc-400">...</span>

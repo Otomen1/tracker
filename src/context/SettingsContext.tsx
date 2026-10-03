@@ -23,9 +23,9 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   const settings = data.settings
   const updateSettings = useCallback((updates: Partial<Settings>) => mutate((current) => ({
     ...current,
-    settings: { ...current.settings, ...updates },
+    settings: { ...current.settings, ...updates, currency: current.accounts[0]?.currency ?? updates.currency ?? current.settings.currency },
   })), [mutate])
-  const fmt = useCallback((amount: number) => _formatCurrency(amount, settings.currency), [settings.currency])
+  const fmt = useCallback((amount: number) => _formatCurrency(amount, data.accounts[0]?.currency ?? settings.currency), [data.accounts, settings.currency])
   const value = useMemo(() => ({ settings, updateSettings, fmt }), [settings, updateSettings, fmt])
 
   return (

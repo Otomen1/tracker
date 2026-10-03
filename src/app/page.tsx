@@ -61,11 +61,11 @@ export default function DashboardPage() {
   return (
     <div className="space-y-4 sm:space-y-5">
       <PageHeader
-        title="Dashboard"
-        description={`Your financial overview for ${formatMonth(selectedMonth)}`}
+        title="Home"
+        description={`Your recorded transactions for ${formatMonth(selectedMonth)}`}
         action={<MonthSelector month={selectedMonth} onChange={setSelectedMonth} />}
       />
-      {transactions.length === 0 && <><ReviewInboxCard /><AccountSummary /></>}
+      {transactions.length === 0 && <><ReviewInboxCard /><AccountSummary month={selectedMonth} /></>}
 
       {transactions.length === 0 && (
         <section
@@ -78,9 +78,9 @@ export default function DashboardPage() {
                 <BarChart3 className="h-5 w-5 text-zinc-700 dark:text-zinc-300" />
               </div>
               <div>
-                <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">{formatMonth(selectedMonth)} · Net</p>
+                <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">{formatMonth(selectedMonth)} · Recorded spending</p>
                 <p className="mt-1 text-3xl font-bold tracking-tight text-zinc-950 dark:text-zinc-50 sm:text-4xl">{fmt(0)}</p>
-                <h2 id="getting-started-title" className="mt-3 font-semibold text-zinc-900 dark:text-zinc-100 sm:mt-4">Your financial picture starts here</h2>
+                <h2 id="getting-started-title" className="mt-3 font-semibold text-zinc-900 dark:text-zinc-100 sm:mt-4">Your transaction history starts here</h2>
                 <p className="mt-1 max-w-lg text-sm leading-relaxed text-zinc-500 dark:text-zinc-400">Add your first transaction to unlock budgets, trends, and spending insights. Your data stays on this device.</p>
               </div>
             </div>
@@ -90,7 +90,7 @@ export default function DashboardPage() {
               </button>
               <div className="flex justify-center gap-4 text-xs">
                 <Link href="/categories" className="text-zinc-500 hover:text-zinc-950 dark:hover:text-zinc-50">Categories</Link>
-                <Link href="/settings#data-backup" className="text-zinc-500 hover:text-zinc-950 dark:hover:text-zinc-50">Import data</Link>
+                <Link href="/settings/backup" className="text-zinc-500 hover:text-zinc-950 dark:hover:text-zinc-50">Import data</Link>
               </div>
             </div>
           </div>
@@ -100,17 +100,18 @@ export default function DashboardPage() {
       {transactions.length > 0 && (
         <>
           <HeroCard stats={stats} monthLabel={formatMonth(selectedMonth)} overBudgetCategories={overBudgetCategories} topInsight={insights[0]} fmt={fmt} />
-          <AccountSummary />
+          <AccountSummary month={selectedMonth} />
           <ReviewInboxCard />
           <div className="flex items-center justify-between gap-3"><QuickActions onAddClick={() => setAddOpen(true)} /></div>
           <div className="grid gap-4 lg:grid-cols-2">
             <NeedsAttention budgets={budgetStatus} insights={insights} currentNet={stats.currentMonthNet} savingsGoal={settings.monthlySavingsGoal} fmt={fmt} />
           </div>
           <RecentTransactions transactions={recentTransactions} categories={categories} />
-          <StatsCards stats={stats} />
+          <Link href="/analytics" className="inline-flex min-h-11 items-center text-sm font-medium">View recorded activity analysis <ArrowRight className="ml-2 h-4 w-4" /></Link>
+          <div className="hidden lg:block"><StatsCards stats={stats} /></div>
           <div className="grid gap-4 lg:grid-cols-2">
             <SavingsGoalCard currentNet={stats.currentMonthNet} />
-            <SpendingInsightsCard insights={insightsForList} selectedMonth={selectedMonth} />
+            <div className="hidden lg:block"><SpendingInsightsCard insights={insightsForList} selectedMonth={selectedMonth} /></div>
           </div>
         </>
       )}

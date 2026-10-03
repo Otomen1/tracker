@@ -10,6 +10,41 @@ permissions:
   contents: read
 
 jobs:
+  android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: android-actions/setup-android@v3
+        with:
+          cmdline-tools-version: 13114758
+      - run: sdkmanager "platforms;android-36" "build-tools;35.0.0" "build-tools;36.0.0"
+      - run: npm ci
+      - run: npm run android:sync
+      - uses: gradle/actions/setup-gradle@v4
+      - run: bash ./gradlew :app:testDebugUnitTest :app:assembleDebug :app:assembleDebugAndroidTest
+        working-directory: android
+      - name: Enable KVM
+        run: sudo chmod 666 /dev/kvm
+      - uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          disable-animations: true
+          script: cd android && bash ./gradlew :app:connectedDebugAndroidTest
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: android-test-results
+          path: android/app/build/reports/tests
+          if-no-files-found: ignore
   validate:
     runs-on: ubuntu-latest
 
@@ -27,7 +62,7 @@ jobs:
         run: npm ci
 
       - name: Audit dependencies
-        run: npm audit --audit-level=high
+        run: npm run audit:dependencies
 
       - name: Run tests
         run: npm test

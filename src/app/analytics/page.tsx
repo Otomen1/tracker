@@ -71,14 +71,14 @@ function AnalyticsPageContent() {
       <div className="space-y-4 sm:space-y-5">
         <PageHeader
           title="Analytics"
-          description="Understand where your money goes and how your balance changes"
+          description="Analyze recorded transactions; account balances and total assets are not tracked"
           action={<PeriodSwitcher type={type} month={month} year={year} onTypeChange={setType} onMonthChange={setMonth} onYearChange={setYear} />}
         />
         <div className="rounded-xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
           <EmptyState
             icon={BarChart3}
             title="Your analytics will appear here"
-            description="Add income and expenses to reveal category breakdowns, cash-flow trends, budget progress, and savings performance."
+            description="Add income and expenses to reveal category breakdowns, cash-flow trends, budget progress, and recorded net progress."
             action={{ label: "Add transaction", href: "/transactions" }}
             secondaryAction={{ label: "Set budgets", href: "/settings#finance" }}
             className="py-10 sm:py-14"
@@ -90,7 +90,7 @@ function AnalyticsPageContent() {
 
   return (
     <div className="space-y-5 sm:space-y-6">
-      <PageHeader title="Analytics" description="Understand where your money goes and how your balance changes" action={<PeriodSwitcher
+      <PageHeader title="Analytics" description="Analyze recorded transactions; account balances and total assets are not tracked" action={<PeriodSwitcher
           type={type}
           month={month}
           year={year}
@@ -129,7 +129,7 @@ function AnalyticsPageContent() {
       </div>
 
       <div className="space-y-3">
-        <SectionHeader title="Cash Flow" description="Track month-to-month movement and the running effect on your balance." />
+        <SectionHeader title="Cash Flow" description="Compare recorded income and spending. Transfers are excluded; unrecorded activity is not included." />
         <MonthlyBarChart
           data={monthlyTrend}
           title={type === "month" ? "6-Month Overview" : `${year} Monthly Overview`}
@@ -138,12 +138,12 @@ function AnalyticsPageContent() {
           enableDeepLinks
           summary={cashFlowSummary}
         />
-        <CumulativeNetChart data={cumulativeBalance} summary={cumulativeBalance.length ? `Your running balance is ${fmt(cumulativeBalance[cumulativeBalance.length - 1].balance)}.` : undefined} />
+        <CumulativeNetChart data={cumulativeBalance} summary={cumulativeBalance.length ? `Your cumulative recorded net is ${fmt(cumulativeBalance[cumulativeBalance.length - 1].balance)}.` : undefined} />
       </div>
 
       <div className="space-y-3">
-        <SectionHeader title="Savings" description="Measure progress against your monthly savings goal." />
-        <SavingsTrendChart trend={savingsTrend} summary={savingsTrend.achievementRate !== null ? `You have reached ${savingsTrend.achievementRate.toFixed(0)}% of the savings target across this period.` : "Set a monthly savings goal to measure progress against a target."} />
+        <SectionHeader title="Recorded Net Goal" description="Measure progress against your monthly recorded net goal." />
+        <SavingsTrendChart trend={savingsTrend} summary={savingsTrend.achievementRate !== null ? `You have reached ${savingsTrend.achievementRate.toFixed(0)}% of the recorded net target across this period.` : "Set a monthly recorded net goal to measure progress against a target."} />
       </div>
     </div>
   )

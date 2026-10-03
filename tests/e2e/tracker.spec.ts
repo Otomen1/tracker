@@ -42,7 +42,7 @@ test("a deleted transaction stays deleted after focus, navigation, and refresh",
 
 test("first-use dashboard presents one primary transaction action", async ({ page }) => {
   await page.goto("/")
-  await expect(page.getByRole("heading", { name: "Your financial picture starts here" })).toBeVisible()
+  await expect(page.getByRole("heading", { name: "Your transaction history starts here" })).toBeVisible()
   await expect(page.getByRole("button", { name: "Add first transaction" })).toHaveCount(1)
   await expect(page.getByText("Income", { exact: true })).toHaveCount(0)
 })
@@ -54,25 +54,21 @@ test("empty analytics replaces charts with one guided state", async ({ page }) =
   await expect(page.getByRole("link", { name: "Add transaction" })).toBeVisible()
 })
 
-test("settings section navigation moves to the selected section", async ({ page }) => {
+test("settings routes to backup and returns to the index", async ({ page }) => {
   await page.goto("/settings")
-  if ((page.viewportSize()?.width ?? 0) >= 1024) {
-    await page.getByRole("navigation", { name: "Settings sections" }).getByRole("button", { name: "Data & backup" }).click()
-  } else {
-    await page.getByRole("navigation", { name: "Settings sections" }).getByRole("button", { name: "Data & backup" }).click()
-  }
-  await expect(page.locator("#data-backup")).toBeInViewport({ timeout: 10_000 })
+  await page.getByRole("navigation", { name: "Settings sections" }).getByRole("link", { name: "Backup, restore & storage" }).click()
+  await expect(page).toHaveURL(/\/settings\/backup$/)
+  await expect(page.getByRole("button", { name: "Create encrypted backup" })).toBeVisible()
+  await page.getByRole("link", { name: "← Settings", exact: true }).click()
+  await expect(page).toHaveURL(/\/settings$/)
 })
 
-test("settings shortcuts stay visible and show the current section on mobile", async ({ page }) => {
+test("settings exposes accounts and finance on a small screen", async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 })
   await page.goto("/settings")
-  const shortcuts = page.getByRole("navigation", { name: "Settings sections" })
-  const finance = shortcuts.getByRole("button", { name: "Budgets & goals" })
-  await finance.click()
-  await expect(page.locator("#finance")).toBeInViewport({ timeout: 10_000 })
-  await expect(finance).toHaveAttribute("aria-current", "location")
-  await expect(shortcuts).toBeInViewport()
+  await page.getByRole("navigation", { name: "Settings sections" }).getByRole("link", { name: "Categories, budgets & goals" }).click()
+  await expect(page.getByRole("heading", { name: "Categories, budgets & goals" })).toBeVisible()
+  await expect(page.getByRole("link", { name: "Manage categories" })).toBeVisible()
 })
 
 test("mobile PWA keeps primary controls clear of navigation", async ({ page }) => {
@@ -122,3 +118,52 @@ for (const route of ["/", "/transactions", "/analytics", "/settings"]) {
     })
   })
 }
+
+
+test("custom card source setup has no asset fields", async ({ page }) => {
+  await page.goto("/settings/accounts")
+  await page.getByRole("button", { name: "Add account", exact: true }).click()
+  const form = page.getByRole("form", { name: "New account" })
+  await form.getByLabel("Account name", { exact: true }).fill("Personal card")
+  await form.getByLabel("Account kind", { exact: true }).selectOption("credit_card")
+  await expect(form.getByLabel(/Opening|Credit limit|Statement/)).toHaveCount(0)
+  await form.getByRole("button", { name: "Create account" }).click()
+  await expect(page.getByRole("heading", { name: "Personal card" })).toBeVisible()
+  await expect(page.getByText(/Automatic notification capture is not configured/)).toBeVisible()
+  await page.reload()
+  await expect(page.getByRole("heading", { name: "Personal card" })).toBeVisible()
+})
+
+test("rapid submit saves once and a card repayment remains an editable transfer", async ({ page }) => {
+  await page.evaluate(() => {
+    const base = { currency: "MYR", openingBalance: 0, isActive: true, createdAt: "2026-01-01T00:00:00Z", updatedAt: "2026-01-01T00:00:00Z" }
+    localStorage.setItem("tracker_accounts", JSON.stringify([{ ...base, id: "bank", name: "Bank", kind: "bank" }, { ...base, id: "card", name: "Card", kind: "credit_card" }]))
+  })
+  await page.goto("/transactions")
+  await page.reload()
+  await page.getByRole("button", { name: "Add Transaction", exact: true }).click()
+  await page.getByLabel("Amount", { exact: true }).fill("50")
+  await page.getByRole("combobox", { name: "Account", exact: true }).click()
+  await page.getByRole("option", { name: "Card", exact: true }).click()
+  await page.getByRole("combobox", { name: "Category", exact: true }).click()
+  await page.getByRole("option", { name: "Food", exact: true }).click()
+  await page.getByLabel("Description", { exact: true }).fill("Card purchase")
+  await page.getByRole("form", { name: "Transaction editor" }).evaluate((form: HTMLFormElement) => { form.requestSubmit(); form.requestSubmit() })
+  await expect(page.getByRole("dialog")).toHaveCount(0)
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem("tracker_transactions") ?? "[]").length)).toBe(1)
+  await page.getByRole("button", { name: "Add Transaction", exact: true }).click()
+  await page.getByRole("button", { name: "transfer", exact: true }).click()
+  await page.getByLabel("Amount", { exact: true }).fill("40")
+  await page.getByLabel("From account", { exact: true }).selectOption("bank")
+  await page.getByLabel("To account", { exact: true }).selectOption("card")
+  await page.getByLabel("Description", { exact: true }).fill("Card repayment")
+  await page.getByRole("button", { name: "Add Transaction", exact: true }).last().click()
+  await expect(page.getByRole("button", { name: "Edit Card repayment", exact: true })).toBeVisible()
+  await page.getByRole("button", { name: "Edit Card repayment", exact: true }).click()
+  await page.getByLabel("Amount", { exact: true }).fill("45")
+  await page.getByRole("button", { name: "Save Changes", exact: true }).click()
+  await expect(page.getByRole("dialog")).toHaveCount(0)
+  const entries = await page.evaluate(() => JSON.parse(localStorage.getItem("tracker_transactions") ?? "[]"))
+  expect(entries).toHaveLength(2)
+  expect(entries.find((t: { type: string }) => t.type === "transfer")).toMatchObject({ amount: 45, fromAccountId: "bank", toAccountId: "card", categoryId: "" })
+})

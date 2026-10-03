@@ -7,7 +7,7 @@ import { Providers } from "@/components/providers/Providers"
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "Expense Tracker",
+  title: "Tracker",
   description: "Track your income and expenses locally",
   manifest: "/manifest.json",
 }

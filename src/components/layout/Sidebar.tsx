@@ -7,8 +7,8 @@ import { cn } from "@/lib/utils"
 import { nativeCapture } from "@/lib/nativeCapture"
 
 const navItems = [
-  { href: "/", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/transactions", label: "Transactions", icon: ArrowLeftRight },
+  { href: "/", label: "Home", icon: LayoutDashboard },
+  { href: "/transactions", label: "Activity", icon: ArrowLeftRight },
   { href: "/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/settings", label: "Settings", icon: Settings },
 ]
@@ -23,12 +23,12 @@ export function Sidebar() {
         <div className="w-7 h-7 rounded-md bg-white flex items-center justify-center">
           <Wallet className="w-4 h-4 text-zinc-900" />
         </div>
-        <span className="font-semibold text-sm tracking-tight">Expense Tracker</span>
+        <span className="font-semibold text-sm tracking-tight">Tracker</span>
       </div>
 
       <nav className="flex-1 px-3 py-4 space-y-1">
         {visibleItems.map(({ href, label, icon: Icon }) => {
-          const isActive = pathname === href
+          const isActive = pathname === href || (href === "/settings" && pathname.startsWith("/settings/"))
           return (
             <Link
               key={href}

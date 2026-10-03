@@ -1,6 +1,7 @@
 "use client"
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react"
+import { validateEntry } from "@/domain/finance"
 import { nativeVault } from "@/lib/nativeVault"
 import {
   SENSITIVE_LEGACY_KEYS,
@@ -31,6 +32,7 @@ interface VaultContextValue {
   lock: () => Promise<void>
   mutate: (mutation: VaultMutation) => Promise<boolean>
   replace: (next: VaultData) => Promise<boolean>
+  restoreMigration: () => Promise<boolean>
   restorePrevious: () => Promise<boolean>
   eraseAll: () => Promise<void>
 }
@@ -66,6 +68,12 @@ export function VaultProvider({ children }: { children: React.ReactNode }) {
   const [migrationPending, setMigrationPending] = useState(false)
   const currentRef = useRef<VaultData>(initial)
   const queueRef = useRef<Promise<unknown>>(Promise.resolve())
+
+  const enqueue = useCallback(<T,>(action: () => Promise<T>): Promise<T> => {
+    const task = queueRef.current.then(action)
+    queueRef.current = task.then(() => undefined, () => undefined)
+    return task
+  }, [])
 
   const publish = useCallback((next: VaultData) => {
     currentRef.current = next
@@ -162,15 +170,15 @@ export function VaultProvider({ children }: { children: React.ReactNode }) {
     setUnlocked(false)
   }, [])
 
-  const persist = useCallback(async (candidate: VaultData, expectedRevision: number) => {
+  const persist = useCallback(async (candidate: VaultData, expectedRevision: number, restoring = false) => {
     const validated = validateVault(candidate)
-    if (nativeVault.isNative()) return validateVault(await nativeVault.write(validated, expectedRevision))
+    if (nativeVault.isNative()) return validateVault(await nativeVault.write(validated, expectedRevision, restoring))
     const next = validateVault({ ...validated, revision: expectedRevision + 1, updatedAt: new Date().toISOString() })
     writeWebVault(localStorage, next)
     return next
   }, [])
 
-  const mutate = useCallback((mutation: VaultMutation): Promise<boolean> => {
+  const mutate = useCallback((mutation: VaultMutation, validateChanges = true): Promise<boolean> => {
     const task = queueRef.current.then(async () => {
       const commit = async () => {
         if (nativeVault.isNative() && !unlocked) return false
@@ -180,8 +188,25 @@ export function VaultProvider({ children }: { children: React.ReactNode }) {
           // the caller's mutation so concurrent tabs do not overwrite records.
           const current = nativeVault.isNative() ? currentRef.current : readLegacyVault(localStorage)
           const proposed = mutation(structuredClone(current))
+          const previousById = new Map(current.transactions.map(item => [item.id, item]))
+          for (const item of validateChanges ? proposed.transactions : []) {
+            const previous = previousById.get(item.id)
+            if (JSON.stringify(previous) !== JSON.stringify(item)) validateEntry(item, proposed.accounts, proposed.categories, previous)
+          }
+          for (const category of validateChanges ? proposed.categories : []) {
+            const old = current.categories.find(c => c.id === category.id)
+            if (old && old.type !== category.type && current.transactions.some(t => t.categoryId === category.id)) throw new Error("A category with history cannot change type.")
+          }
+          for (const old of validateChanges ? current.categories : []) {
+            if (!proposed.categories.some(c => c.id === old.id) && proposed.transactions.some(t => t.categoryId === old.id)) throw new Error("Category is used by existing transactions.")
+          }
+          for (const account of validateChanges ? proposed.accounts : []) {
+            const old = current.accounts.find(a => a.id === account.id)
+            if (old?.isActive && !account.isActive && proposed.transactions.some(t => t.isRecurring && !t.recurringId && [t.accountId, t.fromAccountId, t.toAccountId].includes(account.id))) throw new Error("Turn off recurring entries for this account before archiving it.")
+            if (old && (old.currency !== account.currency || (old.kind ?? "bank") !== (account.kind ?? "bank")) && current.transactions.some(t => [t.accountId, t.fromAccountId, t.toAccountId].includes(account.id))) throw new Error("An account with history cannot change currency or kind.")
+          }
           if (samePayload(current, proposed)) return true
-          const next = await persist({ ...proposed, revision: current.revision }, current.revision)
+          const next = await persist({ ...proposed, revision: current.revision }, current.revision, !validateChanges)
           publish(next)
           setError(null)
           setHasRecovery(nativeVault.isNative())
@@ -213,9 +238,9 @@ export function VaultProvider({ children }: { children: React.ReactNode }) {
     ...next,
     revision: currentRef.current.revision,
     updatedAt: new Date().toISOString(),
-  })), [mutate])
+  }), false), [mutate])
 
-  const restorePrevious = useCallback(async () => {
+  const restorePrevious = useCallback(() => enqueue(async () => {
     try {
       const next = nativeVault.isNative()
         ? validateVault(await nativeVault.restorePrevious())
@@ -229,9 +254,21 @@ export function VaultProvider({ children }: { children: React.ReactNode }) {
       setError(reason instanceof Error ? reason.message : "Recovery snapshot could not be restored")
       return false
     }
+  }), [publish, enqueue])
+
+  const restoreMigration = useCallback((): Promise<boolean> => {
+    const task = queueRef.current.then(async () => {
+      try {
+        const next = validateVault(await nativeVault.restoreMigration())
+        publish(next); setError(null); setUnlocked(true)
+        return true
+      } catch (reason) { setError(reason instanceof Error ? reason.message : "Pre-upgrade snapshot is unavailable"); return false }
+    })
+    queueRef.current = task.then(() => undefined, () => undefined)
+    return task
   }, [publish])
 
-  const eraseAll = useCallback(async () => {
+  const eraseAll = useCallback(() => enqueue(async () => {
     if (nativeVault.isNative()) await nativeVault.erase()
     for (const key of Object.keys(localStorage).filter((key) => key.startsWith("tracker_"))) localStorage.removeItem(key)
     localStorage.removeItem("theme")
@@ -242,11 +279,11 @@ export function VaultProvider({ children }: { children: React.ReactNode }) {
     setHasRecovery(false)
     setMigrationPending(false)
     setError(null)
-  }, [])
+  }), [enqueue])
 
   const value = useMemo<VaultContextValue>(() => ({
-    data, ready, unlocked, error, hasRecovery, migrationPending, unlock, lock, mutate, replace, restorePrevious, eraseAll,
-  }), [data, ready, unlocked, error, hasRecovery, migrationPending, unlock, lock, mutate, replace, restorePrevious, eraseAll])
+    data, ready, unlocked, error, hasRecovery, migrationPending, unlock, lock, mutate, replace, restorePrevious, restoreMigration, eraseAll,
+  }), [data, ready, unlocked, error, hasRecovery, migrationPending, unlock, lock, mutate, replace, restorePrevious, restoreMigration, eraseAll])
 
   return <VaultContext.Provider value={value}>{children}</VaultContext.Provider>
 }

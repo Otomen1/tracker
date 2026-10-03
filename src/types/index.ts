@@ -1,14 +1,21 @@
 export type EntryType = "income" | "expense"
 export type TransactionType = EntryType | "transfer"
+export type AccountKind = "bank" | "cash" | "ewallet" | "credit_card"
 
 export interface Account {
   id: string
   name: string
   currency: string
-  openingBalance: number
+  openingBalance: number // legacy storage compatibility only; no longer used or editable
   isActive: boolean
   createdAt: string
   updatedAt: string
+  kind?: AccountKind // omitted in legacy records; interpreted as bank
+  creditLimit?: number // legacy backup field; no longer used or editable
+  lastFour?: string
+  statementBalance?: number // legacy backup field; no longer used or editable
+  statementDate?: string
+  dueDate?: string
 }
 
 export interface NotificationSource {
@@ -35,6 +42,8 @@ export interface Transaction {
   fromAccountId?: string
   toAccountId?: string
   notificationSource?: NotificationSource
+  linkedNotifications?: NotificationSource[]
+  isRefund?: boolean // income on a credit card, reverses spending
 }
 
 export type CategoryType = "income" | "expense"
@@ -120,7 +129,8 @@ export interface AnnualSummary {
 }
 
 export interface TransactionFormData {
-  type: EntryType
+  commandId?: string // stable across retries of one editor session
+  type: TransactionType
   amount: string
   categoryId: string
   description: string
@@ -130,6 +140,9 @@ export interface TransactionFormData {
   isRecurring?: boolean
   recurringDay?: number
   accountId?: string
+  fromAccountId?: string
+  toAccountId?: string
+  isRefund?: boolean
 }
 
 export interface CategoryFormData {
@@ -147,6 +160,7 @@ export interface Insight {
 }
 
 export interface TransactionFilters {
+  accountId?: string
   type?: TransactionType | ""
   categoryId?: string
   dateFrom?: string

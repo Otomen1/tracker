@@ -22,7 +22,10 @@ const wrapper = ({ children }: { children: React.ReactNode }) => (
 )
 
 describe("TransactionsProvider persistence", () => {
-  beforeEach(() => localStorage.clear())
+  beforeEach(() => {
+    localStorage.clear()
+    localStorage.setItem(STORAGE_KEYS.ACCOUNTS, JSON.stringify(["account_ryt", "account_maybank"].map(id => ({ id, name: id, currency: "MYR", openingBalance: 0, isActive: true, createdAt: "2026-01-01T00:00:00Z", updatedAt: "2026-01-01T00:00:00Z" }))))
+  })
 
   it("keeps a deletion after focus and remount", async () => {
     localStorage.setItem(STORAGE_KEYS.TRANSACTIONS, JSON.stringify([transaction]))
@@ -66,4 +69,26 @@ describe("TransactionsProvider persistence", () => {
     await act(async () => { expect(await hook.result.current.confirmTransfer(pending, "account_maybank", "account_ryt", pending.description, "2026-09-21")).toBe("added") })
     expect(hook.result.current.transactions[0]).toMatchObject({ type: "transfer", fromAccountId: "account_maybank", toAccountId: "account_ryt", categoryId: "" })
   })
+  it("uses the edited transfer amount and links a second notification without another balance movement", async () => {
+    const hook = renderHook(() => useTransactions(), { wrapper })
+    const pending = { id: "p", provider: "ryt" as const, fingerprint: "fingerprint-edited", direction: "income" as const, amount: 50, description: "Own transfer", occurredAt: transaction.createdAt, capturedAt: transaction.createdAt, accountId: "account_ryt" }
+    await act(async () => {
+      expect(await hook.result.current.confirmTransfer(pending, "account_maybank", "account_ryt", pending.description, "2026-09-21", 55)).toBe("added")
+    })
+    expect(hook.result.current.transactions[0].amount).toBe(55)
+    const second = { ...pending, id: "other", provider: "mae" as const, accountId: "account_maybank", fingerprint: "second-fingerprint" }
+    await act(async () => {
+      expect(await hook.result.current.linkCaptured(second, hook.result.current.transactions[0].id)).toBe(true)
+      expect(await hook.result.current.confirmTransfer(second, "account_maybank", "account_ryt", second.description, "2026-09-21", 55)).toBe("duplicate")
+    })
+    expect(hook.result.current.transactions).toHaveLength(1)
+  })
+
+  it("keeps data unchanged when transfer endpoints are invalid", async () => {
+    const hook = renderHook(() => useTransactions(), { wrapper })
+    const pending = { id: "p", provider: "ryt" as const, fingerprint: "invalid-fingerprint", direction: "income" as const, amount: 50, description: "Own transfer", occurredAt: transaction.createdAt, capturedAt: transaction.createdAt, accountId: "account_ryt" }
+    await act(async () => { expect(await hook.result.current.confirmTransfer(pending, "missing", "account_ryt", pending.description, "2026-09-21", 55)).toBe("failed") })
+    expect(hook.result.current.transactions).toHaveLength(0)
+  })
+
 })

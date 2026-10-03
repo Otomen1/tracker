@@ -1,6 +1,6 @@
 "use client"
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react"
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, useRef } from "react"
 import { nativeCapture } from "@/lib/nativeCapture"
 import { PendingTransaction } from "@/types"
 import { useVault } from "@/context/VaultContext"
@@ -18,17 +18,27 @@ const ReviewInboxContext = createContext<ReviewInboxContextValue | null>(null)
 
 export function ReviewInboxProvider({ children }: { children: React.ReactNode }) {
   const { unlocked } = useVault()
+  const generation = useRef(0)
   const [items, setItems] = useState<PendingTransaction[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const refresh = useCallback(async () => {
+    const request = ++generation.current
     setLoading(true)
-    try { const result = await nativeCapture.listPending(); setItems(result.items); setError(result.error ?? null) } finally { setLoading(false) }
+    try {
+      const result = await nativeCapture.listPending()
+      if (request === generation.current) { if (!result.error) setItems(result.items); setError(result.error ?? null) }
+    } catch (reason) {
+      if (request === generation.current) setError(reason instanceof Error ? reason.message : "Could not read secure review inbox. Retry after unlocking.")
+    } finally { if (request === generation.current) setLoading(false) }
   }, [])
 
   useEffect(() => {
     if (!unlocked) {
+      generation.current++
+      setLoading(false)
+      setError(null)
       setItems([])
       return
     }
@@ -44,6 +54,8 @@ export function ReviewInboxProvider({ children }: { children: React.ReactNode })
   }, [refresh, unlocked])
 
   const discard = useCallback(async (id: string) => {
+    ++generation.current
+    setLoading(false)
     await nativeCapture.discardPending(id)
     setItems((current) => current.filter((item) => item.id !== id))
   }, [])

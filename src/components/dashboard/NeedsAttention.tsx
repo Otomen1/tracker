@@ -29,7 +29,7 @@ export function NeedsAttention({ budgets, insights, currentNet, savingsGoal, fmt
     ...(savingsGoal > 0 && savingsGap > 0 ? [{
       id: "savings-gap",
       icon: Target,
-      title: `${fmt(savingsGap)} to reach your savings goal`,
+      title: `${fmt(savingsGap)} to reach your recorded net goal`,
       detail: "Keep an eye on discretionary spending for the rest of the month.",
       tone: "text-zinc-500",
     }] : []),

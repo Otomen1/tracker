@@ -1,5 +1,6 @@
 "use client"
 
+import { useRef } from "react"
 import { Category, CategoryFormData } from "@/types"
 import {
   Dialog,
@@ -26,14 +27,20 @@ export function CategoryDialog({
   existingNames,
   onSubmit,
 }: Props) {
+  const saving = useRef(false)
+  const dismiss = (value: boolean) => { if (!saving.current) onOpenChange(value) }
   const handleSubmit = async (data: CategoryFormData) => {
-    const result = await onSubmit(data)
-    if (result !== false && result !== null) onOpenChange(false)
+    if (saving.current) return
+    saving.current = true
+    try {
+      const result = await onSubmit(data)
+      if (result !== false && result !== null) onOpenChange(false)
+    } finally { saving.current = false }
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-sm">
+    <Dialog open={open} onOpenChange={dismiss}>
+      <DialogContent onEscapeKeyDown={(event) => { if (saving.current) event.preventDefault() }} onInteractOutside={(event) => { if (saving.current) event.preventDefault() }} className="sm:max-w-sm">
         <DialogHeader>
           <DialogTitle>
             {category ? "Edit Category" : "Add Category"}
@@ -44,7 +51,7 @@ export function CategoryDialog({
           defaultType={defaultType}
           existingNames={existingNames}
           onSubmit={handleSubmit}
-          onCancel={() => onOpenChange(false)}
+          onCancel={() => dismiss(false)}
         />
       </DialogContent>
     </Dialog>

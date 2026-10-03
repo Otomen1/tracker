@@ -22,7 +22,7 @@ export function SavingsGoalForm() {
     setSaving(false)
     setSaved(success)
     if (success) setTimeout(() => setSaved(false), 2000)
-    else showToast("Savings goal could not be saved.", "error")
+    else showToast("Recorded net goal could not be saved.", "error")
   }
 
   return (

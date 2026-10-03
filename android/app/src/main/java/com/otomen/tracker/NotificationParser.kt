@@ -35,8 +35,11 @@ object NotificationParser {
     private val amountPattern = Regex("RM\\s?([0-9,]+(?:\\.[0-9]{1,2})?)", RegexOption.IGNORE_CASE)
     private val rytReceived = Regex("you(?:'|’)ve received\\s+RM", RegexOption.IGNORE_CASE)
     private val rytSent = Regex("you(?:'|’)ve sent\\s+RM", RegexOption.IGNORE_CASE)
+    private val rytPaid = Regex("you(?:'|’)ve paid\\s+RM", RegexOption.IGNORE_CASE)
     private val maeTransferred = Regex("you(?:'|’)ve transferred\\s+RM", RegexOption.IGNORE_CASE)
     private val maePaid = Regex("successful payment of\\s+RM", RegexOption.IGNORE_CASE)
+    private val maeBillPaid = Regex("^you(?:'|’)ve performed a Bill Payment of\\s+RM", RegexOption.IGNORE_CASE)
+    private val maePaymentsTitle = Regex("^Maybank2u:\\s*Payments$", RegexOption.IGNORE_CASE)
     private val recipientPattern = Regex("(?:from|to)\\s+(.+?)(?:\\s+on\\s+\\d|\\.\\s*REF:|$)", setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL))
 
     fun parse(source: TrustedNotificationSource, title: String, text: String, postedAt: Long): ParsedTransaction? {
@@ -44,12 +47,13 @@ object NotificationParser {
         val direction = when (source.provider) {
             "ryt" -> when {
                 rytReceived.containsMatchIn(normalized) -> "income"
-                rytSent.containsMatchIn(normalized) -> "expense"
+                rytSent.containsMatchIn(normalized) || rytPaid.containsMatchIn(normalized) -> "expense"
                 else -> return null
             }
             "mae" -> when {
                 title.contains("Transfer", true) && maeTransferred.containsMatchIn(normalized) -> "expense"
                 title.contains("Scan & Pay", true) && maePaid.containsMatchIn(normalized) -> "expense"
+                maePaymentsTitle.matches(title.trim()) && maeBillPaid.containsMatchIn(normalized) -> "expense"
                 else -> return null
             }
             else -> return null
@@ -57,7 +61,15 @@ object NotificationParser {
         val amount = amountPattern.find(normalized)?.groupValues?.get(1)?.replace(",", "")?.toDoubleOrNull() ?: return null
         if (amount <= 0.0 || !amount.isFinite()) return null
         val counterparty = recipientPattern.find(normalized)?.groupValues?.get(1)?.trim()?.take(120)
-        val description = counterparty?.let { if (direction == "income") "Transfer from $it" else if (title.contains("Scan & Pay", true)) "Scan & Pay to $it" else "Transfer to $it" }
+        val description = counterparty?.let {
+            when {
+                direction == "income" -> "Transfer from $it"
+                source.provider == "mae" && maeBillPaid.containsMatchIn(normalized) -> "Bill payment to $it"
+                source.provider == "ryt" && rytPaid.containsMatchIn(normalized) -> "Payment to $it"
+                title.contains("Scan & Pay", true) -> "Scan & Pay to $it"
+                else -> "Transfer to $it"
+            }
+        }
             ?: title.take(120).ifBlank { if (source.provider == "ryt") "Ryt transaction" else "MAE transaction" }
         val capturedAt = iso(postedAt)
         val fingerprintInput = listOf(source.provider, direction, "%.2f".format(Locale.US, amount), normalized.lowercase(Locale.ROOT), (postedAt / 60000).toString()).joinToString("|")

@@ -134,7 +134,7 @@ export function AndroidCaptureSettings() {
 
       <div className="flex items-start gap-2 rounded-lg bg-zinc-50 p-3 text-xs leading-5 text-zinc-700 dark:bg-zinc-800/60 dark:text-zinc-300">
         <ShieldCheck aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0" />
-        <p>Notification text stays on this device. Detected transactions wait for your review before they affect balances.</p>
+        <p>Notification text stays on this device. Detected transactions wait for your review before they enter your transaction log.</p>
       </div>
 
       <details className="group rounded-lg border border-zinc-200 dark:border-zinc-700">

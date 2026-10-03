@@ -11,7 +11,7 @@ import { nativeVault } from "@/lib/nativeVault"
 type Status = { type: "success" | "error"; message: string }
 
 export function LocalSecuritySettings() {
-  const { lock, eraseAll, migrationPending } = useVault()
+  const { lock, eraseAll, migrationPending, restoreMigration } = useVault()
   const hydrated = useHydrated()
   const isNative = hydrated && nativeVault.isNative()
   const [confirmErase, setConfirmErase] = useState(false)
@@ -26,8 +26,10 @@ export function LocalSecuritySettings() {
       await eraseAll()
       setConfirmErase(false)
       setStatus({ type: "success", message: "All Tracker data on this device was erased." })
+      return true
     } catch (error) {
       setStatus({ type: "error", message: error instanceof Error ? error.message : "Local data could not be erased." })
+      return false
     } finally {
       setErasing(false)
     }
@@ -64,6 +66,15 @@ export function LocalSecuritySettings() {
         </Button>
       </div>
 
+      {isNative && <Button variant="outline" onClick={async () => {
+        if (!window.confirm("Restore the pre-v4 upgrade snapshot? All activity after that snapshot will be removed from the active vault. Export a current backup first.")) return
+        try {
+          if (!await nativeVault.unlock()) return
+          const result = await restoreMigration()
+          setStatus({ type: result ? "success" : "error", message: result ? "Pre-upgrade snapshot restored. Newer activity is not in the active vault." : "No usable pre-upgrade snapshot is available." })
+        } catch { setStatus({ type: "error", message: "Snapshot restore failed; unlock and retry." }) }
+      }}>Restore pre-upgrade snapshot</Button>}
+
       {status && (
         <p role="status" className={`flex items-start gap-2 text-sm ${status.type === "success" ? "text-emerald-600" : "text-rose-600"}`}>
           {status.type === "success" ? <CheckCircle className="mt-0.5 h-4 w-4 shrink-0" /> : <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />}
@@ -77,7 +88,7 @@ export function LocalSecuritySettings() {
         title="Erase all data on this device?"
         description="This permanently removes transactions, accounts, categories, settings, recovery data, and the notification review inbox. Create an encrypted backup first if you may need this data again."
         confirmLabel="Erase everything"
-        onConfirm={() => void erase()}
+        onConfirm={erase}
       />
     </div>
   )

@@ -12,11 +12,14 @@ export interface CaptureStatus {
 export interface VaultStatus {
   exists: boolean
   unlocked: boolean
+  hasMigrationRecovery?: boolean
   hasRecovery: boolean
 }
 
 interface TrackerNativeApi {
   isAvailable(): Promise<{ available: boolean }>
+  consumeLaunchInbox(): Promise<{ open: boolean }>
+  setReminder(options: { enabled: boolean; time: string }): Promise<void>
   getCaptureStatus(): Promise<CaptureStatus>
   setSources(options: { ryt: boolean; mae: boolean }): Promise<void>
   openNotificationAccess(): Promise<void>
@@ -29,8 +32,9 @@ interface TrackerNativeApi {
   lockVault(): Promise<void>
   readVault(): Promise<{ vault: VaultData }>
   initializeVault(options: { vault: VaultData }): Promise<{ vault: VaultData }>
-  writeVault(options: { vault: VaultData; expectedRevision: number }): Promise<{ vault: VaultData }>
+  writeVault(options: { vault: VaultData; expectedRevision: number; restoring?: boolean }): Promise<{ vault: VaultData }>
   restorePreviousVault(): Promise<{ vault: VaultData }>
+  restoreMigrationVault(): Promise<{ vault: VaultData }>
   eraseVault(): Promise<void>
 }
 

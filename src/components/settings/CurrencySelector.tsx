@@ -1,12 +1,15 @@
 "use client"
 
 import { useSettingsContext } from "@/context/SettingsContext"
+import { useVault } from "@/context/VaultContext"
 import { CURRENCIES } from "@/lib/constants"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useToast } from "@/context/ToastContext"
 
 export function CurrencySelector() {
   const { settings, updateSettings } = useSettingsContext()
+  const { data } = useVault()
+  const accountCurrency = data.accounts[0]?.currency
   const { showToast } = useToast()
 
   const save = async (currency: string) => {
@@ -14,7 +17,7 @@ export function CurrencySelector() {
   }
 
   return (
-    <Select value={settings.currency} onValueChange={(value) => void save(value)}>
+    <Select disabled={Boolean(accountCurrency)} value={accountCurrency ?? settings.currency} onValueChange={(value) => void save(value)}>
       <SelectTrigger className="min-h-11 w-full sm:w-56">
         <SelectValue />
       </SelectTrigger>

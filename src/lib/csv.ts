@@ -1,4 +1,5 @@
-import { Transaction, Category } from "@/types"
+import { saveOrShareFile } from "./fileExport"
+import { Transaction, Category, Account } from "@/types"
 import { formatDate } from "./formatters"
 
 function escapeCsvCell(value: string): string {
@@ -9,12 +10,15 @@ function escapeCsvCell(value: string): string {
 
 export function transactionsToCSV(
   transactions: Transaction[],
-  categories: Category[]
+  categories: Category[],
+  accounts?: Account[]
 ): string {
   const getCategoryName = (id: string) =>
     categories.find((c) => c.id === id)?.name ?? "Unknown"
 
   const headers = ["Date", "Type", "Category", "Description", "Amount"]
+  if (accounts) headers.push("Source", "From", "To")
+  const sourceName = (id?: string) => accounts?.find(account => account.id === id)?.name ?? id ?? ""
   const rows = [...transactions]
     .sort((a, b) => b.date.localeCompare(a.date))
     .map((t) => [
@@ -23,17 +27,12 @@ export function transactionsToCSV(
       escapeCsvCell(t.type === "transfer" ? "Internal transfer" : getCategoryName(t.categoryId)),
       escapeCsvCell(t.description),
       t.type === "income" ? t.amount.toFixed(2) : t.type === "expense" ? `-${t.amount.toFixed(2)}` : t.amount.toFixed(2),
+      ...(accounts ? [escapeCsvCell(sourceName(t.accountId)), escapeCsvCell(sourceName(t.fromAccountId)), escapeCsvCell(sourceName(t.toAccountId))] : []),
     ])
 
   return [headers.join(","), ...rows.map((r) => r.join(","))].join("\n")
 }
 
-export function downloadCSV(content: string, filename: string): void {
-  const blob = new Blob([content], { type: "text/csv;charset=utf-8;" })
-  const url = URL.createObjectURL(blob)
-  const link = document.createElement("a")
-  link.href = url
-  link.download = filename
-  link.click()
-  URL.revokeObjectURL(url)
+export async function downloadCSV(content: string, filename: string): Promise<void> {
+  await saveOrShareFile(content, filename, "text/csv;charset=utf-8;")
 }

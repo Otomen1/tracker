@@ -1,20 +1,26 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 import { useSettingsContext } from "@/context/SettingsContext"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
+import { nativeVault } from "@/lib/nativeVault"
+import { nativeCapture } from "@/lib/nativeCapture"
+import { trackerNativePlugin } from "@/lib/trackerNativePlugin"
 import { useToast } from "@/context/ToastContext"
 
 export function ReminderSettings() {
   const { settings, updateSettings } = useSettingsContext()
+  const [native, setNative] = useState(false)
   const [permission, setPermission] = useState<NotificationPermission>("default")
   const [isSupported, setIsSupported] = useState(false)
+  const guard = useRef(false)
   const [saving, setSaving] = useState(false)
   const { showToast } = useToast()
 
   useEffect(() => {
+    if (nativeVault.isNative()) { setNative(true); setIsSupported(true); void nativeCapture.getStatus().then(s => setPermission(s.alertsEnabled ? "granted" : "default")).catch(() => setPermission("default")); return }
     const supported = "Notification" in window
     setIsSupported(supported)
     if (supported) setPermission(Notification.permission)
@@ -24,30 +30,40 @@ export function ReminderSettings() {
     return <p className="text-sm text-zinc-600 dark:text-zinc-400">Notifications are not supported in this browser.</p>
   }
 
+  const persist = async (enabled: boolean, time: string) => {
+    if (native) await trackerNativePlugin.setReminder({ enabled, time })
+    if (!await updateSettings({ reminderEnabled: enabled, reminderTime: time })) {
+      if (native) await trackerNativePlugin.setReminder({ enabled: !!settings.reminderEnabled, time: settings.reminderTime ?? "20:00" })
+      throw new Error("Reminder setting could not be saved.")
+    }
+  }
   const handleToggle = async () => {
+    if (guard.current) return
+    guard.current = true
     setSaving(true)
     try {
       if (settings.reminderEnabled) {
-        if (!await updateSettings({ reminderEnabled: false })) showToast("Reminder setting could not be saved.", "error")
+        await persist(false, settings.reminderTime ?? "20:00")
         return
       }
-      if (permission !== "granted") {
+      if (native && permission !== "granted") { await nativeCapture.requestPrivateAlerts() }
+      if (!native && permission !== "granted") {
         const result = await Notification.requestPermission()
         setPermission(result)
         if (result !== "granted") return
       }
-      if (!await updateSettings({ reminderEnabled: true, reminderTime: settings.reminderTime ?? "20:00" })) {
-        showToast("Reminder setting could not be saved.", "error")
-      }
+      await persist(true, settings.reminderTime ?? "20:00")
     } catch {
       showToast("Notification permission could not be requested.", "error")
     } finally {
+      guard.current = false
       setSaving(false)
     }
   }
 
   const saveTime = async (reminderTime: string) => {
-    if (!await updateSettings({ reminderTime })) showToast("Reminder time could not be saved.", "error")
+    if (!reminderTime) return
+    try { await persist(!!settings.reminderEnabled, reminderTime) } catch { showToast("Reminder time could not be saved.", "error") }
   }
 
   return (
@@ -82,12 +98,12 @@ export function ReminderSettings() {
       )}
 
       {!settings.reminderEnabled && permission === "default" && (
-          <Button className="min-h-11" variant="outline" size="sm" onClick={handleToggle}>
+          <Button className="min-h-11" variant="outline" size="sm" disabled={saving} onClick={handleToggle}>
           Enable notifications
         </Button>
       )}
 
-      {settings.reminderEnabled && permission === "granted" && (
+      {settings.reminderEnabled && (native || permission === "granted") && (
         <div className="space-y-1.5">
           <Label htmlFor="reminder-time">Reminder time</Label>
           <Input
@@ -98,7 +114,7 @@ export function ReminderSettings() {
             onChange={(event) => void saveTime(event.target.value)}
           />
           <p className="text-xs text-zinc-400">
-            The app must be open in a browser tab to receive notifications.
+            {native ? "Android schedules a daily reminder even while Tracker is closed. Battery restrictions can delay delivery; enable system notifications." : "The app must be open in a browser tab to receive notifications."}
           </p>
         </div>
       )}

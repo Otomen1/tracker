@@ -1,0 +1,19 @@
+# Tracker architecture
+
+Release metadata: `release.json` (1.3.1 / Android 18). Local-only, no login/cloud/API. Android package and signing identity remain `com.otomen.tracker` and the original certificate.
+
+UI → React contexts → serialized VaultContext mutations → Zod → platform persistence. New/edited records also pass pure finance command validation. Context adapters retain React state; `src/domain/finance.ts` owns money parsing, recorded source movements, transfer direction, notification identities and refund analytics classification. Analytics uses that shared classification.
+
+Android: TrackerNative bridge → authentication-gated session → AES-256-GCM vault. Random 32-byte data key; Keystore auth-bound wrapping key; atomic writes; expected revision prevents stale commits. Reads reopen and validate; confirmed UI state publishes after persistence. Physical device authentication/Keystore behavior needs signed-device testing.
+
+Browser/PWA: localStorage with multi-key rollback/recovery and Web Locks for concurrent tabs when supported. It is not an encrypted app vault. Exported portable backups are password-encrypted. Native pending capture uses a separate encrypted inbox/key so supported bank notifications can arrive while the main vault is locked; viewing and confirming require unlock.
+
+Notification capture: exact trusted package → conservative local parser → pending item → explicit review → vault commit → pending cleanup. Cleanup failure after commit is reported as saved-but-cleanup-pending. Fingerprint replay is idempotent. Different providers reporting one own transfer must be explicitly linked, never amount-only auto-merged. Ryt sent/received/paid and MAE transfer/Scan & Pay/bill-payment patterns are supported; custom accounts do not add support for new banks.
+
+Navigation: Home / Activity / Analytics / Settings; Review entry and badge; Add on Home/Activity. Settings subpages are static-export-compatible routes. Android Back dismisses IME first, then top Radix overlay via Escape, then nested settings parent, then Home, then finishes the Activity. Saving dialogs block dismissal; transaction dirty drafts prompt before discard. Browser history is retained. Notification intents are consumed after React is ready, not through a fixed startup delay. Predictive gesture animation and accessibility require device checks.
+
+Finance: accounts are transaction sources, not asset/debt records. Record income/expense and own-transfer endpoints with stable references. New assigned entries require an active source; archived historical references remain. Per-source incoming/outgoing activity includes its side of transfers, while spending analytics exclude transfers. Existing refund classification remains compatible. UI and command APIs no longer calculate source balances or offer opening balance, card limit, outstanding, statement or due fields. Historical fields remain in encrypted schema-v4 payloads/backups without being used; new sources use zero for the legacy required openingBalance field. No FX conversion or automatic unsupported bank capture.
+
+Money: retain historical decimal payloads losslessly; reject new partial/exponent/nonfinite inputs and more than two decimal places. Calculate movements from stored numbers and round final displayed activity totals to two decimals. This release does not perform an integer-cents rewrite of historical data. No hidden FX conversion.
+
+All destructive, save and backup flows should report actual completion and keep drafts on failure. Never add financial localStorage writes to native UI paths; use VaultContext. Do not add telemetry or cloud configuration incidentally.

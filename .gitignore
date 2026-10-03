@@ -54,3 +54,5 @@ android/*.keystore
 *.keystore
 /.android-toolchain/
 /dist-private/
+
+android/.kotlin/

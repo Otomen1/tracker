@@ -31,7 +31,7 @@ export const StatsCards = memo(function StatsCards({ stats, comparisonLabel = "v
         <CardContent className="p-3 sm:p-4">
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-xs font-medium text-zinc-500 uppercase tracking-wide">Income</p>
+              <p className="text-xs font-medium text-zinc-500 uppercase tracking-wide">Recorded income</p>
               <p className="mt-1 text-lg font-semibold tabular-nums text-emerald-700 dark:text-emerald-400 sm:text-xl">{fmt(stats.currentMonthIncome)}</p>
             </div>
             <div className="w-8 h-8 rounded-full bg-emerald-50 dark:bg-emerald-950 flex items-center justify-center">
@@ -49,7 +49,7 @@ export const StatsCards = memo(function StatsCards({ stats, comparisonLabel = "v
         <CardContent className="p-3 sm:p-4">
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-xs font-medium text-zinc-500 uppercase tracking-wide">Expenses</p>
+              <p className="text-xs font-medium text-zinc-500 uppercase tracking-wide">Recorded spending</p>
               <p className="mt-1 text-lg font-semibold tabular-nums text-rose-700 dark:text-rose-400 sm:text-xl">{fmt(stats.currentMonthExpenses)}</p>
             </div>
             <div className="w-8 h-8 rounded-full bg-rose-50 dark:bg-rose-950 flex items-center justify-center">

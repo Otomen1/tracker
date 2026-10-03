@@ -13,7 +13,7 @@ import type { Account, Category, Settings, Transaction } from "@/types"
 import { z } from "zod"
 
 const backupSchema = z.object({
-  schemaVersion: z.union([z.string(), z.number()]).optional(),
+  schemaVersion: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4), z.literal("1"), z.literal("2"), z.literal("3"), z.literal("4")]).optional(),
   exportedAt: z.string().optional(),
   transactions: z.array(transactionSchema).max(50_000),
   categories: z.array(categorySchema).max(500).default(DEFAULT_CATEGORIES),
@@ -38,9 +38,12 @@ function relationshipError(transactions: Transaction[], categories: Category[], 
   if (duplicateId(transactions)) return "Duplicate transaction ID"
   if (duplicateId(categories)) return "Duplicate category ID"
   if (duplicateId(accounts)) return "Duplicate account ID"
+  if (new Set(accounts.map(a => a.currency)).size > 1) return "Mixed-currency backups are not supported; no data was replaced"
   const categoryIds = new Set(categories.map((category) => category.id))
   const missingCategory = transactions.find((item) => item.type !== "transfer" && !categoryIds.has(item.categoryId))
   if (missingCategory) return `Missing category for transaction "${missingCategory.description}"`
+  const mismatched = transactions.find(item => item.type !== "transfer" && categories.find(c => c.id === item.categoryId)?.type !== (item.isRefund ? "expense" : item.type))
+  if (mismatched) return `Category type does not match transaction "${mismatched.description}"`
   const accountIds = new Set(accounts.map((account) => account.id))
   const invalidAccount = transactions.find((item) =>
     (item.accountId && !accountIds.has(item.accountId)) ||
@@ -53,7 +56,7 @@ function relationshipError(transactions: Transaction[], categories: Category[], 
 export function createBackupJson(vault: VaultData): string {
   const backup = {
     format: "tracker-portable-backup",
-    schemaVersion: 3,
+    schemaVersion: 4,
     exportedAt: new Date().toISOString(),
     transactions: vault.transactions,
     categories: vault.categories,
@@ -76,7 +79,7 @@ export function parseBackupJson(json: string, current?: VaultData): BackupImport
 
   try {
     return { success: true, vault: validateVault({
-      schemaVersion: 3,
+      schemaVersion: 4,
       revision: current?.revision ?? 0,
       updatedAt: new Date().toISOString(),
       transactions: parsed.data.transactions,
@@ -101,7 +104,7 @@ export function importAllData(json: string): { success: boolean; error?: string 
   if (typeof window === "undefined") return { success: false, error: "Storage is unavailable" }
   let current: VaultData
   try { current = readLegacyVault(localStorage) } catch { current = validateVault({
-    schemaVersion: 3, revision: 0, updatedAt: new Date().toISOString(), transactions: [], categories: DEFAULT_CATEGORIES,
+    schemaVersion: 4, revision: 0, updatedAt: new Date().toISOString(), transactions: [], categories: DEFAULT_CATEGORIES,
     accounts: [], settings: DEFAULT_SETTINGS, androidSetupComplete: false,
   }) }
   const result = parseBackupJson(json, current)

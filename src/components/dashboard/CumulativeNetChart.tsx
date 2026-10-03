@@ -56,10 +56,10 @@ export const CumulativeNetChart = memo(function CumulativeNetChart({ data, summa
     return (
       <Card className="border-zinc-200 dark:border-zinc-800">
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">Net Worth Over Time</CardTitle>
+          <CardTitle className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">Recorded Net Over Time</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-zinc-400 py-8 text-center">Add transactions across multiple months to see your net worth trend.</p>
+          <p className="text-sm text-zinc-400 py-8 text-center">Add transactions across multiple months to see your recorded income minus spending trend.</p>
         </CardContent>
       </Card>
     )
@@ -72,14 +72,14 @@ export const CumulativeNetChart = memo(function CumulativeNetChart({ data, summa
     <Card className="border-zinc-200 dark:border-zinc-800">
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">Net Worth Over Time</CardTitle>
+          <CardTitle className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">Recorded Net Over Time</CardTitle>
           <span className={`text-sm font-bold ${latest >= 0 ? "text-emerald-600" : "text-rose-500"}`}>
             {latest >= 0 ? "+" : ""}{fmt(latest)}
           </span>
         </div>
       </CardHeader>
       <CardContent>
-        <div role="img" aria-label="Line chart showing cumulative net balance over time">
+        <div role="img" aria-label="Line chart showing cumulative recorded net over time">
           <ResponsiveContainer width="100%" height={200}>
             <LineChart data={chartData} margin={{ top: 4, right: 8, bottom: 0, left: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f4f4f5" vertical={false} />
@@ -112,8 +112,8 @@ export const CumulativeNetChart = memo(function CumulativeNetChart({ data, summa
         </div>
         {summary && <p className="mt-2 border-t border-zinc-100 pt-3 text-xs text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">{summary}</p>}
         <table className="sr-only">
-          <caption>Cumulative net balance by month</caption>
-          <thead><tr><th>Month</th><th>Net Balance</th></tr></thead>
+          <caption>Cumulative recorded net by month</caption>
+          <thead><tr><th>Month</th><th>Recorded Net</th></tr></thead>
           <tbody>
             {data.map((d) => (
               <tr key={d.month}><td>{d.month}</td><td>{fmt(d.balance)}</td></tr>
