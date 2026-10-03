@@ -60,7 +60,7 @@ export function SettingsNav() {
             onClick={() => navigate(section.id)}
             aria-current={active === section.id ? "location" : undefined}
             className={cn(
-              "min-h-11 shrink-0 rounded-full border px-3 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-950",
+              "min-h-12 shrink-0 rounded-full border px-3 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-950",
               active === section.id
                 ? "border-zinc-900 bg-zinc-900 text-white dark:border-zinc-100 dark:bg-zinc-100 dark:text-zinc-900"
                 : "border-zinc-200 bg-white text-zinc-700 hover:border-zinc-400 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:border-zinc-600"
@@ -79,7 +79,7 @@ export function SettingsNav() {
             onClick={() => navigate(section.id)}
             aria-current={active === section.id ? "location" : undefined}
             className={cn(
-              "flex min-h-11 w-full items-center rounded-lg px-3 text-left text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-500",
+              "flex min-h-12 w-full items-center rounded-lg px-3 text-left text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-500",
               active === section.id
                 ? "bg-zinc-900 font-medium text-white dark:bg-zinc-100 dark:text-zinc-900"
                 : "text-zinc-700 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800"

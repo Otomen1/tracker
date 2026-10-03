@@ -40,7 +40,7 @@ export function MobileNav() {
                   : "text-zinc-500 dark:text-zinc-400"
               )}
             >
-              <span className={cn("flex h-8 min-w-11 items-center justify-center rounded-full transition-colors", isActive && "bg-zinc-200 dark:bg-zinc-700")}>
+              <span className={cn("flex h-8 min-w-12 items-center justify-center rounded-full transition-colors", isActive && "bg-zinc-200 dark:bg-zinc-700")}>
                 <Icon className="h-5 w-5" />
               </span>
               <span className="text-xs">{label}{href === "/transactions" && items.length > 0 && <span className="ml-1 rounded-full bg-amber-700 px-1 text-white" aria-label={`${items.length} waiting for review`}>{items.length}</span>}</span>

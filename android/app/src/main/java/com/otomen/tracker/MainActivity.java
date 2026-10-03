@@ -28,6 +28,7 @@ public class MainActivity extends BridgeActivity {
         boolean isDebuggable = (getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0;
         WebView.setWebContentsDebuggingEnabled(isDebuggable);
         WebSettings settings = bridge.getWebView().getSettings();
+        settings.setTextZoom(Math.round(100 * getResources().getConfiguration().fontScale));
         settings.setAllowFileAccess(false);
         settings.setAllowContentAccess(false);
         settings.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);

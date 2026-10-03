@@ -4,7 +4,7 @@ Authoritative overview: PROJECT_MASTER.md. Technical detail: docs/architecture.m
 docs/schema-migrations.md, docs/dependency-security.md and docs/release-checklist.md.
 Use code and those documents together; this is not evidence of a shipped release.
 
-Tracker 1.3.1 / Android build 18 is a local finance application. Web/PWA uses local
+Tracker 1.3.2 / Android build 19 is a local finance application. Web/PWA uses local
 browser storage; Android uses an authenticated encrypted app-private vault. No
 account, cloud sync, PostgreSQL, Clerk or network API is required. Android has no
 INTERNET permission. Protect browser data with the device login/disk encryption.

@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { useAccounts } from "@/context/AccountsContext"
 import { Transaction, Category } from "@/types"
 import { Button } from "@/components/ui/button"
-import { Pencil, Trash2, RefreshCw } from "lucide-react"
+import { RefreshCw } from "lucide-react"
 import { formatDate } from "@/lib/formatters"
 import { useSettingsContext } from "@/context/SettingsContext"
 import { cn } from "@/lib/utils"
@@ -38,8 +38,13 @@ export function TransactionRow({
   const category = categories.find((c) => c.id === transaction.categoryId)
 
   return (
-    <tr className={cn(
-      "group border-b border-zinc-100 outline-none last:border-b-0 hover:bg-zinc-50 focus-within:bg-zinc-50 dark:border-zinc-800 dark:hover:bg-zinc-800/50 dark:focus-within:bg-zinc-800/50 transition-colors",
+    <tr onClick={event => {
+      if (!event.currentTarget.contains(event.target as Node)) return
+      if ((event.target as Element).closest("button, input, a, [role=dialog]")) return
+      if (selectMode) onToggleSelect?.(transaction.id)
+      else setDetailOpen(true)
+    }} className={cn(
+      "cursor-pointer group border-b border-zinc-100 outline-none last:border-b-0 hover:bg-zinc-50 focus-within:bg-zinc-50 dark:border-zinc-800 dark:hover:bg-zinc-800/50 dark:focus-within:bg-zinc-800/50 transition-colors",
       selected && "bg-zinc-50 dark:bg-zinc-800/50"
     )}>
       {selectMode && (
@@ -56,10 +61,10 @@ export function TransactionRow({
       <td className="hidden py-2.5 px-4 text-sm text-zinc-500 dark:text-zinc-400 whitespace-nowrap sm:table-cell">
         {formatDate(transaction.date)}
       </td>
-      <td className="py-3 px-4 max-w-[200px] sm:py-2.5">
+      <td className="py-3 px-4 max-w-[200px] break-words sm:py-2.5">
         <div>
-          <button className="min-h-11 max-w-full text-left text-sm text-zinc-900 dark:text-zinc-100" onClick={() => setDetailOpen(true)} aria-label={`Details for ${transaction.description}`}>{transaction.description}</button>
-          <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400 sm:hidden">{transaction.type === "transfer" ? "Internal transfer" : category?.name ?? "Uncategorized"} · {formatDate(transaction.date)}</p>
+          <button className="min-h-12 max-w-full text-left text-sm text-zinc-900 dark:text-zinc-100" onClick={() => selectMode ? onToggleSelect?.(transaction.id) : setDetailOpen(true)} aria-label={`Details for ${transaction.description}`}>{transaction.description}</button>
+          <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400 sm:hidden">{transaction.type === "transfer" ? "Transfer" : transaction.type === "income" ? "Money in" : "Money out"} · {category?.name ?? "Uncategorized"} · {formatDate(transaction.date)}</p>
           <p className="mt-0.5 text-xs text-muted-foreground">{transaction.type === "transfer" ? `${accountName(transaction.fromAccountId)} → ${accountName(transaction.toAccountId)}` : accountName(transaction.accountId)}</p>
           {transaction.notes && (
             <p className="text-xs text-zinc-400 truncate mt-0.5">{transaction.notes}</p>
@@ -107,24 +112,7 @@ export function TransactionRow({
       )}>
         {transaction.type === "income" ? "+" : transaction.type === "expense" ? "-" : ""}{fmt(transaction.amount)}
       </td>
-      <td className="py-2.5 pl-1 pr-2 text-right sm:px-4">
-        <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 group-focus-within:opacity-100 transition-opacity">
-          <Button
-            size="icon" variant="ghost" className="h-10 w-10 sm:h-8 sm:w-8"
-            aria-label={`Edit ${transaction.description}`}
-            onClick={() => onEditRequest(transaction)}
-          >
-            <Pencil className="w-3.5 h-3.5" />
-          </Button>
-          <Button
-            size="icon" variant="ghost"
-            className="h-10 w-10 text-rose-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950 sm:h-8 sm:w-8"
-            aria-label={`Delete ${transaction.description}`}
-            onClick={() => onDeleteRequest(transaction)}
-          >
-            <Trash2 className="w-3.5 h-3.5" />
-          </Button>
-        </div>
+      <td className="p-0 w-0">
         <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
           <DialogContent className="max-h-[85dvh] overflow-y-auto rounded-xl">
             <DialogHeader><DialogTitle>{transaction.description}</DialogTitle><DialogDescription>Transaction details</DialogDescription></DialogHeader>
@@ -137,7 +125,7 @@ export function TransactionRow({
               {transaction.tags?.length ? <div><dt className="text-muted-foreground">Tags</dt><dd>{transaction.tags.join(", ")}</dd></div> : null}
               {transaction.notificationSource && <div><dt className="text-muted-foreground">Capture</dt><dd>{transaction.notificationSource.provider} · {1 + (transaction.linkedNotifications?.length ?? 0)} linked notification(s)</dd></div>}
             </dl>
-            <div className="flex gap-2"><Button onClick={() => { setDetailOpen(false); onEditRequest(transaction) }}>Edit</Button><Button variant="destructive" onClick={() => { setDetailOpen(false); onDeleteRequest(transaction) }}>Delete</Button></div>
+            <div className="grid grid-cols-2 gap-2"><Button onClick={() => { setDetailOpen(false); onEditRequest(transaction) }} aria-label={`Edit ${transaction.description}`}>Edit</Button><Button variant="destructive" onClick={() => { setDetailOpen(false); onDeleteRequest(transaction) }} aria-label={`Delete ${transaction.description}`}>Delete</Button></div>
           </DialogContent>
         </Dialog>
       </td>

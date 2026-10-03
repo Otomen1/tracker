@@ -57,11 +57,11 @@ export function LocalSecuritySettings() {
 
       <div className="flex flex-col gap-2 sm:flex-row">
         {isNative && (
-          <Button variant="outline" className="min-h-11 gap-2" onClick={() => void lock()}>
+          <Button variant="outline" className="min-h-12 gap-2" onClick={() => void lock()}>
             <LockKeyhole className="h-4 w-4" />Lock now
           </Button>
         )}
-        <Button variant="destructive" className="min-h-11 gap-2" onClick={() => setConfirmErase(true)} disabled={erasing}>
+        <Button variant="destructive" className="min-h-12 gap-2" onClick={() => setConfirmErase(true)} disabled={erasing}>
           <Trash2 className="h-4 w-4" />Erase all local data
         </Button>
       </div>

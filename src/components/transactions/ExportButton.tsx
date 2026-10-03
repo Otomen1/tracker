@@ -184,7 +184,7 @@ export function ExportButton({ allTransactions, transactions, categories, curren
                   disabled={row.txns.length === 0 || pdfLoading !== null}
                   onClick={() => handleCSV(row.txns, row.csvFile)}
                   aria-label={`Export ${row.label} as CSV`} title={`Download ${row.label} as CSV`}
-                  className="w-16 min-h-11 items-center flex justify-center py-1 rounded text-zinc-500 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                  className="w-16 min-h-12 items-center flex justify-center py-1 rounded text-zinc-500 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                 >
                   <Download className="w-3.5 h-3.5" />
                 </button>
@@ -194,7 +194,7 @@ export function ExportButton({ allTransactions, transactions, categories, curren
                   disabled={row.txns.length === 0 || pdfLoading !== null}
                   onClick={() => handlePDF(row.txns, row.rangeLabel, row.pdfFile)}
                   aria-label={`Export ${row.label} as PDF`} title={`Download ${row.label} as PDF`}
-                  className="w-16 min-h-11 items-center flex justify-center py-1 rounded text-zinc-500 hover:text-rose-500 dark:hover:text-rose-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                  className="w-16 min-h-12 items-center flex justify-center py-1 rounded text-zinc-500 hover:text-rose-500 dark:hover:text-rose-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                 >
                   {pdfLoading === row.pdfFile
                     ? <span className="text-[10px] text-zinc-400">...</span>

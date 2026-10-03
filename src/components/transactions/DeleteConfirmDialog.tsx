@@ -51,7 +51,7 @@ export function DeleteConfirmDialog({
         </AlertDialogHeader>
 
         {showCascade && (
-          <label className="flex items-center gap-2 text-sm text-zinc-700 dark:text-zinc-300 cursor-pointer select-none pb-1">
+          <label className="min-h-12 flex items-center gap-2 text-sm text-zinc-700 dark:text-zinc-300 cursor-pointer select-none pb-1">
             <input
               type="checkbox"
               checked={cascade}

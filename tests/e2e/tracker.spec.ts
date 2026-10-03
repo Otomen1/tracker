@@ -27,6 +27,7 @@ test("a deleted transaction stays deleted after focus, navigation, and refresh",
   await page.getByRole("button", { name: "Add Transaction", exact: true }).last().click()
   await expect(page.getByText(description)).toBeVisible()
 
+  await page.getByRole("button", { name: `Details for ${description}` }).click()
   await page.getByRole("button", { name: `Delete ${description}` }).click()
   await page.getByRole("button", { name: "Delete", exact: true }).click()
   await expect(page.getByText(description)).toHaveCount(0)
@@ -56,7 +57,7 @@ test("empty analytics replaces charts with one guided state", async ({ page }) =
 
 test("settings routes to backup and returns to the index", async ({ page }) => {
   await page.goto("/settings")
-  await page.getByRole("navigation", { name: "Settings sections" }).getByRole("link", { name: "Backup, restore & storage" }).click()
+  await page.getByRole("navigation", { name: "Settings sections" }).getByRole("link", { name: "Backup & restore" }).click()
   await expect(page).toHaveURL(/\/settings\/backup$/)
   await expect(page.getByRole("button", { name: "Create encrypted backup" })).toBeVisible()
   await page.getByRole("link", { name: "← Settings", exact: true }).click()
@@ -66,8 +67,8 @@ test("settings routes to backup and returns to the index", async ({ page }) => {
 test("settings exposes accounts and finance on a small screen", async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 })
   await page.goto("/settings")
-  await page.getByRole("navigation", { name: "Settings sections" }).getByRole("link", { name: "Categories, budgets & goals" }).click()
-  await expect(page.getByRole("heading", { name: "Categories, budgets & goals" })).toBeVisible()
+  await page.getByRole("navigation", { name: "Settings sections" }).getByRole("link", { name: "Categories & budgets" }).click()
+  await expect(page.getByRole("heading", { name: "Categories & budgets" })).toBeVisible()
   await expect(page.getByRole("link", { name: "Manage categories" })).toBeVisible()
 })
 
@@ -158,7 +159,7 @@ test("rapid submit saves once and a card repayment remains an editable transfer"
   await page.getByLabel("To account", { exact: true }).selectOption("card")
   await page.getByLabel("Description", { exact: true }).fill("Card repayment")
   await page.getByRole("button", { name: "Add Transaction", exact: true }).last().click()
-  await expect(page.getByRole("button", { name: "Edit Card repayment", exact: true })).toBeVisible()
+  await page.getByRole("button", { name: "Details for Card repayment", exact: true }).click()
   await page.getByRole("button", { name: "Edit Card repayment", exact: true }).click()
   await page.getByLabel("Amount", { exact: true }).fill("45")
   await page.getByRole("button", { name: "Save Changes", exact: true }).click()

@@ -18,7 +18,7 @@ export function CurrencySelector() {
 
   return (
     <Select disabled={Boolean(accountCurrency)} value={accountCurrency ?? settings.currency} onValueChange={(value) => void save(value)}>
-      <SelectTrigger className="min-h-11 w-full sm:w-56">
+      <SelectTrigger className="min-h-12 w-full sm:w-56">
         <SelectValue />
       </SelectTrigger>
       <SelectContent>

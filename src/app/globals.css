@@ -101,3 +101,8 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+@media (max-width: 639px) {
+  select { min-height: 3rem; }
+  input, textarea { scroll-margin-block: 5rem; }
+}

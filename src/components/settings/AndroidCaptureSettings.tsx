@@ -104,9 +104,9 @@ export function AndroidCaptureSettings() {
           </div>
         </div>
         {!status.notificationAccess ? (
-          <Button className="min-h-11 w-full shrink-0 sm:w-auto" size="sm" onClick={() => void nativeCapture.openNotificationAccess()}>Allow access</Button>
+          <Button className="min-h-12 w-full shrink-0 sm:w-auto" size="sm" onClick={() => void nativeCapture.openNotificationAccess()}>Allow access</Button>
         ) : !status.alertsEnabled ? (
-          <Button className="min-h-11 w-full shrink-0 sm:w-auto" size="sm" variant="outline" disabled={requestingAlerts} onClick={() => void enableAlerts()}>
+          <Button className="min-h-12 w-full shrink-0 sm:w-auto" size="sm" variant="outline" disabled={requestingAlerts} onClick={() => void enableAlerts()}>
             {requestingAlerts ? "Opening…" : "Enable review alerts"}
           </Button>
         ) : null}
@@ -138,7 +138,7 @@ export function AndroidCaptureSettings() {
       </div>
 
       <details className="group rounded-lg border border-zinc-200 dark:border-zinc-700">
-        <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 px-3 text-sm font-medium text-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-zinc-500 dark:text-zinc-300 [&::-webkit-details-marker]:hidden">
+        <summary className="flex min-h-12 cursor-pointer list-none items-center gap-2 px-3 text-sm font-medium text-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-zinc-500 dark:text-zinc-300 [&::-webkit-details-marker]:hidden">
           <Smartphone aria-hidden="true" className="h-4 w-4" /> Source details
         </summary>
         <div className="space-y-2 border-t border-zinc-200 px-3 py-3 text-xs leading-5 text-zinc-600 dark:border-zinc-700 dark:text-zinc-400">

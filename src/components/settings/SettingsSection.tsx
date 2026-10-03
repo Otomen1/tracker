@@ -18,7 +18,7 @@ import { useHydrated } from "@/hooks/useHydrated"
 import release from "../../../release.json"
 
 export const settingsSections = {
-  accounts: "Accounts & transaction sources", capture: "Bank capture", finance: "Categories, budgets & goals", preferences: "Appearance & currency", reminders: "Reminders", security: "Security & app lock", backup: "Backup, restore & storage", about: "About Tracker"
+  accounts: "Transaction sources", capture: "Bank capture", finance: "Categories & budgets", preferences: "Appearance", reminders: "Reminders", security: "Security & app lock", backup: "Backup & restore", about: "About Tracker"
 } as const
 
 export function SettingsSection({ section }: { section: keyof typeof settingsSections }) {
@@ -26,12 +26,12 @@ export function SettingsSection({ section }: { section: keyof typeof settingsSec
   const hydrated = useHydrated()
   const native = hydrated && nativeVault.isNative()
   return <div className="space-y-4">
-    <Link href="/settings" replace={native} className="inline-flex min-h-11 items-center text-sm font-medium">← Settings</Link>
+    <Link href="/settings" replace={native} className="inline-flex min-h-12 items-center text-sm font-medium">← Settings</Link>
     <PageHeader title={settingsSections[section]} description="Settings for this device" />
     <section className="space-y-5 rounded-2xl border bg-background p-4 sm:p-5">
       {section === "accounts" && <AccountSettings />}
       {section === "capture" && <AndroidCaptureSettings />}
-      {section === "finance" && <><Link href="/categories" className="inline-flex min-h-11 items-center font-medium">Manage categories →</Link><BudgetLimitsForm /><div className="space-y-2"><h2 className="text-sm font-semibold">Recorded net goal</h2><p className="text-xs text-muted-foreground">Optional goal for recorded income minus spending. Unrecorded activity is not included.</p><SavingsGoalForm /></div></>}
+      {section === "finance" && <><Link href="/categories" className="inline-flex min-h-12 items-center font-medium">Manage categories →</Link><BudgetLimitsForm /><div className="space-y-2"><h2 className="text-sm font-semibold">Recorded net goal</h2><p className="text-xs text-muted-foreground">Optional goal for recorded income minus spending. Unrecorded activity is not included.</p><SavingsGoalForm /></div></>}
       {section === "preferences" && <><ThemeToggle /><CurrencySelector /><p className="text-xs text-muted-foreground">Currency is fixed to your accounts once an account exists. Amounts are not converted; cross-currency transfers are not supported.</p></>}
       {section === "reminders" && <ReminderSettings />}
       {section === "security" && <LocalSecuritySettings />}

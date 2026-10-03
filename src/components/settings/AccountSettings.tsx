@@ -1,5 +1,7 @@
 "use client"
 
+import { useDraftGuard } from "@/hooks/useDraftGuard"
+import { canLeaveScreen } from "@/lib/navigationGuard"
 import { useRef, useState } from "react"
 import { useAccounts, type AccountInput } from "@/context/AccountsContext"
 import { useSettingsContext } from "@/context/SettingsContext"
@@ -18,6 +20,7 @@ function AccountEditor({ account, onDone }: { account?: Account; onDone?: () => 
   const saving = useRef(false)
   const [error, setError] = useState<string | null>(null)
   const [saved, setSaved] = useState(false)
+  useDraftGuard(name !== (account?.name ?? "") || kind !== (account?.kind ?? "bank"), busy)
   const currency = account?.currency ?? accounts[0]?.currency ?? settings.currency
   return <form aria-label={account ? `Edit account ${account.name}` : "New account"} className="space-y-3" onSubmit={async event => {
     event.preventDefault()
@@ -32,7 +35,7 @@ function AccountEditor({ account, onDone }: { account?: Account; onDone?: () => 
   }}>
     <fieldset disabled={busy} className="space-y-3">
       <label className="block text-sm">Account name<Input value={name} maxLength={60} required onChange={e => setName(e.target.value)} /></label>
-      <label className="block text-sm">Account kind<select className="min-h-11 w-full rounded-md border bg-background px-3" value={kind} onChange={e => setKind(e.target.value as AccountKind)} disabled={!!account}>
+      <label className="block text-sm">Account kind<select className="min-h-12 w-full rounded-md border bg-background px-3" value={kind} onChange={e => setKind(e.target.value as AccountKind)} disabled={!!account}>
         <option value="bank">Bank</option><option value="cash">Cash</option><option value="ewallet">E-wallet</option><option value="credit_card">Credit card</option>
       </select></label>
       <p className="text-xs text-muted-foreground">Transaction currency: {currency}. This source identifies recorded activity; no balance, assets or card debt is calculated.</p>
@@ -49,11 +52,12 @@ function AccountCard({ account }: { account: Account }) {
   const [busy, setBusy] = useState(false)
   const guard = useRef(false)
   const [error, setError] = useState<string | null>(null)
+  useDraftGuard(false, busy)
   const capture = account.id === "account_ryt" || account.id === "account_maybank"
   return <section id={account.id} className="scroll-mt-5 space-y-3 rounded-xl border bg-background p-4">
     <div className="flex justify-between gap-3"><h2 className="font-semibold">{account.name}</h2><span className="text-xs">{account.isActive ? "Active" : "Archived"}</span></div>
     <p className="text-xs text-muted-foreground">{capture ? "Ryt/MAE notification source. Enable capture in Bank capture on Android." : "Manual transaction source. Automatic notification capture is not configured for this source."}</p>
-    <details><summary className="min-h-11 cursor-pointer py-3 text-sm font-medium">Edit source</summary><AccountEditor account={account} /></details>
+    <details><summary className="min-h-12 cursor-pointer py-3 text-sm font-medium">Edit source</summary><AccountEditor account={account} /></details>
     <Button variant="outline" disabled={busy} onClick={async () => {
       if (guard.current) return
       if (account.isActive && !window.confirm("Archive source? Transactions stay. Turn off recurring entries first. Disable its bank capture separately if needed.")) return
@@ -70,7 +74,7 @@ export function AccountSettings() {
   const [adding, setAdding] = useState(false)
   return <div className="space-y-4">
     <p className="text-sm text-muted-foreground">Keep a source for each bank, card, wallet or cash you use. Automatic capture supports Ryt and MAE only; other sources need manual entries.</p>
-    <Button onClick={() => setAdding(v => !v)}>{adding ? "Close new account" : "Add account"}</Button>
+    <Button onClick={() => { if (!adding || canLeaveScreen()) setAdding(v => !v) }}>{adding ? "Close new account" : "Add account"}</Button>
     {adding && <section className="rounded-xl border p-4"><AccountEditor onDone={() => setAdding(false)} /></section>}
     {accounts.map(account => <AccountCard key={account.id} account={account} />)}
   </div>

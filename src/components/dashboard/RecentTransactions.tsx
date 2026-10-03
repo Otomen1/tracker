@@ -1,66 +1,39 @@
 "use client"
-
+import { useState } from "react"
 import Link from "next/link"
 import { Transaction, Category } from "@/types"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { formatDate } from "@/lib/formatters"
-import { useSettingsContext } from "@/context/SettingsContext"
-import { ArrowLeftRight, ArrowRight } from "lucide-react"
-import { cn } from "@/lib/utils"
-import { EmptyState } from "@/components/ui/empty-state"
-
-interface Props {
-  transactions: Transaction[]
-  categories: Category[]
-}
-
+import { ArrowRight } from "lucide-react"
+import { TransactionRow } from "@/components/transactions/TransactionRow"
+import { TransactionDialog } from "@/components/transactions/TransactionDialog"
+import { DeleteConfirmDialog } from "@/components/transactions/DeleteConfirmDialog"
+import { useTransactions } from "@/hooks/useTransactions"
+import { useToast } from "@/context/ToastContext"
+interface Props { transactions: Transaction[]; categories: Category[] }
 export function RecentTransactions({ transactions, categories }: Props) {
-  const { fmt } = useSettingsContext()
-
-  return (
-    <Card className="border-zinc-200 dark:border-zinc-800">
-      <CardHeader className="pb-2 flex flex-row items-center justify-between">
-        <CardTitle className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">Recent Transactions</CardTitle>
-        <Link href="/transactions" className="text-xs text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 flex items-center gap-1 transition-colors">
-          View all <ArrowRight className="w-3 h-3" />
-        </Link>
-      </CardHeader>
-      <CardContent>
-        {transactions.length === 0 ? (
-          <EmptyState
-            icon={ArrowLeftRight}
-            title="No recent activity"
-            description="Your latest income and expenses will appear here."
-            action={{ label: "Add transaction", href: "/transactions" }}
-            className="py-7"
-          />
-        ) : (
-          <div>
-            {transactions.map((t) => {
-              const cat = categories.find((c) => c.id === t.categoryId)
-              return (
-                <div key={t.id} className="flex items-center justify-between py-3 border-b border-zinc-100 dark:border-zinc-800 last:border-0">
-                  <div className="flex items-center gap-3">
-                    <div
-                      className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0"
-                      style={{ backgroundColor: cat?.color ?? "#6b7280" }}
-                    >
-                      {t.description.charAt(0).toUpperCase()}
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100 leading-none">{t.description}</p>
-                      <p className="text-xs text-zinc-400 mt-0.5">{t.type === "transfer" ? "Internal transfer" : cat?.name} · {formatDate(t.date)}</p>
-                    </div>
-                  </div>
-                  <span className={cn("text-sm font-semibold whitespace-nowrap", t.type === "income" ? "text-emerald-600" : t.type === "expense" ? "text-rose-500" : "text-zinc-600 dark:text-zinc-300")}>
-                    {t.type === "income" ? "+" : t.type === "expense" ? "-" : ""}{fmt(t.amount)}
-                  </span>
-                </div>
-              )
-            })}
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  )
+  const [edit, setEdit] = useState<Transaction | null>(null)
+  const [remove, setRemove] = useState<Transaction | null>(null)
+  const { transactions: all, updateTransaction, deleteTransaction, deleteWithCascade } = useTransactions()
+  const { showToast } = useToast()
+  return <Card className="border-zinc-200 dark:border-zinc-800">
+    <CardHeader className="flex flex-row items-center justify-between pb-2">
+      <CardTitle className="text-sm font-semibold">Recent activity</CardTitle>
+      <Link href="/transactions" className="inline-flex min-h-12 items-center gap-1 text-sm">View all <ArrowRight className="h-4 w-4" /></Link>
+    </CardHeader>
+    <CardContent className="px-2 sm:px-4">
+      {transactions.length ? <div className="overflow-x-auto"><table className="w-full"><caption className="sr-only">Recent recorded transactions. Tap a row for details.</caption><tbody>{transactions.map(transaction => <TransactionRow key={transaction.id} transaction={transaction} categories={categories} onEditRequest={setEdit} onDeleteRequest={setRemove} />)}</tbody></table></div> : <p className="p-4 text-sm text-muted-foreground">Your latest transactions will appear here.</p>}
+      <TransactionDialog open={!!edit} onOpenChange={open => { if (!open) setEdit(null) }} transaction={edit ?? undefined} categories={categories} onSubmit={async data => {
+        if (!edit) return false
+        const saved = await updateTransaction(edit.id, data)
+        showToast(saved ? "Transaction updated" : "Could not save. Your input is kept.", saved ? "success" : "error")
+        return saved
+      }} />
+      <DeleteConfirmDialog open={!!remove} onOpenChange={open => { if (!open) setRemove(null) }} cascadeCount={remove?.isRecurring ? all.filter(t => t.recurringId === remove.id).length : 0} onConfirm={async cascade => {
+        if (!remove) return false
+        const saved = cascade ? await deleteWithCascade(remove.id) : await deleteTransaction(remove.id)
+        showToast(saved ? "Transaction deleted" : "Could not delete. Your record is kept.", saved ? "success" : "error")
+        return saved
+      }} />
+    </CardContent>
+  </Card>
 }

@@ -36,7 +36,7 @@ export function ThemeToggle() {
           onClick={() => void selectTheme(value)}
           aria-pressed={mounted && theme === value}
           className={cn(
-            "min-h-11 flex-1 flex items-center justify-center gap-2 px-2 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-zinc-500",
+            "min-h-12 flex-1 flex items-center justify-center gap-2 px-2 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-zinc-500",
             mounted && theme === value
               ? "bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 font-medium"
               : "text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-50 dark:hover:bg-zinc-800"

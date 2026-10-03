@@ -85,7 +85,7 @@ export default function DashboardPage() {
               </div>
             </div>
             <div className="flex flex-col items-stretch gap-2 sm:min-w-52">
-              <button className="flex min-h-11 items-center justify-center gap-2 rounded-lg bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300" onClick={() => setAddOpen(true)}>
+              <button className="flex min-h-12 items-center justify-center gap-2 rounded-lg bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300" onClick={() => setAddOpen(true)}>
                 Add first transaction <ArrowRight className="h-4 w-4" />
               </button>
               <div className="flex justify-center gap-4 text-xs">
@@ -99,15 +99,15 @@ export default function DashboardPage() {
 
       {transactions.length > 0 && (
         <>
+          <ReviewInboxCard />
           <HeroCard stats={stats} monthLabel={formatMonth(selectedMonth)} overBudgetCategories={overBudgetCategories} topInsight={insights[0]} fmt={fmt} />
           <AccountSummary month={selectedMonth} />
-          <ReviewInboxCard />
           <div className="flex items-center justify-between gap-3"><QuickActions onAddClick={() => setAddOpen(true)} /></div>
           <div className="grid gap-4 lg:grid-cols-2">
             <NeedsAttention budgets={budgetStatus} insights={insights} currentNet={stats.currentMonthNet} savingsGoal={settings.monthlySavingsGoal} fmt={fmt} />
           </div>
           <RecentTransactions transactions={recentTransactions} categories={categories} />
-          <Link href="/analytics" className="inline-flex min-h-11 items-center text-sm font-medium">View recorded activity analysis <ArrowRight className="ml-2 h-4 w-4" /></Link>
+          <Link href="/analytics" className="inline-flex min-h-12 items-center text-sm font-medium">View recorded activity analysis <ArrowRight className="ml-2 h-4 w-4" /></Link>
           <div className="hidden lg:block"><StatsCards stats={stats} /></div>
           <div className="grid gap-4 lg:grid-cols-2">
             <SavingsGoalCard currentNet={stats.currentMonthNet} />

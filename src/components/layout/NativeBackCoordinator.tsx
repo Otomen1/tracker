@@ -1,5 +1,6 @@
 "use client"
 
+import { canLeaveScreen } from "@/lib/navigationGuard"
 import { useEffect } from "react"
 import { usePathname, useRouter } from "next/navigation"
 import { trackerNativePlugin } from "@/lib/trackerNativePlugin"
@@ -13,7 +14,7 @@ export function NativeBackCoordinator() {
   useEffect(() => {
     if (!nativeVault.isNative()) return
     let mounted = true
-    const openInbox = () => { void trackerNativePlugin.consumeLaunchInbox().then(result => { if (mounted && result.open) router.replace("/inbox") }).catch(() => undefined) }
+    const openInbox = () => { void trackerNativePlugin.consumeLaunchInbox().then(result => { if (mounted && result.open && canLeaveScreen()) router.replace("/inbox") }).catch(() => undefined) }
     openInbox()
     window.addEventListener("tracker-open-inbox", openInbox)
     const back = (event: Event) => {
@@ -24,6 +25,7 @@ export function NativeBackCoordinator() {
         document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", code: "Escape", bubbles: true, cancelable: true }))
         return
       }
+      if (!canLeaveScreen()) { event.preventDefault(); return }
       const parent = pathname.startsWith("/settings/") ? "/settings" : pathname === "/" ? null : "/"
       if (parent) { event.preventDefault(); router.replace(parent) }
     }

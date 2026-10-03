@@ -1,0 +1,65 @@
+import "@testing-library/jest-dom/vitest"
+import { afterEach, beforeEach, expect, it, vi } from "vitest"
+import { render, renderHook } from "@testing-library/react"
+import { NativeBackCoordinator } from "../NativeBackCoordinator"
+import { useDraftGuard } from "@/hooks/useDraftGuard"
+import { canLeaveScreen } from "@/lib/navigationGuard"
+const mocks = vi.hoisted(() => ({ path: "/settings/security", unlocked: true, replace: vi.fn() }))
+vi.mock("next/navigation", () => ({ usePathname: () => mocks.path, useRouter: () => ({ replace: mocks.replace }) }))
+vi.mock("@/context/VaultContext", () => ({ useVault: () => ({ unlocked: mocks.unlocked }) }))
+vi.mock("@/lib/nativeVault", () => ({ nativeVault: { isNative: () => true } }))
+vi.mock("@/lib/trackerNativePlugin", () => ({ trackerNativePlugin: { consumeLaunchInbox: async () => ({ open: false }) } }))
+beforeEach(() => { mocks.path = "/settings/security"; mocks.unlocked = true; mocks.replace.mockReset() })
+afterEach(() => vi.restoreAllMocks())
+it("Back from nested settings returns to Settings, then other routes return Home", () => {
+  const view = render(<NativeBackCoordinator />)
+  const event = new Event("tracker-back", { cancelable: true })
+  window.dispatchEvent(event)
+  expect(event.defaultPrevented).toBe(true)
+  expect(mocks.replace).toHaveBeenLastCalledWith("/settings")
+  mocks.path = "/inbox"; view.rerender(<NativeBackCoordinator />)
+  window.dispatchEvent(new Event("tracker-back", { cancelable: true }))
+  expect(mocks.replace).toHaveBeenLastCalledWith("/")
+})
+it("Back closes the overlay before any route navigation", () => {
+  render(<><NativeBackCoordinator /><div role="dialog">Details</div></>)
+  const escape = vi.fn(); document.addEventListener("keydown", escape)
+  const event = new Event("tracker-back", { cancelable: true }); window.dispatchEvent(event)
+  expect(event.defaultPrevented).toBe(true)
+  expect(escape.mock.calls[0][0].key).toBe("Escape")
+  expect(mocks.replace).not.toHaveBeenCalled()
+  document.removeEventListener("keydown", escape)
+})
+it("Home and locked state allow the native terminal exit action", () => {
+  mocks.path = "/"; const view = render(<NativeBackCoordinator />)
+  expect(window.dispatchEvent(new Event("tracker-back", { cancelable: true }))).toBe(true)
+  mocks.path = "/inbox"; mocks.unlocked = false; view.rerender(<NativeBackCoordinator />)
+  expect(window.dispatchEvent(new Event("tracker-back", { cancelable: true }))).toBe(true)
+})
+it("dirty review drafts can cancel Back and navigation; busy writes never navigate", () => {
+  vi.spyOn(window, "confirm").mockReturnValue(false)
+  const guard = renderHook(({ dirty, busy }) => useDraftGuard(dirty, busy), { initialProps: { dirty: true, busy: false } })
+  render(<NativeBackCoordinator />)
+  expect(canLeaveScreen()).toBe(false)
+  window.dispatchEvent(new Event("tracker-back", { cancelable: true }))
+  expect(mocks.replace).not.toHaveBeenCalled()
+  guard.rerender({ dirty: false, busy: true })
+  expect(canLeaveScreen()).toBe(false)
+  guard.rerender({ dirty: false, busy: false })
+  expect(canLeaveScreen()).toBe(true)
+})
+it("discard approval permits leaving a dirty draft", () => {
+  vi.spyOn(window, "confirm").mockReturnValue(true)
+  renderHook(() => useDraftGuard(true, false))
+  expect(canLeaveScreen()).toBe(true)
+})
+it("asks once for multiple review drafts and blocks busy writes without asking", () => {
+  const confirm = vi.spyOn(window, "confirm").mockReturnValue(true)
+  renderHook(() => useDraftGuard(true, false))
+  renderHook(() => useDraftGuard(true, false))
+  expect(canLeaveScreen()).toBe(true)
+  expect(confirm).toHaveBeenCalledTimes(1)
+  renderHook(() => useDraftGuard(true, true))
+  expect(canLeaveScreen()).toBe(false)
+  expect(confirm).toHaveBeenCalledTimes(1)
+})

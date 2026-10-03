@@ -1,6 +1,6 @@
 "use client"
 
-import { useRef } from "react"
+import { useRef, useState } from "react"
 import { Category, CategoryFormData } from "@/types"
 import {
   Dialog,
@@ -28,7 +28,8 @@ export function CategoryDialog({
   onSubmit,
 }: Props) {
   const saving = useRef(false)
-  const dismiss = (value: boolean) => { if (!saving.current) onOpenChange(value) }
+  const [dirty, setDirty] = useState(false)
+  const dismiss = (value: boolean) => { if (saving.current) return; if (!value && dirty && !window.confirm("Discard unsaved category changes?")) return; onOpenChange(value) }
   const handleSubmit = async (data: CategoryFormData) => {
     if (saving.current) return
     saving.current = true
@@ -47,6 +48,7 @@ export function CategoryDialog({
           </DialogTitle>
         </DialogHeader>
         <CategoryForm
+          onDirtyChange={setDirty}
           category={category}
           defaultType={defaultType}
           existingNames={existingNames}

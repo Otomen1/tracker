@@ -157,7 +157,7 @@ export function TransactionForm({ transaction, categories, onSubmit, onCancel, o
   const applyCategoryDescriptionDefault = (categoryName: string) => {
     const current = watch("description")
     if (shouldAutoFillDescription(current, descriptionLastAuto)) {
-      setValue("description", categoryName)
+      setValue("description", categoryName, { shouldDirty: true })
       setDescriptionLastAuto(categoryName)
     }
   }
@@ -178,7 +178,7 @@ export function TransactionForm({ transaction, categories, onSubmit, onCancel, o
     // "" a moment later. No real user selection ever produces "" here (there
     // is no "none" item), so it's safe to ignore.
     if (v === "") return
-    setValue("categoryId", v)
+    setValue("categoryId", v, { shouldDirty: true })
     const category = allCategories.find((c) => c.id === v)
     if (category) applyCategoryDescriptionDefault(category.name)
   }
@@ -190,14 +190,14 @@ export function TransactionForm({ transaction, categories, onSubmit, onCancel, o
       return null
     }
     setCreatedCategories((prev) => [...prev, created])
-    setValue("categoryId", created.id)
+    setValue("categoryId", created.id, { shouldDirty: true })
     applyCategoryDescriptionDefault(created.name)
     return created
   }
 
   return (
     <>
-      <form aria-label="Transaction editor" onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4 sm:space-y-5">
+      <form aria-busy={pending} aria-label="Transaction editor" onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4 sm:space-y-5">
         <fieldset disabled={pending} className="space-y-4 sm:space-y-5">
         <div className="space-y-1.5">
           <Label htmlFor="amount">Amount</Label>
@@ -226,7 +226,7 @@ export function TransactionForm({ transaction, categories, onSubmit, onCancel, o
                 aria-pressed={selectedType === t}
                 onClick={() => { setValue("type", t, { shouldDirty: true }); setValue("isRefund", false); setValue("isRecurring", false) }}
                 className={cn(
-                  "min-h-11 flex-1 py-2 text-sm font-medium capitalize transition-colors",
+                  "min-h-12 flex-1 py-2 text-sm font-medium capitalize transition-colors",
                   selectedType === t
                     ? t === "income"
                       ? "bg-emerald-600 text-white"
@@ -250,13 +250,13 @@ export function TransactionForm({ transaction, categories, onSubmit, onCancel, o
 
         {selectedType === "transfer" && <div className="grid gap-3 sm:grid-cols-2">
           {(["fromAccountId", "toAccountId"] as const).map(field => <label key={field} className="space-y-1 text-sm">{field === "fromAccountId" ? "From account" : "To account"}
-            <select aria-label={field === "fromAccountId" ? "From account" : "To account"} className="min-h-11 w-full rounded-md border bg-background px-3" {...register(field)}>
+            <select aria-label={field === "fromAccountId" ? "From account" : "To account"} className="min-h-12 w-full rounded-md border bg-background px-3" {...register(field)}>
               <option value="">Choose an account</option>{accounts.filter(a => a.isActive || a.id === transaction?.[field]).map(a => <option key={a.id} value={a.id}>{a.name} ({a.currency})</option>)}
             </select>
           </label>)}
           <p className="text-xs text-muted-foreground sm:col-span-2">Transfers between your own sources and card repayments do not count as new spending. Choose Expense for a payment to someone else.</p>
         </div>}
-        {selectedType === "income" && accounts.find(a => a.id === watch("accountId"))?.kind === "credit_card" && <label className="flex min-h-11 items-center gap-2 text-sm"><input type="checkbox" {...register("isRefund")} />Refund (reverses recorded spending)</label>}
+        {selectedType === "income" && accounts.find(a => a.id === watch("accountId"))?.kind === "credit_card" && <label className="flex min-h-12 items-center gap-2 text-sm"><input type="checkbox" {...register("isRefund")} />Refund (reverses recorded spending)</label>}
         {selectedType !== "transfer" && <>
         <div className="space-y-1.5">
           <Label htmlFor="category-trigger">Category</Label>
@@ -320,7 +320,7 @@ export function TransactionForm({ transaction, categories, onSubmit, onCancel, o
           aria-expanded={showMoreDetails}
           aria-controls="transaction-more-details"
           onClick={() => setShowMoreDetails((o) => !o)}
-          className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+          className="min-h-12 flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
         >
           <ChevronDown className={cn("w-4 h-4 transition-transform", showMoreDetails && "rotate-180")} />
           More details
@@ -358,7 +358,7 @@ export function TransactionForm({ transaction, categories, onSubmit, onCancel, o
                   <button
                     type="button"
                     aria-label={`Remove tag ${tag}`}
-                    className="p-1 -m-1"
+                    className="min-h-12 min-w-12 flex items-center justify-center"
                     onClick={() => setTags((p) => p.filter((t) => t !== tag))}
                   >
                     <X className="w-2.5 h-2.5" />
@@ -388,7 +388,7 @@ export function TransactionForm({ transaction, categories, onSubmit, onCancel, o
               {...register("isRecurring")}
             />
             <div className="flex-1">
-              <label htmlFor="isRecurring" className="flex items-center gap-1.5 text-sm font-medium cursor-pointer">
+              <label htmlFor="isRecurring" className="min-h-12 flex items-center gap-1.5 text-sm font-medium cursor-pointer">
                 <RefreshCw className="w-3.5 h-3.5 text-zinc-500" />
                 Repeat monthly
               </label>

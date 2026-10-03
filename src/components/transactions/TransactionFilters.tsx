@@ -26,7 +26,7 @@ function FilterChip({ label, onRemove }: { label: string; onRemove: () => void }
         type="button"
         onClick={onRemove}
         aria-label={`Remove ${label} filter`}
-        className="hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
+        className="min-h-12 min-w-12 flex items-center justify-center hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
       >
         <X className="w-3 h-3" />
       </button>
@@ -107,10 +107,13 @@ export function TransactionFiltersBar({ filters, categories, tags, fmt, onChange
   return (
     <div className="space-y-2">
       {accounts.length > 0 && <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-300">Transaction source
-        <select aria-label="Transaction source" className="mt-1 min-h-11 w-full rounded-md border bg-background px-3 text-sm sm:w-56" value={filters.accountId ?? ""} onChange={e => onChange({ ...filters, accountId: e.target.value || undefined })}>
+        <select aria-label="Transaction source" className="mt-1 min-h-12 w-full rounded-md border bg-background px-3 text-sm sm:w-56" value={filters.accountId ?? ""} onChange={e => onChange({ ...filters, accountId: e.target.value || undefined })}>
           <option value="">All sources</option>{accounts.map(account => <option key={account.id} value={account.id}>{account.name}{account.isActive ? "" : " (archived)"}</option>)}
         </select>
       </label>}
+      <div role="group" aria-label="Quick transaction filters" className="flex gap-2 overflow-x-auto pb-1">
+        {([{ value: "", label: "All" }, { value: "income", label: "Money in" }, { value: "expense", label: "Money out" }, { value: "transfer", label: "Transfers" }] as const).map(option => <Button key={option.value} variant={(filters.type ?? "") === option.value ? "secondary" : "outline"} aria-pressed={(filters.type ?? "") === option.value} onClick={() => onChange({ ...filters, type: option.value, categoryId: "" })}>{option.label}</Button>)}
+      </div>
       {/* Always visible: search, type, date range, plus the advanced-filters toggle */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:flex xl:flex-wrap xl:items-end">
         <div className="space-y-1"><label htmlFor="transaction-search" className="text-xs font-medium text-zinc-600 dark:text-zinc-300">Search</label><Input

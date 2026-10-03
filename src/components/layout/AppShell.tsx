@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { InteractionCoordinator } from "./InteractionCoordinator"
 import { Sidebar } from "./Sidebar"
 import { MobileNav } from "./MobileNav"
 import { QuickAddFAB } from "./QuickAddFAB"
@@ -39,7 +40,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const showContent = !hydrated || !nativeVault.isNative() || unlocked
   // Keep the one-handed floating action on the transaction list only. The
   // dashboard already presents an explicit primary add action.
-  const showQuickAdd = hydrated && (pathname === "/transactions" || pathname === "/")
+  const showQuickAdd = hydrated && pathname === "/transactions"
 
   const handleQuickAdd = async (data: TransactionFormData) => {
     if (!await addTransaction(data)) {
@@ -54,6 +55,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <>
+      <InteractionCoordinator />
       <NativeBackCoordinator />
       {showContent && (
         <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950">

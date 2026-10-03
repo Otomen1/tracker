@@ -1,5 +1,7 @@
 "use client"
 
+import { useEffect } from "react"
+import { useDraftGuard } from "@/hooks/useDraftGuard"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
@@ -29,13 +31,14 @@ interface Props {
   defaultType?: "income" | "expense"
   existingNames?: string[]
   onSubmit: (data: CategoryFormData) => Promise<unknown> | unknown
+  onDirtyChange?: (dirty: boolean) => void
   onCancel: () => void
 }
 
-export function CategoryForm({ category, defaultType = "expense", existingNames = [], onSubmit, onCancel }: Props) {
+export function CategoryForm({ category, defaultType = "expense", existingNames = [], onSubmit, onCancel, onDirtyChange }: Props) {
   const {
     register, handleSubmit, watch, setValue, setError,
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting, isDirty },
   } = useForm<FormFields>({
     resolver: zodResolver(schema),
     defaultValues: {
@@ -46,6 +49,8 @@ export function CategoryForm({ category, defaultType = "expense", existingNames 
     },
   })
 
+  useDraftGuard(isDirty, isSubmitting)
+  useEffect(() => { onDirtyChange?.(isDirty) }, [isDirty, onDirtyChange])
   const selectedColor = watch("color")
   const selectedType = watch("type")
 
@@ -66,7 +71,8 @@ export function CategoryForm({ category, defaultType = "expense", existingNames 
   }
 
   return (
-    <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4">
+    <form aria-busy={isSubmitting} onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4">
+      <fieldset disabled={isSubmitting} className="space-y-4">
       <div className="space-y-1.5">
         <Label htmlFor="name">Name</Label>
         <Input id="name" placeholder="Category name" maxLength={30} {...register("name")} />
@@ -82,9 +88,9 @@ export function CategoryForm({ category, defaultType = "expense", existingNames 
                 key={t}
                 type="button"
                 aria-pressed={selectedType === t}
-                onClick={() => setValue("type", t)}
+                onClick={() => setValue("type", t, { shouldDirty: true })}
                 className={cn(
-                  "flex-1 py-2 text-sm font-medium capitalize transition-colors",
+                  "min-h-12 flex-1 py-2 text-sm font-medium capitalize transition-colors",
                   selectedType === t
                     ? "bg-primary text-primary-foreground"
                     : "bg-background text-muted-foreground hover:bg-muted"
@@ -121,9 +127,11 @@ export function CategoryForm({ category, defaultType = "expense", existingNames 
             <button
               key={color}
               type="button"
-              onClick={() => setValue("color", color)}
+              aria-label={`Choose color ${color}`}
+              aria-pressed={selectedColor === color}
+              onClick={() => setValue("color", color, { shouldDirty: true })}
               className={cn(
-                "w-7 h-7 rounded-full transition-transform",
+                "w-12 h-12 rounded-full transition-transform",
                 selectedColor === color ? "scale-125 ring-2 ring-offset-1 ring-zinc-400" : "hover:scale-110"
               )}
               style={{ backgroundColor: color }}
@@ -132,8 +140,8 @@ export function CategoryForm({ category, defaultType = "expense", existingNames 
           <input
             type="color"
             value={selectedColor}
-            onChange={(e) => setValue("color", e.target.value)}
-            className="w-7 h-7 rounded-full cursor-pointer border border-zinc-200 p-0.5"
+            onChange={(e) => setValue("color", e.target.value, { shouldDirty: true })}
+            className="w-12 h-12 rounded-full cursor-pointer border border-zinc-200 p-0.5"
             title="Custom color"
           />
         </div>
@@ -143,6 +151,7 @@ export function CategoryForm({ category, defaultType = "expense", existingNames 
         <Button type="button" variant="outline" className="flex-1" disabled={isSubmitting} onClick={onCancel}>Cancel</Button>
         <Button type="submit" disabled={isSubmitting} className="flex-1">{isSubmitting ? "Saving…" : category ? "Save Changes" : "Add Category"}</Button>
       </div>
+      </fieldset>
     </form>
   )
 }

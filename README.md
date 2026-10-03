@@ -28,7 +28,7 @@ The browser/PWA build remains local-only but browser storage is not encrypted by
 
 ## Safe upgrade from 1.1.x
 
-Version 1.3.1 keeps the package ID `com.otomen.tracker`, so Android can update the existing installation only when the APK is signed with the original signing key.
+Version 1.3.2 keeps the package ID `com.otomen.tracker`, so Android can update the existing installation only when the APK is signed with the original signing key.
 
 On the first successful unlock after updating, Tracker copies and validates the existing browser-stored records into the encrypted vault. The original copy is retained until the encrypted vault survives another successful unlock; only then is sensitive legacy storage removed. Do not uninstall the old app or clear its storage before installing the correctly signed update.
 

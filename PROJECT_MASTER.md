@@ -4,7 +4,7 @@ Updated 2026-10-03. Read this file first, then the linked docs and actual code. 
 
 ## Identity and scope
 
-Local personal finance app: Next.js/React/TypeScript web/PWA plus Capacitor Android `com.otomen.tracker`. Release metadata is `release.json`: 1.3.1, Android build 18. No Clerk, PostgreSQL, pgAdmin, server synchronization, telemetry or financial-data API. Android INTERNET permission remains removed. Browser records stay in that browser and are not app-encrypted.
+Local personal finance app: Next.js/React/TypeScript web/PWA plus Capacitor Android `com.otomen.tracker`. Release metadata is `release.json`: 1.3.2, Android build 19. No Clerk, PostgreSQL, pgAdmin, server synchronization, telemetry or financial-data API. Android INTERNET permission remains removed. Browser records stay in that browser and are not app-encrypted.
 
 Implementation branch: `feature/verified-local-redesign`. Reviewed remote main baseline: `acfc56d34155408b0143cedd83ac65622fa7914e`. Re-fetch and compare before integrating; use remote main to identify published commits and do not overwrite newer work.
 
@@ -28,6 +28,10 @@ Implementation branch: `feature/verified-local-redesign`. Reviewed remote main b
 - CSV/PDF native share or browser download includes source/transfer endpoint names, with failure feedback and private cache cleanup. Portable backups remain encrypted and previewable. CSV/PDF are unencrypted records.
 - Details of the corrected plan: [transaction-sources-plan](docs/transaction-sources-plan.md). This supersedes earlier plans to track assets or card outstanding balances.
 
+## UI and Android behavior (1.3.2)
+
+Whole-row details and safe actions, shared Home recent activity, visible in/out/transfer filters, simplified settings, original notification details, draft-safe Back/link/refresh guards and 48px controls are implemented. Native IME-first Back and source-only storage remain. Dialog sizing responds to the visual viewport; Android respects system text scaling. See [android-ui-behavior](docs/android-ui-behavior.md) for exact behavior and remaining phone gates. Closing a detail overlay preserves list filters/page/scroll; no draft persistence is added outside the native vault.
+
 ## Build and verify
 
 Node >=22.22.2, Java 21, Android SDK 36. `npm ci`; `npm test`; `npm run typecheck`; `npm run lint`; `npm run build`; `npm run test:e2e`; `npm run audit:dependencies`.
@@ -36,7 +40,7 @@ APK assets: `npm run android:sync`. Native checks: `cd android && bash ./gradlew
 
 The audit gate allows only the documented unpatched build-time braces advisory until 2026-11-03; it rejects new high/critical findings and expiry. Raw npm audit is not clean. Do not silently extend or widen the exception.
 
-183 tests passed during implementation. Production and Android builds are recorded in `docs/implementation-status.md`. Browser automation was attempted but Chromium could not launch because this environment denies socket creation; those flows are not passed. Instrumentation tests compile but require an emulator/device to execute.
+191 tests passed during implementation. Production and Android builds are recorded in `docs/implementation-status.md`. Browser automation was attempted but Chromium could not launch because this environment denies socket creation; those flows are not passed. Instrumentation tests compile but require an emulator/device to execute.
 
 ## Release and unresolved verification
 

@@ -10,7 +10,7 @@ interface Props {
 
 export function QuickActions({ onAddClick }: Props) {
   return (
-    <div className="flex gap-2">
+    <div className="flex flex-wrap gap-2">
       <Button size="sm" className="gap-1.5" onClick={onAddClick}>
         <Plus className="w-4 h-4" />
         Add Transaction

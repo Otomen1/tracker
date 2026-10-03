@@ -76,7 +76,7 @@ export function ReminderSettings() {
           onClick={handleToggle}
           disabled={saving}
           aria-label="Daily reminder"
-          className={`relative inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+          className={`relative inline-flex min-h-12 min-w-12 shrink-0 items-center justify-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
             settings.reminderEnabled ? "bg-emerald-500" : "bg-zinc-300 dark:bg-zinc-600"
           }`}
         >
@@ -98,7 +98,7 @@ export function ReminderSettings() {
       )}
 
       {!settings.reminderEnabled && permission === "default" && (
-          <Button className="min-h-11" variant="outline" size="sm" disabled={saving} onClick={handleToggle}>
+          <Button className="min-h-12" variant="outline" size="sm" disabled={saving} onClick={handleToggle}>
           Enable notifications
         </Button>
       )}
@@ -109,7 +109,7 @@ export function ReminderSettings() {
           <Input
             id="reminder-time"
             type="time"
-            className="min-h-11 w-32"
+            className="min-h-12 w-32"
             value={settings.reminderTime ?? "20:00"}
             onChange={(event) => void saveTime(event.target.value)}
           />

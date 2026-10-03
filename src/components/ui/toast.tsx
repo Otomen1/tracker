@@ -35,7 +35,7 @@ function ToastItem({ toast, onDismiss }: ToastItemProps) {
   const { icon: Icon, classes } = config[toast.variant]
   return (
     <div
-      role="alert"
+      role={toast.variant === "error" ? "alert" : "status"}
       className={cn(
         "flex items-start gap-2.5 px-3.5 py-3 rounded-lg border shadow-lg text-sm max-w-sm w-full",
         "animate-in slide-in-from-right-4 fade-in duration-200",
@@ -47,7 +47,7 @@ function ToastItem({ toast, onDismiss }: ToastItemProps) {
       <button
         onClick={() => onDismiss(toast.id)}
         aria-label="Dismiss notification"
-        className="shrink-0 opacity-60 hover:opacity-100 transition-opacity"
+        className="min-h-12 min-w-12 flex items-center justify-center shrink-0 opacity-60 hover:opacity-100 transition-opacity"
       >
         <X className="w-3.5 h-3.5" />
       </button>
@@ -66,7 +66,7 @@ export function ToastContainer({ toasts, onDismiss }: ToastContainerProps) {
     <div
       aria-live="polite"
       aria-atomic="false"
-      className="fixed bottom-4 right-4 z-50 flex flex-col gap-2 items-end"
+      className="fixed bottom-[calc(8.5rem+env(safe-area-inset-bottom))] left-3 right-3 lg:bottom-4 lg:left-auto lg:right-4 z-50 flex flex-col gap-2 items-end"
     >
       {toasts.map((t) => (
         <ToastItem key={t.id} toast={t} onDismiss={onDismiss} />
